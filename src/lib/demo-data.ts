@@ -1,5 +1,4 @@
 import { Contact, Interview, JobLead, Template } from '@/types';
-import { hydrateJob } from './scoring';
 
 const contacts: Contact[] = [
   { id: 'c1', name: 'Rachel King', company: 'Scale Army', title: 'Talent Partner', relationshipType: 'RECRUITER', outreachDate: '2026-03-22', nextFollowUp: '2026-03-31', notes: 'Reached out on LinkedIn.' },
@@ -26,12 +25,12 @@ export const demoJobs: JobLead[] = [
     salaryMin: 2800,
     salaryMax: 3300,
     currency: 'USD',
-    notes: 'Excellent fit on stack, timezone workable, video required.',
-    status: 'APPLYING' as const,
+    notes: 'Excellent fit on stack, timezone workable, video required. Modern TypeScript, Next.js, NestJS, PostgreSQL.',
+    status: 'APPLYING',
     dateFound: '2026-03-28',
     nextFollowUp: '2026-04-03',
-    priorityFlag: 'MONITOR' as const,
-    score: { coreStackMatch: 5, roleAlignment: 5, seniorityFit: 4, geographyEligibility: 5, timezoneCompatibility: 4, compensationFit: 5, domainRelevance: 4, applicationFriction: 3, signalQuality: 5, fitScore: 0, fitTier: 'A' as const },
+    priorityFlag: 'MONITOR',
+    score: { coreStackMatch: 5, roleAlignment: 5, seniorityFit: 4, geographyEligibility: 5, timezoneCompatibility: 4, compensationFit: 5, domainRelevance: 4, applicationFriction: 3, signalQuality: 5, fitScore: 0, fitTier: 'A' },
     checklist: { resumeTailored: true, pdfChecked: true, coverLetterReady: true, portfolioAdded: true, videoDone: false, compensationChecked: true, eligibilityChecked: true, submitted: false },
     contacts: [contacts[0]],
     interviews: [interviews[0]],
@@ -50,11 +49,11 @@ export const demoJobs: JobLead[] = [
     salaryMin: 3500,
     salaryMax: 4500,
     currency: 'USD',
-    notes: 'Stretch on seniority but good Node/Nest alignment.',
-    status: 'LEAD' as const,
+    notes: 'Stretch on seniority but good Node/Nest alignment. TypeScript backend, PostgreSQL, Docker.',
+    status: 'LEAD',
     dateFound: '2026-03-29',
-    priorityFlag: 'MONITOR' as const,
-    score: { coreStackMatch: 4, roleAlignment: 4, seniorityFit: 3, geographyEligibility: 5, timezoneCompatibility: 4, compensationFit: 4, domainRelevance: 3, applicationFriction: 4, signalQuality: 4, fitScore: 0, fitTier: 'B' as const },
+    priorityFlag: 'MONITOR',
+    score: { coreStackMatch: 4, roleAlignment: 4, seniorityFit: 3, geographyEligibility: 5, timezoneCompatibility: 4, compensationFit: 4, domainRelevance: 3, applicationFriction: 4, signalQuality: 4, fitScore: 0, fitTier: 'B' },
     checklist: { resumeTailored: false, pdfChecked: false, coverLetterReady: false, portfolioAdded: true, videoDone: false, compensationChecked: false, eligibilityChecked: true, submitted: false },
     contacts: [contacts[1]],
     interviews: [interviews[1]],
@@ -73,17 +72,17 @@ export const demoJobs: JobLead[] = [
     salaryMin: 3000,
     salaryMax: 4000,
     currency: 'USD',
-    notes: 'Good role, worth tailoring after Scale Army.',
-    status: 'SAVED' as const,
+    notes: 'Good role, worth tailoring after Scale Army. React, Node.js, Postgres, distributed remote product work.',
+    status: 'SAVED',
     dateFound: '2026-03-30',
-    priorityFlag: 'MONITOR' as const,
-    score: { coreStackMatch: 4, roleAlignment: 5, seniorityFit: 4, geographyEligibility: 5, timezoneCompatibility: 5, compensationFit: 4, domainRelevance: 4, applicationFriction: 3, signalQuality: 4, fitScore: 0, fitTier: 'B' as const },
+    priorityFlag: 'MONITOR',
+    score: { coreStackMatch: 4, roleAlignment: 5, seniorityFit: 4, geographyEligibility: 5, timezoneCompatibility: 5, compensationFit: 4, domainRelevance: 4, applicationFriction: 3, signalQuality: 4, fitScore: 0, fitTier: 'B' },
     checklist: { resumeTailored: false, pdfChecked: false, coverLetterReady: false, portfolioAdded: true, videoDone: false, compensationChecked: true, eligibilityChecked: true, submitted: false },
     contacts: [contacts[2]],
     interviews: [],
     prepPack: { whyThisRole: 'Strong full-stack overlap.', topFitPoints: 'React, Node.js, Postgres, remote product work.', likelyQuestions: 'Cross-functional collaboration examples.', questionsToAsk: 'What are the main product priorities?', technicalFocus: 'Product velocity and maintainability.', companyResearchLinks: 'https://deel.com', prepScore: 49, prepStatus: 'NOT_STARTED' }
   }
-].map(hydrateJob);
+];
 
 export const demoContacts = contacts;
 export const demoInterviews = interviews;

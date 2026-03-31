@@ -1,8 +1,10 @@
 import { demoJobs, demoTemplates } from './demo-data';
-import { JobLead, Template } from '@/types';
+import { defaultPreferences } from './preferences';
+import { JobLead, Template, UserPreferences } from '@/types';
 
 const JOBS_KEY = 'job-seeker-os.jobs';
 const TEMPLATES_KEY = 'job-seeker-os.templates';
+const PREFERENCES_KEY = 'job-seeker-os.preferences';
 
 export function getStoredJobs(): JobLead[] {
   if (typeof window === 'undefined') return demoJobs;
@@ -32,4 +34,19 @@ export function getStoredTemplates(): Template[] {
 export function saveStoredTemplates(templates: Template[]) {
   if (typeof window === 'undefined') return;
   localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
+}
+
+export function getStoredPreferences(): UserPreferences {
+  if (typeof window === 'undefined') return defaultPreferences;
+  const raw = localStorage.getItem(PREFERENCES_KEY);
+  if (!raw) {
+    localStorage.setItem(PREFERENCES_KEY, JSON.stringify(defaultPreferences));
+    return defaultPreferences;
+  }
+  return { ...defaultPreferences, ...JSON.parse(raw) };
+}
+
+export function saveStoredPreferences(preferences: UserPreferences) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
 }

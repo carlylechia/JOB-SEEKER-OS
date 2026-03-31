@@ -1,19 +1,26 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { JobLead, Template } from '@/types';
+import { JobLead, Template, UserPreferences } from '@/types';
 import { demoContacts, demoInterviews } from '@/lib/demo-data';
-import { getStoredJobs, getStoredTemplates, saveStoredJobs, saveStoredTemplates } from '@/lib/storage';
+import { getStoredJobs, getStoredPreferences, getStoredTemplates, saveStoredJobs, saveStoredPreferences, saveStoredTemplates } from '@/lib/storage';
 import { checklistCompletion, hydrateJob } from '@/lib/scoring';
 
 export function useJobs() {
-  const [jobs, setJobs] = useState<JobLead[]>([]);
+  const [rawJobs, setRawJobs] = useState<JobLead[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
 
   useEffect(() => {
-    setJobs(getStoredJobs().map(hydrateJob));
+    setRawJobs(getStoredJobs());
     setTemplates(getStoredTemplates());
+    setPreferences(getStoredPreferences());
   }, []);
+
+  const jobs = useMemo(() => {
+    if (!preferences) return [];
+    return rawJobs.map((job) => hydrateJob(job, preferences));
+  }, [rawJobs, preferences]);
 
   const contacts = useMemo(() => jobs.flatMap((job) => job.contacts).concat(demoContacts.filter((c) => !jobs.flatMap((j) => j.contacts).some((jc) => jc.id === c.id))), [jobs]);
   const interviews = useMemo(() => jobs.flatMap((job) => job.interviews).concat(demoInterviews.filter((i) => !jobs.flatMap((j) => j.interviews).some((ji) => ji.id === i.id))), [jobs]);
@@ -26,7 +33,9 @@ export function useJobs() {
     const avgFit = total ? Math.round((jobs.reduce((sum, j) => sum + j.score.fitScore, 0) / total) * 10) / 10 : 0;
     const responseRate = applied ? Math.round((interviewsCount / applied) * 100) : 0;
     const topPriority = [...jobs].sort((a, b) => b.score.fitScore - a.score.fitScore).slice(0, 5);
-    const queue = [...jobs].filter((j) => ['A', 'B'].includes(j.score.fitTier) && j.status !== 'ARCHIVED').sort((a, b) => (checklistCompletion(b) + b.score.fitScore) - (checklistCompletion(a) + a.score.fitScore));
+    const queue = [...jobs]
+      .filter((j) => ['A', 'B'].includes(j.score.fitTier) && !['ARCHIVED', 'REJECTED', 'OFFER'].includes(j.status))
+      .sort((a, b) => (checklistCompletion(b) + b.score.fitScore) - (checklistCompletion(a) + a.score.fitScore));
     const weeklyTrend = [
       { week: 'W1', leads: 3, applied: 2, interviews: 1 },
       { week: 'W2', leads: 4, applied: 3, interviews: 1 },
@@ -37,10 +46,9 @@ export function useJobs() {
   }, [jobs]);
 
   function upsertJob(job: JobLead) {
-    const hydrated = hydrateJob(job);
-    setJobs((prev) => {
-      const exists = prev.some((j) => j.id === hydrated.id);
-      const next = exists ? prev.map((j) => (j.id === hydrated.id ? hydrated : j)) : [hydrated, ...prev];
+    setRawJobs((prev) => {
+      const exists = prev.some((j) => j.id === job.id);
+      const next = exists ? prev.map((j) => (j.id === job.id ? job : j)) : [job, ...prev];
       saveStoredJobs(next);
       return next;
     });
@@ -59,5 +67,10 @@ export function useJobs() {
     });
   }
 
-  return { jobs, templates, contacts, interviews, dashboard, upsertJob, getJob, updateTemplate };
+  function updatePreferences(nextPreferences: UserPreferences) {
+    setPreferences(nextPreferences);
+    saveStoredPreferences(nextPreferences);
+  }
+
+  return { jobs, templates, contacts, interviews, dashboard, preferences, upsertJob, getJob, updateTemplate, updatePreferences };
 }

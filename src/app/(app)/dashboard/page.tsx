@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/shared/page-header';
 import { useJobs } from '@/hooks/use-job-data';
 
 export default function DashboardPage() {
-  const { dashboard, jobs, interviews } = useJobs();
+  const { dashboard, jobs, interviews, preferences } = useJobs();
 
   const followUps = jobs
     .filter((job) => job.nextFollowUp)
@@ -35,6 +35,13 @@ export default function DashboardPage() {
           <UpcomingList title="Upcoming interviews" items={upcomingInterviews} />
         </div>
       </div>
+
+      <div className="card-pad">
+        <div className="text-sm text-muted">Personalized ranking</div>
+        <div className="mt-3 text-lg font-semibold">{preferences ? `${preferences.targetLevel} target · ${preferences.preferredRegions.join(' / ')}` : 'Loading preferences...'}</div>
+        <div className="mt-2 text-xs text-muted">Your dashboard now ranks jobs based on saved level, regions, salary floor, and must-have stack.</div>
+      </div>
+
       <TopPriorityList jobs={dashboard.topPriority} />
     </div>
   );

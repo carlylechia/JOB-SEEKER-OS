@@ -2,13 +2,13 @@
 
 Job Seeker OS is a personalized job-search management web app built as a portfolio-ready SaaS MVP. It helps candidates discover, score, track, and manage job applications through one structured workflow.
 
-## What is included in this first version
+## What is included in this first zip
 
 This first version is a polished frontend MVP with:
 
 - marketing landing page
 - dashboard with KPIs and charts
-- job tracker with fit scoring and priority logic
+- job tracker with personalized fit scoring and priority logic
 - job detail workspace
 - recruiter/contact CRM view
 - interview pipeline view
@@ -64,7 +64,11 @@ prisma/
 
 ## Key product logic
 
-### Fit scoring weights
+### Personalized fit scoring
+
+This version now reads user preferences from the Settings page and recalculates job rankings based on target level, preferred regions, preferred titles, salary floor, remote preference, and must-have tech.
+
+### Base scoring weights
 
 - Core stack match — 25%
 - Role alignment — 15%
@@ -88,7 +92,18 @@ prisma/
 
 ## Current limitations
 
+- personalization is stored in local storage rather than a shared backend profile
+
 - authentication is stubbed for this first version
 - data is stored in local storage instead of a real database
 - editing flows are intentionally light in this first zip
 - mobile app is not yet implemented
+
+## Next steps (In subsequent releases)
+
+1. add Auth.js / NextAuth
+2. connect Prisma to PostgreSQL
+3. move local state to database-backed CRUD
+4. add richer forms and editing flows
+5. add email reminders and browser extension ingestion
+6. (deploy to Vercel)

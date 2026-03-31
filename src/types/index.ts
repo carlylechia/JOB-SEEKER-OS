@@ -1,6 +1,8 @@
 export type JobStatus = 'LEAD' | 'SAVED' | 'APPLYING' | 'APPLIED' | 'INTERVIEWING' | 'OFFER' | 'REJECTED' | 'ARCHIVED';
 export type FitTier = 'A' | 'B' | 'C' | 'D';
 export type PriorityFlag = 'APPLY_TODAY' | 'APPLY_THIS_WEEK' | 'PREPARE_ASSETS' | 'FOLLOW_UP_DUE' | 'INTERVIEW_SOON' | 'CHECK_DUPLICATE' | 'MONITOR' | 'SKIP';
+export type SeniorityLevel = 'ENTRY' | 'MID' | 'SENIOR' | 'FLEXIBLE';
+export type WorkRegion = 'US' | 'EU' | 'AFRICA' | 'WORLDWIDE' | 'FLEXIBLE';
 
 export type ScoreFields = {
   coreStackMatch: number;
@@ -12,6 +14,21 @@ export type ScoreFields = {
   domainRelevance: number;
   applicationFriction: number;
   signalQuality: number;
+};
+
+export type UserPreferences = {
+  currentLevel: SeniorityLevel;
+  targetLevel: SeniorityLevel;
+  targetRoles: string[];
+  preferredRegions: string[];
+  preferredTitles: string[];
+  preferredStack: string[];
+  mustHaveTech: string[];
+  workRegions: WorkRegion[];
+  remoteOnly: boolean;
+  salaryMin: number;
+  salaryTarget: number;
+  timezoneToleranceHours: number;
 };
 
 export type Checklist = {
