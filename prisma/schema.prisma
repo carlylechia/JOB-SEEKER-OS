@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum JobStatus {
+  LEAD
+  SAVED
+  APPLYING
+  APPLIED
+  INTERVIEWING
+  OFFER
+  REJECTED
+  ARCHIVED
+}
+
+enum FitTier {
+  A
+  B
+  C
+  D
+}
+
+enum PriorityFlag {
+  APPLY_TODAY
+  APPLY_THIS_WEEK
+  PREPARE_ASSETS
+  FOLLOW_UP_DUE
+  INTERVIEW_SOON
+  CHECK_DUPLICATE
+  MONITOR
+  SKIP
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

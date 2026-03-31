@@ -1,0 +1,18 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/(auth)/login/page": "/login",
+  "/(marketing)/demo/page": "/demo",
+  "/(marketing)/page": "/",
+  "/(auth)/register/page": "/register",
+  "/(app)/dashboard/page": "/dashboard",
+  "/(app)/prep/page": "/prep",
+  "/(app)/jobs/page": "/jobs",
+  "/(app)/pipeline/page": "/pipeline",
+  "/(app)/profile/page": "/profile",
+  "/(app)/queue/page": "/queue",
+  "/(app)/jobs/new/page": "/jobs/new",
+  "/(app)/settings/page": "/settings",
+  "/(app)/templates/page": "/templates",
+  "/(app)/contacts/page": "/contacts",
+  "/(app)/jobs/[id]/page": "/jobs/[id]"
+}
