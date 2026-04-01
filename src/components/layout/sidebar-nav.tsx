@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Briefcase, LayoutDashboard, Users, KanbanSquare, Target, FileText, Settings, UserCircle2 } from 'lucide-react';
+import { Logo } from '@/components/shared/logo';
 
 const items = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -19,11 +20,10 @@ const items = [
 export function SidebarNav() {
   const pathname = usePathname();
   return (
-    <aside className="hidden w-64 flex-col border-r border-line bg-[#09111f] p-4 lg:flex">
-      <Link href="/" className="mb-6 rounded-2xl border border-line bg-white/5 p-4">
-        <div className="text-lg font-semibold">Job Seeker OS</div>
-        <div className="mt-1 text-xs text-muted">Personalized job search operating system</div>
-      </Link>
+    <aside className="hidden w-72 flex-col border-r border-line bg-[#09111f] p-4 lg:flex">
+      <div className="mb-6 rounded-2xl border border-line bg-white/5 p-4">
+        <Logo href="/dashboard" />
+      </div>
       <nav className="space-y-1">
         {items.map((item) => {
           const active = pathname.startsWith(item.href);

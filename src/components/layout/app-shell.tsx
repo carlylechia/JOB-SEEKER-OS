@@ -1,12 +1,18 @@
 import { SidebarNav } from './sidebar-nav';
 import { Topbar } from './topbar';
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+type UserLike = {
+  id: string;
+  email?: string | null;
+  name?: string | null;
+};
+
+export function AppShell({ children, user }: { children: React.ReactNode; user: UserLike }) {
   return (
     <div className="flex min-h-screen">
       <SidebarNav />
       <div className="flex min-h-screen flex-1 flex-col">
-        <Topbar />
+        <Topbar user={user} />
         <main className="flex-1 p-4 lg:p-8">{children}</main>
       </div>
     </div>
