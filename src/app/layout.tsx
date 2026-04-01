@@ -8,9 +8,9 @@ export const metadata: Metadata = {
   },
   description: 'Personalized job-search management platform with scoring, CRM, and interview workflows.',
   icons: {
-    icon: '/favicon.svg',
-    shortcut: '/favicon.svg',
-    apple: '/apple-touch-icon.svg',
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
   },
 };
 

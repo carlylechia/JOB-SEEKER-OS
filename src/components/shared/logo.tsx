@@ -8,15 +8,18 @@ export function Logo({ compact = false, href = '/' }: { compact?: boolean; href?
   );
 
   if (compact) {
-    return <Link href={href} className="inline-flex items-center gap-3">{mark}</Link>;
+    return (
+      <Link href={href} className="inline-flex flex-col items-center gap-1">
+        <img src="/logo-full.png" alt="full logo" className="h-12 w-auto" />
+      </Link>
+    );
   }
 
   return (
-    <Link href={href} className="inline-flex items-center gap-3">
-      {mark}
-      <span>
-        <span className="block text-lg font-semibold">Job Seeker OS</span>
-        <span className="block text-xs text-muted">Personalized job search operating system</span>
+    <Link href={href} className="inline-flex flex-col items-center gap-2">
+      <img src="/logo-full.png" alt="full logo" className="h-12 w-auto" />
+      <span className="text-xs text-gray-600 text-center max-w-48">
+        A personalized operating system for modern job seekers
       </span>
     </Link>
   );
