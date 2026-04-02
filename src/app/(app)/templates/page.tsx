@@ -4,7 +4,8 @@ import { PageHeader } from '@/components/shared/page-header';
 import { useJobs } from '@/hooks/use-job-data';
 
 export default function TemplatesPage() {
-  const { templates } = useJobs();
+  const { templates, isLoading } = useJobs();
+  if (isLoading) return <div className="card-pad">Loading templates…</div>;
   return (
     <div className="space-y-6">
       <PageHeader title="Follow-Up Templates" subtitle="Reusable templates for outreach, follow-ups, and thank-you notes." />

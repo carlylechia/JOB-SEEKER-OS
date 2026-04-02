@@ -4,7 +4,8 @@ import { PageHeader } from '@/components/shared/page-header';
 import { useJobs } from '@/hooks/use-job-data';
 
 export default function PrepPage() {
-  const { jobs } = useJobs();
+  const { jobs, isLoading } = useJobs();
+  if (isLoading) return <div className="card-pad">Loading prep packs…</div>;
   return (
     <div className="space-y-6">
       <PageHeader title="Prep Packs" subtitle="Interview prep, talking points, and company-specific notes." />

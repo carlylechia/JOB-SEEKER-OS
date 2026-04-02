@@ -2,12 +2,12 @@
 
 Job Seeker OS is a personalized job-search management web app built as a portfolio-ready SaaS MVP. It helps candidates discover, score, track, and manage job applications through one structured workflow.
 
-## What is included in this first zip
+## Features
 
-This first version is a polished frontend MVP with:
+Job Seeker OS includes:
 
 - marketing landing page
-- dashboard with KPIs and charts
+- authenticated user dashboard with KPIs and charts
 - job tracker with personalized fit scoring and priority logic
 - job detail workspace
 - recruiter/contact CRM view
@@ -16,31 +16,34 @@ This first version is a polished frontend MVP with:
 - prep packs view
 - follow-up templates view
 - profile and settings pages
-- demo data with browser local persistence
-- Prisma schema placeholder for the future full backend
+- persistent data storage across sessions
 
 ## Tech stack
+
+Built with modern, production-ready tools:
 
 - Next.js 15
 - TypeScript
 - Tailwind CSS
-- Recharts
-- Lucide React
+- Auth.js (for authentication)
+- Prisma ORM
+- PostgreSQL
+- Recharts (for dashboard visualizations)
+- Lucide React (for icons)
 
-## Why local storage in this first version
+## Data Persistence
 
-To get a portfolio-ready product working immediately, this version uses seeded demo data and browser local storage for state persistence. The repository already includes the data model direction and Prisma schema foundation so the next iteration can move to PostgreSQL and authentication.
+As of v2.0, Job Seeker OS uses PostgreSQL with Prisma ORM for all data persistence. Initialize the database with `npm run prisma:push` and optionally seed sample data with `npm run prisma:seed`.
 
-## Getting started
+## Development
 
 ```bash
-npm install
 npm run dev
 ```
 
 Open `http://localhost:3000`.
 
-## Build
+## Production Build
 
 ```bash
 npm run build
@@ -90,20 +93,72 @@ This version now reads user preferences from the Settings page and recalculates 
 - Monitor
 - Skip
 
-## Current limitations
+## Architecture
 
-- personalization is stored in local storage rather than a shared backend profile
+As of v2.0, Job Seeker OS is a full-stack SaaS application with:
 
-- authentication is stubbed for this first version
-- data is stored in local storage instead of a real database
-- editing flows are intentionally light in this first zip
-- mobile app is not yet implemented
+- **Email/password authentication** using Auth.js with Credentials provider
+- **Protected app routes** behind login walls
+- **PostgreSQL + Prisma** for persistent data storage
+- **Seeded starter workspace** created on user registration
+- **User-driven fit scoring** based on saved profile preferences
 
-## Next steps (In subsequent releases)
+## Setup
 
-1. add Auth.js / NextAuth
-2. connect Prisma to PostgreSQL
-3. move local state to database-backed CRUD
-4. add richer forms and editing flows
-5. add email reminders and browser extension ingestion
-6. (deploy to Vercel)
+```bash
+npm install
+cp .env.example .env.local
+npm run prisma:generate
+npm run prisma:push
+npm run dev
+```
+
+**Required environment variables:**
+```env
+DATABASE_URL="postgresql://[user]:[password]@[host]:5432/job_seeker_os?schema=public"
+AUTH_SECRET="[generate-a-random-string]"
+AUTH_URL="http://localhost:3000"
+```
+
+To seed initial demo data:
+```bash
+npm run prisma:seed
+```
+
+## Planned Features
+
+- Structured job add/edit forms
+- Enhanced job ingestion from links
+- Email reminders and notifications
+- Browser extension for quick job capture
+- AI-assisted fit explanations
+
+## Release History
+
+### v2.0 — Auth + Database (Current)
+**Transition from MVP to SaaS-ready application**
+
+- Email/password authentication via Auth.js Credentials provider
+- PostgreSQL database backend with Prisma ORM
+- Protected routes and user session management
+- Seeded starter workspace on user registration
+- Persistent user data: jobs, contacts, templates, preferences
+- User-driven personalized fit scoring based on profile settings
+- Logo/favicon system for future custom branding
+- Vercel and production deployment ready
+
+**Setup:** See [Setup](#setup) section above.
+
+### v1.0 — Frontend MVP
+**Initial portfolio-ready prototype**
+
+- Marketing landing page and demo view
+- Authenticated dashboard with KPI cards and weekly trends
+- Job tracker with mock scoring and priority badges
+- CRM contacts view
+- Interview pipeline tracker
+- Application queue management
+- Prep packs and templates views
+- Profile and settings pages
+- Browser local storage for session persistence
+- Responsive design with Tailwind CSS and Lucide icons

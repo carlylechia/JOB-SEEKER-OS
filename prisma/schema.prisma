@@ -7,38 +7,86 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum JobStatus {
-  LEAD
-  SAVED
-  APPLYING
-  APPLIED
-  INTERVIEWING
-  OFFER
-  REJECTED
-  ARCHIVED
-}
-
-enum FitTier {
-  A
-  B
-  C
-  D
-}
-
-enum PriorityFlag {
-  APPLY_TODAY
-  APPLY_THIS_WEEK
-  PREPARE_ASSETS
-  FOLLOW_UP_DUE
-  INTERVIEW_SOON
-  CHECK_DUPLICATE
-  MONITOR
-  SKIP
-}
-
 model User {
+  id           String            @id @default(cuid())
+  email        String            @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  profile      UserProfile?
+  jobLeads     JobLead[]
+  templates    FollowUpTemplate[]
+}
+
+model UserProfile {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  currentLevel           String   @default("MID")
+  targetLevel            String   @default("MID")
+  targetRoles            String[]
+  preferredRegions       String[]
+  preferredTitles        String[]
+  preferredStack         String[]
+  mustHaveTech           String[]
+  workRegions            String[]
+  remoteOnly             Boolean  @default(true)
+  salaryMin              Int      @default(2500)
+  salaryTarget           Int      @default(3200)
+  timezoneToleranceHours Int      @default(4)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model JobLead {
+  id                  String   @id @default(cuid())
+  userId              String
+  company             String
+  title               String
+  source              String?
+  jobUrl              String?
+  location            String?
+  remoteType          String?
+  timezoneRequirement String?
+  eligibilityRegion   String?
+  salaryMin           Int?
+  salaryMax           Int?
+  currency            String?  @default("USD")
+  notes               String?
+  status              String   @default("LEAD")
+  dateFound           DateTime @default(now())
+  dateApplied         DateTime?
+  nextFollowUp        DateTime?
+  priorityFlag        String   @default("MONITOR")
+  score               Json
+  checklist           Json
+  contacts            Json
+  interviews          Json
+  prepPack            Json
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, company])
+}
+
+model FollowUpTemplate {
   id        String   @id @default(cuid())
-  email     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  userId     String
+  type       String
+  name       String
+  subject    String?
+  body       String
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
 }

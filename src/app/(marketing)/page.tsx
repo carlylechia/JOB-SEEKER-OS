@@ -1,17 +1,16 @@
 import Link from 'next/link';
 import { BriefcaseBusiness, ChartColumnIncreasing, Users } from 'lucide-react';
+import { Logo } from '@/components/shared/logo';
 
 export default function LandingPage() {
   return (
     <div className="shell py-12">
       <header className="flex items-center justify-between">
-        <div>
-          <div className="text-xl font-semibold">Job Seeker OS</div>
-          <p className="muted mt-1">A personalized operating system for modern job seekers</p>
-        </div>
+        <Logo />
         <div className="flex gap-3">
           <Link className="btn-secondary" href="/demo">Live Demo</Link>
-          <Link className="btn-primary" href="/dashboard">Open App</Link>
+          <Link className="btn-secondary" href="/login">Sign In</Link>
+          <Link className="btn-primary" href="/register">Create Account</Link>
         </div>
       </header>
 
@@ -21,28 +20,16 @@ export default function LandingPage() {
           <h1 className="mt-5 text-5xl font-semibold leading-tight">Track, score, and manage your job search like a system.</h1>
           <p className="mt-5 max-w-2xl text-lg text-muted">Job Seeker OS turns a messy spreadsheet-driven hunt into one clean workflow: opportunity scoring, recruiter CRM, interview prep, follow-ups, and a dashboard that tells you what to do next.</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link className="btn-primary" href="/dashboard">Launch Demo Workspace</Link>
+            <Link className="btn-primary" href="/register">Create your workspace</Link>
             <Link className="btn-secondary" href="/demo">View Product Overview</Link>
           </div>
         </div>
         <div className="card-pad">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-line p-4">
-              <div className="text-sm text-muted">Best-fit jobs</div>
-              <div className="mt-2 text-3xl font-semibold">12</div>
-            </div>
-            <div className="rounded-2xl border border-line p-4">
-              <div className="text-sm text-muted">Avg fit score</div>
-              <div className="mt-2 text-3xl font-semibold">78.4</div>
-            </div>
-            <div className="rounded-2xl border border-line p-4">
-              <div className="text-sm text-muted">Follow-ups due</div>
-              <div className="mt-2 text-3xl font-semibold">4</div>
-            </div>
-            <div className="rounded-2xl border border-line p-4">
-              <div className="text-sm text-muted">Interviews this week</div>
-              <div className="mt-2 text-3xl font-semibold">2</div>
-            </div>
+            <div className="rounded-2xl border border-line p-4"><div className="text-sm text-muted">Best-fit jobs</div><div className="mt-2 text-3xl font-semibold">12</div></div>
+            <div className="rounded-2xl border border-line p-4"><div className="text-sm text-muted">Avg fit score</div><div className="mt-2 text-3xl font-semibold">78.4</div></div>
+            <div className="rounded-2xl border border-line p-4"><div className="text-sm text-muted">Follow-ups due</div><div className="mt-2 text-3xl font-semibold">4</div></div>
+            <div className="rounded-2xl border border-line p-4"><div className="text-sm text-muted">Interviews this week</div><div className="mt-2 text-3xl font-semibold">2</div></div>
           </div>
         </div>
       </section>

@@ -4,7 +4,8 @@ import { PageHeader } from '@/components/shared/page-header';
 import { useJobs } from '@/hooks/use-job-data';
 
 export default function PipelinePage() {
-  const { interviews } = useJobs();
+  const { interviews, isLoading } = useJobs();
+  if (isLoading) return <div className="card-pad">Loading pipeline…</div>;
   const grouped = ['VIDEO', 'RECRUITER_CALL', 'TECHNICAL', 'FINAL'].map((stage) => ({ stage, items: interviews.filter((i) => i.stage === stage) }));
   return (
     <div className="space-y-6">
