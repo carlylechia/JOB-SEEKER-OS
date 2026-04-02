@@ -11,9 +11,10 @@ import { checklistCompletion } from '@/lib/scoring';
 
 export default function JobDetailsPage() {
   const params = useParams<{ id: string }>();
-  const { getJob } = useJobs();
+  const { getJob, isLoading } = useJobs();
   const job = getJob(params.id);
 
+  if (isLoading) return <div className="card-pad">Loading job…</div>;
   if (!job) return <div className="card-pad">Job not found.</div>;
 
   return (

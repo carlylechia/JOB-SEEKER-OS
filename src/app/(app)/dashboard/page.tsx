@@ -8,7 +8,11 @@ import { PageHeader } from '@/components/shared/page-header';
 import { useJobs } from '@/hooks/use-job-data';
 
 export default function DashboardPage() {
-  const { dashboard, jobs, interviews, preferences } = useJobs();
+  const { dashboard, jobs, interviews, preferences, isLoading } = useJobs();
+
+  if (isLoading) {
+    return <div className="card-pad">Loading your workspace…</div>;
+  }
 
   const followUps = jobs
     .filter((job) => job.nextFollowUp)
@@ -39,7 +43,7 @@ export default function DashboardPage() {
       <div className="card-pad">
         <div className="text-sm text-muted">Personalized ranking</div>
         <div className="mt-3 text-lg font-semibold">{preferences ? `${preferences.targetLevel} target · ${preferences.preferredRegions.join(' / ')}` : 'Loading preferences...'}</div>
-        <div className="mt-2 text-xs text-muted">Your dashboard now ranks jobs based on saved level, regions, salary floor, and must-have stack.</div>
+        <div className="mt-2 text-xs text-muted">This release persists each user’s ranking preferences in PostgreSQL and rehydrates the workspace after sign-in.</div>
       </div>
 
       <TopPriorityList jobs={dashboard.topPriority} />

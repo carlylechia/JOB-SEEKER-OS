@@ -7,7 +7,9 @@ import { useJobs } from '@/hooks/use-job-data';
 import { checklistCompletion } from '@/lib/scoring';
 
 export default function QueuePage() {
-  const { dashboard, preferences } = useJobs();
+  const { dashboard, preferences, isLoading } = useJobs();
+  if (isLoading) return <div className="card-pad">Loading your queue…</div>;
+
   return (
     <div className="space-y-6">
       <PageHeader title="Tailored Application Queue" subtitle={preferences ? `Ranked for ${preferences.targetLevel.toLowerCase()}-level targets, ${preferences.preferredRegions.join(', ')}, and your saved stack priorities.` : 'These are the roles most worth tailoring right now.'} />

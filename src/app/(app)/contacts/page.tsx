@@ -4,7 +4,9 @@ import { PageHeader } from '@/components/shared/page-header';
 import { useJobs } from '@/hooks/use-job-data';
 
 export default function ContactsPage() {
-  const { contacts } = useJobs();
+  const { contacts, isLoading } = useJobs();
+  if (isLoading) return <div className="card-pad">Loading contacts…</div>;
+
   return (
     <div className="space-y-6">
       <PageHeader title="Contacts CRM" subtitle="Track recruiters, hiring managers, referrals, and follow-ups." />

@@ -8,7 +8,11 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { useJobs } from '@/hooks/use-job-data';
 
 export default function JobsPage() {
-  const { jobs } = useJobs();
+  const { jobs, isLoading } = useJobs();
+
+  if (isLoading) {
+    return <div className="card-pad">Loading jobs…</div>;
+  }
 
   return (
     <div className="space-y-6">
