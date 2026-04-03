@@ -181,7 +181,7 @@ export function JobForm({
 
           <div className="card-pad space-y-3">
             <h3 className="text-lg font-semibold">Save changes</h3>
-            <p className="muted">This release saves the job, recalculates fit and priority, and keeps the detail workspace up to date.</p>
+            <p className="muted">This action saves the job, recalculates fit and priority, and keeps the detail workspace up to date.</p>
             {error ? <div className="rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</div> : null}
             <div className="flex flex-wrap gap-3">
               <button type="submit" className="btn-primary" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : mode === 'create' ? 'Create job lead' : 'Save changes'}</button>
