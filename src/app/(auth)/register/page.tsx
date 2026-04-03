@@ -41,7 +41,9 @@ export default function RegisterPage() {
   return (
     <div className="shell flex min-h-screen items-center justify-center py-12">
       <div className="card-pad w-full max-w-md">
-        <div className="mb-6"><Logo /></div>
+        <div className="mb-6 flex justify-center">
+          <Logo centered />
+        </div>
         <h1 className="text-2xl font-semibold">Create your workspace</h1>
         <p className="muted mt-1">We’ll create a seeded starter workspace so you can explore the product immediately.</p>
         <form className="mt-6 space-y-3" onSubmit={handleSubmit}>

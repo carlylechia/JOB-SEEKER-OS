@@ -39,8 +39,8 @@ function LoginForm() {
   return (
     <div className="shell flex min-h-screen items-center justify-center py-12">
       <div className="card-pad w-full max-w-md">
-        <div className="mb-6">
-          <Logo />
+        <div className="mb-6 flex justify-center">
+          <Logo centered />
         </div>
         <h1 className="text-2xl font-semibold">Sign in</h1>
         <p className="muted mt-1">
@@ -89,8 +89,8 @@ export default function LoginPage() {
       fallback={
         <div className="shell flex min-h-screen items-center justify-center py-12">
           <div className="card-pad w-full max-w-md">
-            <div className="mb-6">
-              <Logo />
+            <div className="mb-6 flex justify-center">
+              <Logo centered />
             </div>
             <h1 className="text-2xl font-semibold">Sign in</h1>
             <p className="muted mt-1">Loading...</p>
