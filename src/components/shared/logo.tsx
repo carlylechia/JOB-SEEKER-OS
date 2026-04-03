@@ -20,9 +20,9 @@ export function Logo({
         className={`inline-flex items-center justify-center ${centered ? 'mx-auto' : ''}`}
       >
         <img
-          src="/apple-touch-icon.png"
+          src="/logo-full.png"
           alt="Job Seeker OS"
-          className="h-10 w-10 rounded-xl"
+          className="h-8 w-auto rounded-xl"
         />
       </Link>
     );
@@ -35,7 +35,7 @@ export function Logo({
     >
       <img src="/logo-full.png" alt="Job Seeker OS" className="h-12 w-auto" />
       {showSubtitle ? (
-        <span className="max-w-48 text-center text-xs text-gray-600">
+        <span className="hidden max-w-48 text-center text-xs text-gray-600 md:block">
           A personalized operating system for modern job seekers
         </span>
       ) : null}
