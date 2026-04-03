@@ -26,7 +26,6 @@ export default function LandingPage() {
 
       <section className="grid gap-10 py-20 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
         <div>
-          <span className="badge bg-accent/15 text-blue-200">Portfolio-ready SaaS MVP</span>
           <h1 className="mt-5 text-5xl font-semibold leading-tight">
             Track, score, and manage your job search like a system.
           </h1>

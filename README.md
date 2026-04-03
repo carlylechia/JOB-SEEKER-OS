@@ -2,9 +2,26 @@
 
 Job Seeker OS is a personalized job-search management web app built as a portfolio-ready SaaS MVP. It helps candidates discover, score, track, and manage job applications through one structured workflow.
 
-## Features
+---
 
-Job Seeker OS includes:
+## Overview
+
+Job Seeker OS is designed to turn a messy, spreadsheet-driven job hunt into a focused system.
+
+Instead of tracking opportunities across scattered notes, documents, and tabs, the app gives users one place to:
+
+- save and manage job leads
+- score job fit against their personal profile
+- track recruiters and contacts
+- prepare for interviews
+- manage follow-ups
+- monitor progress through a clear dashboard
+
+---
+
+## Current Features
+
+The project currently includes:
 
 - marketing landing page
 - authenticated user dashboard with KPIs and charts
@@ -16,62 +33,60 @@ Job Seeker OS includes:
 - prep packs view
 - follow-up templates view
 - profile and settings pages
-- persistent data storage across sessions
+- persistent database-backed storage
+- responsive navigation for both app and marketing pages
+- Vercel Analytics integration
 
-## Tech stack
+---
 
-Built with modern, production-ready tools:
+## Tech Stack
 
-- Next.js 15
-- TypeScript
-- Tailwind CSS
-- Auth.js (for authentication)
-- Prisma ORM
-- PostgreSQL
-- Recharts (for dashboard visualizations)
-- Lucide React (for icons)
+Built with modern production-ready tools:
 
-## Data Persistence
+- **Next.js 15.2.8**
+- **React 19**
+- **TypeScript**
+- **Tailwind CSS**
+- **Auth.js / NextAuth**
+- **Prisma ORM**
+- **PostgreSQL**
+- **Recharts**
+- **Lucide React**
+- **Vercel Analytics**
 
-As of v2.0, Job Seeker OS uses PostgreSQL with Prisma ORM for all data persistence. Initialize the database with `npm run prisma:push` and optionally seed sample data with `npm run prisma:seed`.
+---
 
-## Development
+## Architecture
 
-```bash
-npm run dev
-```
+As of the current release, Job Seeker OS is a full-stack SaaS application with:
 
-Open `http://localhost:3000`.
+- **Email/password authentication** using Auth.js Credentials provider
+- **Protected app routes** behind login
+- **PostgreSQL + Prisma** for persistent data storage
+- **User-driven personalized fit scoring**
+- **Responsive app shell** with authenticated and marketing navigation split cleanly
+- **Server-first public pages** with client components only where interactivity is needed
+- **Vercel deployment** with production-ready environment setup
 
-## Production Build
+---
 
-```bash
-npm run build
-npm run start
-```
+## Product Logic
 
-## Project structure
+### Personalized Fit Scoring
 
-```txt
-src/
-  app/
-    (marketing)/
-    (auth)/
-    (app)/
-  components/
-  hooks/
-  lib/
-  types/
-prisma/
-```
+Job Seeker OS uses user preferences to score and prioritize opportunities.
 
-## Key product logic
+Scoring is driven by factors such as:
 
-### Personalized fit scoring
+- target seniority level
+- preferred regions
+- preferred titles
+- salary expectations
+- remote preference
+- timezone compatibility
+- must-have tech stack requirements
 
-This version now reads user preferences from the Settings page and recalculates job rankings based on target level, preferred regions, preferred titles, salary floor, remote preference, and must-have tech.
-
-### Base scoring weights
+### Base Scoring Weights
 
 - Core stack match — 25%
 - Role alignment — 15%
@@ -83,7 +98,7 @@ This version now reads user preferences from the Settings page and recalculates 
 - Application friction — 5%
 - Signal quality — 5%
 
-### Priority flags
+### Priority Flags
 
 - Apply Today
 - Apply This Week
@@ -93,72 +108,249 @@ This version now reads user preferences from the Settings page and recalculates 
 - Monitor
 - Skip
 
-## Architecture
+---
 
-As of v2.0, Job Seeker OS is a full-stack SaaS application with:
+## Security and Reliability Notes
 
-- **Email/password authentication** using Auth.js with Credentials provider
-- **Protected app routes** behind login walls
-- **PostgreSQL + Prisma** for persistent data storage
-- **Seeded starter workspace** created on user registration
-- **User-driven fit scoring** based on saved profile preferences
+This release introduces important backend protections and operational safeguards:
+
+- job payloads validated with **Zod**
+- text and URLs sanitized before persistence
+- lightweight **per-user / per-IP rate limiting** on job endpoints
+- structured API error handling
+- optional webhook alerts for important production issues
+- important CRUD failures logged without noisy spam
+- Prisma indexes added for common job access patterns
+
+---
 
 ## Setup
 
+### 1. Install dependencies
+
 ```bash
 npm install
+````
+
+### 2. Create local environment files
+
+```bash
 cp .env.example .env.local
+cp .env.local .env
+```
+
+* `.env.local` is used by the Next.js app runtime
+* `.env` is used by Prisma CLI commands
+
+### 3. Generate Prisma client
+
+```bash
 npm run prisma:generate
+```
+
+### 4. Push the schema
+
+```bash
 npm run prisma:push
-npm run dev
 ```
 
-**Required environment variables:**
-```env
-DATABASE_URL="postgresql://[user]:[password]@[host]:5432/job_seeker_os?schema=public"
-AUTH_SECRET="[generate-a-random-string]"
-AUTH_URL="http://localhost:3000"
-```
+### 5. Optionally seed sample data
 
-To seed initial demo data:
 ```bash
 npm run prisma:seed
 ```
 
-## Planned Features
+### 6. Start development server
 
-- Structured job add/edit forms
-- Enhanced job ingestion from links
-- Email reminders and notifications
-- Browser extension for quick job capture
-- AI-assisted fit explanations
+```bash
+npm run dev
+```
+
+Open:
+
+```txt
+http://localhost:3000
+```
+
+---
+
+## Local Database Setup
+
+If you are using PostgreSQL installed with Homebrew on macOS:
+
+### Start PostgreSQL
+
+For PostgreSQL 16:
+
+```bash
+brew services start postgresql@16
+```
+
+Check status:
+
+```bash
+brew services list
+pg_isready
+```
+
+### Create your local environment file
+
+Example:
+
+```env
+DATABASE_URL="postgresql://jobseekeros:YOUR_PASSWORD@localhost:5432/job_seeker_os?schema=public"
+AUTH_SECRET="YOUR_SECRET"
+AUTH_URL="http://localhost:3000"
+```
+
+Then copy it for Prisma:
+
+```bash
+cp .env.local .env
+```
+
+---
+
+## Environment Variables
+
+Required:
+
+* `DATABASE_URL`
+* `AUTH_SECRET`
+* `AUTH_URL`
+
+Optional:
+
+* `CORS_ORIGIN` — only if cross-origin API access is needed
+* `ALERT_WEBHOOK_URL` — webhook for important production issue alerts
+
+---
+
+## Scripts
+
+```bash
+npm run dev
+npm run build
+npm run start
+npm run lint
+npm run prisma:generate
+npm run prisma:push
+npm run prisma:seed
+npm run prisma:studio
+```
+
+---
+
+## Project Structure
+
+```txt
+src/
+  app/
+    (marketing)/
+    (auth)/
+    (app)/
+    api/
+  components/
+  hooks/
+  lib/
+  types/
+prisma/
+public/
+```
+
+---
+
+## Analytics and Metadata
+
+The app includes **Vercel Analytics** in the root layout.
+
+It also configures metadata with:
+
+* default title
+* title template
+* description
+* favicon
+* apple touch icon
+
+This ensures a cleaner production setup for branding and observability.
+
+---
 
 ## Release History
 
-### v2.0 — Auth + Database (Current)
-**Transition from MVP to SaaS-ready application**
+### v3.0 — Job CRUD + Detail Workspace (Current Release)
 
-- Email/password authentication via Auth.js Credentials provider
-- PostgreSQL database backend with Prisma ORM
-- Protected routes and user session management
-- Seeded starter workspace on user registration
-- Persistent user data: jobs, contacts, templates, preferences
-- User-driven personalized fit scoring based on profile settings
-- Logo/favicon system for future custom branding
-- Vercel and production deployment ready
+This release adds:
 
-**Setup:** See [Setup](#setup) section above.
+* database-backed job CRUD
+* reusable job form
+* richer job detail workspace
+* profile-aware fit recalculation on save
+* input validation and sanitization for job endpoints
+* lightweight CORS handling
+* endpoint rate limiting
+* important event/error logging with optional webhook alerting
+* extra Prisma indexes for common job queries
+
+### v2.0 — Auth + Database
+
+**Transition from frontend MVP to SaaS-ready application**
+
+This release added:
+
+* Email/password authentication via Auth.js Credentials provider
+* PostgreSQL database backend with Prisma ORM
+* Protected routes and user session management
+* Seeded starter workspace on user registration
+* Persistent user data for jobs, contacts, templates, and preferences
+* User-driven personalized fit scoring based on profile settings
+* Logo/favicon system for production branding
+* Vercel deployment readiness
 
 ### v1.0 — Frontend MVP
+
 **Initial portfolio-ready prototype**
 
-- Marketing landing page and demo view
-- Authenticated dashboard with KPI cards and weekly trends
-- Job tracker with mock scoring and priority badges
-- CRM contacts view
-- Interview pipeline tracker
-- Application queue management
-- Prep packs and templates views
-- Profile and settings pages
-- Browser local storage for session persistence
-- Responsive design with Tailwind CSS and Lucide icons
+This release included:
+
+* marketing landing page and demo view
+* authenticated dashboard with KPI cards and weekly trends
+* job tracker with mock scoring and priority badges
+* CRM contacts view
+* interview pipeline tracker
+* application queue management
+* prep packs and templates views
+* profile and settings pages
+* browser local storage persistence
+* responsive design with Tailwind CSS and Lucide icons
+
+---
+
+## Planned Features
+
+Upcoming work includes:
+
+* stronger structured job add/edit experience polish
+* onboarding and demo workspace improvements
+* enhanced job ingestion from links
+* email reminders and notifications
+* browser extension for quick job capture
+* AI-assisted fit explanations
+* smart daily best-fit job recommendations
+
+---
+
+## Long-Term Product Direction
+
+Job Seeker OS is gradually evolving across three layers:
+
+1. **Workflow layer**
+   Track and manage the job search process
+
+2. **Decision layer**
+   Score and prioritize opportunities
+
+3. **Intelligence layer**
+   Recommend what to apply to next and explain why
+
+---
