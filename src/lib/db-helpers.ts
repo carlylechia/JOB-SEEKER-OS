@@ -1,9 +1,10 @@
 import { prisma } from './prisma';
 import { demoJobs, demoTemplates } from './demo-data';
 import { defaultPreferences } from './preferences';
-import { JobLead, Template, UserPreferences } from '@/types';
+import { JobLead, JobFormValues, Template, UserPreferences } from '@/types';
+import { calculateFitScore, calculateFitTier, calculatePriority } from './scoring';
 
-type DbJob = {
+export type DbJob = {
   id: string;
   company: string;
   title: string;
@@ -141,7 +142,7 @@ export async function seedUserWorkspace(userId: string) {
 export async function getUserWorkspace(userId: string) {
   const [profile, jobs, templates] = await Promise.all([
     prisma.userProfile.findUnique({ where: { userId } }),
-    prisma.jobLead.findMany({ where: { userId }, orderBy: { dateFound: 'desc' } }),
+    prisma.jobLead.findMany({ where: { userId }, orderBy: [{ updatedAt: 'desc' }, { dateFound: 'desc' }] }),
     prisma.followUpTemplate.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
   ]);
 
@@ -156,4 +157,73 @@ export async function getUserWorkspace(userId: string) {
       body: template.body,
     })) as Template[],
   };
+}
+
+export async function getUserPreferences(userId: string) {
+  const profile = await prisma.userProfile.findUnique({ where: { userId } });
+  return mapDbPreferences(profile);
+}
+
+export function buildStoredJobPayload(values: JobFormValues | any, preferences: UserPreferences) {
+  const job = {
+    id: values.id || '',
+    company: values.company,
+    title: values.title,
+    source: values.source,
+    jobUrl: values.jobUrl,
+    location: values.location,
+    remoteType: values.remoteType,
+    timezoneRequirement: values.timezoneRequirement,
+    eligibilityRegion: values.eligibilityRegion,
+    salaryMin: values.salaryMin ? Number(values.salaryMin) : undefined,
+    salaryMax: values.salaryMax ? Number(values.salaryMax) : undefined,
+    currency: values.currency || 'USD',
+    notes: values.notes,
+    status: values.status,
+    dateFound: values.dateFound || new Date().toISOString().slice(0, 10),
+    dateApplied: values.status === 'APPLIED' ? new Date().toISOString().slice(0, 10) : undefined,
+    nextFollowUp: values.nextFollowUp || undefined,
+    priorityFlag: 'MONITOR' as JobLead['priorityFlag'],
+    score: {
+      coreStackMatch: Number(values.coreStackMatch),
+      roleAlignment: Number(values.roleAlignment),
+      seniorityFit: Number(values.seniorityFit),
+      geographyEligibility: Number(values.geographyEligibility),
+      timezoneCompatibility: Number(values.timezoneCompatibility),
+      compensationFit: Number(values.compensationFit),
+      domainRelevance: Number(values.domainRelevance),
+      applicationFriction: Number(values.applicationFriction),
+      signalQuality: Number(values.signalQuality),
+      fitScore: 0,
+      fitTier: 'D' as JobLead['score']['fitTier'],
+    },
+    checklist: {
+      resumeTailored: false,
+      pdfChecked: false,
+      coverLetterReady: false,
+      portfolioAdded: false,
+      videoDone: false,
+      compensationChecked: false,
+      eligibilityChecked: false,
+      submitted: false,
+      ...(values.checklist || {}),
+    },
+    contacts: values.contacts || [],
+    interviews: values.interviews || [],
+    prepPack: values.prepPack || {
+      whyThisRole: '',
+      topFitPoints: '',
+      likelyQuestions: '',
+      questionsToAsk: '',
+      technicalFocus: '',
+      companyResearchLinks: '',
+      prepScore: 0,
+      prepStatus: 'NOT_STARTED',
+    },
+  } as JobLead;
+
+  const fitScore = calculateFitScore(job, preferences);
+  const fitTier = calculateFitTier(fitScore);
+  const scored = { ...job, score: { ...job.score, fitScore, fitTier } };
+  return { ...scored, priorityFlag: calculatePriority(scored) };
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { JobLead, Template, UserPreferences } from '@/types';
+import { ApiError, JobFormValues, JobLead, Template, UserPreferences } from '@/types';
 import { checklistCompletion, hydrateJob } from '@/lib/scoring';
 
 type BootstrapPayload = {
@@ -9,6 +9,15 @@ type BootstrapPayload = {
   templates: Template[];
   preferences: UserPreferences;
 };
+
+async function parseApiResponse<T>(response: Response): Promise<T> {
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const payload = data as ApiError;
+    throw new Error(payload.details?.join(', ') || payload.error || 'Request failed');
+  }
+  return data as T;
+}
 
 export function useJobs() {
   const [rawJobs, setRawJobs] = useState<JobLead[]>([]);
@@ -22,8 +31,7 @@ export function useJobs() {
     async function load() {
       try {
         const res = await fetch('/api/bootstrap', { cache: 'no-store' });
-        if (!res.ok) throw new Error('Failed to load workspace');
-        const data = (await res.json()) as BootstrapPayload;
+        const data = await parseApiResponse<BootstrapPayload>(res);
         if (cancelled) return;
         setRawJobs(data.jobs);
         setTemplates(data.templates);
@@ -89,5 +97,47 @@ export function useJobs() {
     });
   }
 
-  return { jobs, templates, contacts, interviews, dashboard, preferences, getJob, updateTemplate, updatePreferences, isLoading };
+  async function createJob(values: JobFormValues) {
+    const res = await fetch('/api/jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    });
+    const payload = await parseApiResponse<{ job: JobLead }>(res);
+    setRawJobs((prev) => [payload.job, ...prev]);
+    return payload.job;
+  }
+
+  async function updateJob(id: string, values: JobFormValues) {
+    const res = await fetch(`/api/jobs/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    });
+    const payload = await parseApiResponse<{ job: JobLead }>(res);
+    setRawJobs((prev) => prev.map((job) => (job.id === id ? payload.job : job)));
+    return payload.job;
+  }
+
+  async function deleteJob(id: string) {
+    const res = await fetch(`/api/jobs/${id}`, { method: 'DELETE' });
+    await parseApiResponse<{ ok: true }>(res);
+    setRawJobs((prev) => prev.filter((job) => job.id !== id));
+  }
+
+  return {
+    jobs,
+    templates,
+    contacts,
+    interviews,
+    dashboard,
+    preferences,
+    getJob,
+    updateTemplate,
+    updatePreferences,
+    createJob,
+    updateJob,
+    deleteJob,
+    isLoading,
+  };
 }

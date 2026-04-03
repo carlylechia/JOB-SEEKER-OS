@@ -18,6 +18,8 @@ model User {
   profile      UserProfile?
   jobLeads     JobLead[]
   templates    FollowUpTemplate[]
+
+  @@index([createdAt])
 }
 
 model UserProfile {
@@ -73,6 +75,10 @@ model JobLead {
 
   @@index([userId, status])
   @@index([userId, company])
+  @@index([userId, title])
+  @@index([userId, priorityFlag])
+  @@index([userId, nextFollowUp])
+  @@index([userId, updatedAt])
 }
 
 model FollowUpTemplate {

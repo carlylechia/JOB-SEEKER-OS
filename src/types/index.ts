@@ -102,6 +102,37 @@ export type JobLead = {
   prepPack: PrepPack;
 };
 
+export type JobFormValues = {
+  company: string;
+  title: string;
+  source: string;
+  jobUrl: string;
+  location: string;
+  remoteType: string;
+  timezoneRequirement: string;
+  eligibilityRegion: string;
+  salaryMin: string;
+  salaryMax: string;
+  currency: string;
+  notes: string;
+  status: JobStatus;
+  nextFollowUp: string;
+  coreStackMatch: number;
+  roleAlignment: number;
+  seniorityFit: number;
+  geographyEligibility: number;
+  timezoneCompatibility: number;
+  compensationFit: number;
+  domainRelevance: number;
+  applicationFriction: number;
+  signalQuality: number;
+};
+
+export type ApiError = {
+  error: string;
+  details?: string[];
+};
+
 export type Template = {
   id: string;
   type: string;

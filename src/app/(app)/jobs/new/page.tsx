@@ -1,17 +1,24 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { JobForm } from '@/components/jobs/job-form';
 import { PageHeader } from '@/components/shared/page-header';
-import Link from 'next/link';
+import { useJobs } from '@/hooks/use-job-data';
+import { JobFormValues } from '@/types';
 
 export default function NewJobPage() {
+  const router = useRouter();
+  const { createJob } = useJobs();
+
+  async function handleCreate(values: JobFormValues) {
+    const job = await createJob(values);
+    router.push(`/jobs/${job.id}`);
+  }
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Add Job Lead" subtitle="Database-backed auth is live in this release. Structured job add/edit forms land in the next release." />
-      <div className="card-pad space-y-4">
-        <p className="text-muted">This auth+database release focuses on secure accounts, user workspaces, seeded data, and persistent preferences. The next feature branch will add the full job form and editing workflow.</p>
-        <div className="flex gap-3">
-          <Link href="/jobs" className="btn-primary">Back to jobs</Link>
-          <Link href="/settings" className="btn-secondary">Update scoring preferences</Link>
-        </div>
-      </div>
+      <PageHeader title="Add Job Lead" subtitle="Create a new lead, score the fit, and save it into your workspace." />
+      <JobForm mode="create" onSubmit={handleCreate} />
     </div>
   );
 }
