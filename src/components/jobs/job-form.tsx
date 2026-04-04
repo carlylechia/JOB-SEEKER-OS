@@ -1,53 +1,63 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { JobFormValues, JobLead } from '@/types';
 
 const statuses = ['LEAD', 'SAVED', 'APPLYING', 'APPLIED', 'INTERVIEWING', 'OFFER', 'REJECTED', 'ARCHIVED'] as const;
 
-function toFormValues(job?: JobLead): JobFormValues {
+function toFormValues(job?: JobLead, initialValues?: Partial<JobFormValues>): JobFormValues {
   return {
-    company: job?.company || '',
-    title: job?.title || '',
-    source: job?.source || '',
-    jobUrl: job?.jobUrl || '',
-    location: job?.location || '',
-    remoteType: job?.remoteType || 'Remote',
-    timezoneRequirement: job?.timezoneRequirement || '',
-    eligibilityRegion: job?.eligibilityRegion || '',
-    salaryMin: job?.salaryMin ? String(job.salaryMin) : '',
-    salaryMax: job?.salaryMax ? String(job.salaryMax) : '',
-    currency: job?.currency || 'USD',
-    notes: job?.notes || '',
-    status: job?.status || 'LEAD',
-    nextFollowUp: job?.nextFollowUp || '',
-    coreStackMatch: job?.score.coreStackMatch ?? 3,
-    roleAlignment: job?.score.roleAlignment ?? 3,
-    seniorityFit: job?.score.seniorityFit ?? 3,
-    geographyEligibility: job?.score.geographyEligibility ?? 3,
-    timezoneCompatibility: job?.score.timezoneCompatibility ?? 3,
-    compensationFit: job?.score.compensationFit ?? 3,
-    domainRelevance: job?.score.domainRelevance ?? 3,
-    applicationFriction: job?.score.applicationFriction ?? 3,
-    signalQuality: job?.score.signalQuality ?? 3,
+    company: initialValues?.company ?? job?.company ?? '',
+    title: initialValues?.title ?? job?.title ?? '',
+    source: initialValues?.source ?? job?.source ?? '',
+    jobUrl: initialValues?.jobUrl ?? job?.jobUrl ?? '',
+    location: initialValues?.location ?? job?.location ?? '',
+    remoteType: initialValues?.remoteType ?? job?.remoteType ?? 'Remote',
+    timezoneRequirement: initialValues?.timezoneRequirement ?? job?.timezoneRequirement ?? '',
+    eligibilityRegion: initialValues?.eligibilityRegion ?? job?.eligibilityRegion ?? '',
+    salaryMin: initialValues?.salaryMin ?? (job?.salaryMin ? String(job.salaryMin) : ''),
+    salaryMax: initialValues?.salaryMax ?? (job?.salaryMax ? String(job.salaryMax) : ''),
+    currency: initialValues?.currency ?? job?.currency ?? 'USD',
+    notes: initialValues?.notes ?? job?.notes ?? '',
+    status: initialValues?.status ?? job?.status ?? 'LEAD',
+    nextFollowUp: initialValues?.nextFollowUp ?? job?.nextFollowUp ?? '',
+    coreStackMatch: initialValues?.coreStackMatch ?? job?.score.coreStackMatch ?? 3,
+    roleAlignment: initialValues?.roleAlignment ?? job?.score.roleAlignment ?? 3,
+    seniorityFit: initialValues?.seniorityFit ?? job?.score.seniorityFit ?? 3,
+    geographyEligibility: initialValues?.geographyEligibility ?? job?.score.geographyEligibility ?? 3,
+    timezoneCompatibility: initialValues?.timezoneCompatibility ?? job?.score.timezoneCompatibility ?? 3,
+    compensationFit: initialValues?.compensationFit ?? job?.score.compensationFit ?? 3,
+    domainRelevance: initialValues?.domainRelevance ?? job?.score.domainRelevance ?? 3,
+    applicationFriction: initialValues?.applicationFriction ?? job?.score.applicationFriction ?? 3,
+    signalQuality: initialValues?.signalQuality ?? job?.score.signalQuality ?? 3,
   };
 }
 
 export function JobForm({
   mode,
   job,
+  initialValues,
+  resetToken,
   onSubmit,
   onDelete,
 }: {
   mode: 'create' | 'edit';
   job?: JobLead;
+  initialValues?: Partial<JobFormValues>;
+  resetToken?: string;
   onSubmit: (values: JobFormValues) => Promise<void>;
   onDelete?: () => Promise<void>;
 }) {
-  const [values, setValues] = useState<JobFormValues>(() => toFormValues(job));
+  const [values, setValues] = useState<JobFormValues>(() => toFormValues(job, initialValues));
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    if (mode === 'create') {
+      setValues(toFormValues(undefined, initialValues));
+    }
+  }, [mode, initialValues, resetToken]);
 
   const averageSignal = useMemo(() => {
     const total = values.coreStackMatch + values.roleAlignment + values.seniorityFit + values.geographyEligibility + values.timezoneCompatibility + values.compensationFit + values.domainRelevance + values.applicationFriction + values.signalQuality;
@@ -181,7 +191,7 @@ export function JobForm({
 
           <div className="card-pad space-y-3">
             <h3 className="text-lg font-semibold">Save changes</h3>
-            <p className="muted">This action saves the job, recalculates fit and priority, and keeps the detail workspace up to date.</p>
+            <p className="muted">This release saves the job, recalculates fit and priority, and keeps the detail workspace up to date.</p>
             {error ? <div className="rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</div> : null}
             <div className="flex flex-wrap gap-3">
               <button type="submit" className="btn-primary" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : mode === 'create' ? 'Create job lead' : 'Save changes'}</button>
