@@ -23,7 +23,7 @@ Instead of tracking opportunities across scattered notes, documents, and tabs, t
 
 The project currently includes:
 
-- marketing landing page
+- marketing landing page with modern product storytelling
 - authenticated user dashboard with KPIs and charts
 - job tracker with personalized fit scoring and priority logic
 - job detail workspace
@@ -130,7 +130,7 @@ This release introduces important backend protections and operational safeguards
 
 ```bash
 npm install
-````
+```
 
 ### 2. Create local environment files
 
@@ -139,8 +139,8 @@ cp .env.example .env.local
 cp .env.local .env
 ```
 
-* `.env.local` is used by the Next.js app runtime
-* `.env` is used by Prisma CLI commands
+- `.env.local` is used by the Next.js app runtime
+- `.env` is used by Prisma CLI commands
 
 ### 3. Generate Prisma client
 
@@ -215,14 +215,14 @@ cp .env.local .env
 
 Required:
 
-* `DATABASE_URL`
-* `AUTH_SECRET`
-* `AUTH_URL`
+- `DATABASE_URL`
+- `AUTH_SECRET`
+- `AUTH_URL`
 
 Optional:
 
-* `CORS_ORIGIN` — only if cross-origin API access is needed
-* `ALERT_WEBHOOK_URL` — webhook for important production issue alerts
+- `CORS_ORIGIN` — only if cross-origin API access is needed
+- `ALERT_WEBHOOK_URL` — webhook for important production issue alerts
 
 ---
 
@@ -266,11 +266,11 @@ The app includes **Vercel Analytics** in the root layout.
 
 It also configures metadata with:
 
-* default title
-* title template
-* description
-* favicon
-* apple touch icon
+- default title
+- title template
+- description
+- favicon
+- apple touch icon
 
 This ensures a cleaner production setup for branding and observability.
 
@@ -278,19 +278,33 @@ This ensures a cleaner production setup for branding and observability.
 
 ## Release History
 
-### v3.0 — Job CRUD + Detail Workspace (Current Release)
+### v4.0 — Landing Page Redesign (Current Release)
 
 This release adds:
 
-* database-backed job CRUD
-* reusable job form
-* richer job detail workspace
-* profile-aware fit recalculation on save
-* input validation and sanitization for job endpoints
-* lightweight CORS handling
-* endpoint rate limiting
-* important event/error logging with optional webhook alerting
-* extra Prisma indexes for common job queries
+- premium server-first landing page redesign
+- stronger hero section and product positioning
+- generated product preview images
+- generated lightweight product demo video with lazy loading
+- expanded feature storytelling and workflow sections
+- personalization and future-intelligence sections
+- FAQ and stronger CTA bands
+- preservation of SEO-conscious server/client split for public pages
+- preservation of analytics, metadata, and current app baseline
+
+### v3.0 — Job CRUD + Detail Workspace
+
+This release added:
+
+- database-backed job CRUD
+- reusable job form
+- richer job detail workspace
+- profile-aware fit recalculation on save
+- input validation and sanitization for job endpoints
+- lightweight CORS handling
+- endpoint rate limiting
+- important event/error logging with optional webhook alerting
+- extra Prisma indexes for common job queries
 
 ### v2.0 — Auth + Database
 
@@ -298,14 +312,14 @@ This release adds:
 
 This release added:
 
-* Email/password authentication via Auth.js Credentials provider
-* PostgreSQL database backend with Prisma ORM
-* Protected routes and user session management
-* Seeded starter workspace on user registration
-* Persistent user data for jobs, contacts, templates, and preferences
-* User-driven personalized fit scoring based on profile settings
-* Logo/favicon system for production branding
-* Vercel deployment readiness
+- Email/password authentication via Auth.js Credentials provider
+- PostgreSQL database backend with Prisma ORM
+- Protected routes and user session management
+- Seeded starter workspace on user registration
+- Persistent user data for jobs, contacts, templates, and preferences
+- User-driven personalized fit scoring based on profile settings
+- Logo/favicon system for production branding
+- Vercel deployment readiness
 
 ### v1.0 — Frontend MVP
 
@@ -313,16 +327,16 @@ This release added:
 
 This release included:
 
-* marketing landing page and demo view
-* authenticated dashboard with KPI cards and weekly trends
-* job tracker with mock scoring and priority badges
-* CRM contacts view
-* interview pipeline tracker
-* application queue management
-* prep packs and templates views
-* profile and settings pages
-* browser local storage persistence
-* responsive design with Tailwind CSS and Lucide icons
+- marketing landing page and demo view
+- authenticated dashboard with KPI cards and weekly trends
+- job tracker with mock scoring and priority badges
+- CRM contacts view
+- interview pipeline tracker
+- application queue management
+- prep packs and templates views
+- profile and settings pages
+- browser local storage persistence
+- responsive design with Tailwind CSS and Lucide icons
 
 ---
 
@@ -330,13 +344,12 @@ This release included:
 
 Upcoming work includes:
 
-* stronger structured job add/edit experience polish
-* onboarding and demo workspace improvements
-* enhanced job ingestion from links
-* email reminders and notifications
-* browser extension for quick job capture
-* AI-assisted fit explanations
-* smart daily best-fit job recommendations
+- onboarding and demo workspace improvements
+- enhanced job ingestion from links
+- email reminders and notifications
+- browser extension for quick job capture
+- AI-assisted fit explanations
+- smart daily best-fit job recommendations
 
 ---
 
@@ -344,13 +357,13 @@ Upcoming work includes:
 
 Job Seeker OS is gradually evolving across three layers:
 
-1. **Workflow layer**
+1. **Workflow layer**  
    Track and manage the job search process
 
-2. **Decision layer**
+2. **Decision layer**  
    Score and prioritize opportunities
 
-3. **Intelligence layer**
+3. **Intelligence layer**  
    Recommend what to apply to next and explain why
 
 ---
