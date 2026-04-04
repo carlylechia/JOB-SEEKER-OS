@@ -8,6 +8,7 @@ type BootstrapPayload = {
   jobs: JobLead[];
   templates: Template[];
   preferences: UserPreferences;
+  onboardingCompleted: boolean;
 };
 
 async function parseApiResponse<T>(response: Response): Promise<T> {
@@ -23,6 +24,7 @@ export function useJobs() {
   const [rawJobs, setRawJobs] = useState<JobLead[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -36,6 +38,7 @@ export function useJobs() {
         setRawJobs(data.jobs);
         setTemplates(data.templates);
         setPreferences(data.preferences);
+        setOnboardingCompleted(data.onboardingCompleted);
       } catch (error) {
         console.error(error);
       } finally {
@@ -88,12 +91,15 @@ export function useJobs() {
     });
   }
 
-  async function updatePreferences(nextPreferences: UserPreferences) {
+  async function updatePreferences(nextPreferences: UserPreferences, options?: { onboardingCompleted?: boolean }) {
     setPreferences(nextPreferences);
+    if (options?.onboardingCompleted !== undefined) {
+      setOnboardingCompleted(options.onboardingCompleted);
+    }
     await fetch('/api/preferences', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(nextPreferences),
+      body: JSON.stringify({ ...nextPreferences, onboardingCompleted: options?.onboardingCompleted ?? onboardingCompleted }),
     });
   }
 
@@ -132,6 +138,7 @@ export function useJobs() {
     interviews,
     dashboard,
     preferences,
+    onboardingCompleted,
     getJob,
     updateTemplate,
     updatePreferences,

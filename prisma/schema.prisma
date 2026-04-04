@@ -37,6 +37,8 @@ model UserProfile {
   salaryMin              Int      @default(2500)
   salaryTarget           Int      @default(3200)
   timezoneToleranceHours Int      @default(4)
+  onboardingCompleted    Boolean  @default(false)
+  onboardingCompletedAt  DateTime?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 

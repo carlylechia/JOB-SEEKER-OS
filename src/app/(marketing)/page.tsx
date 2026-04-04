@@ -61,7 +61,7 @@ export default function LandingPage() {
         <section className="grid gap-10 py-14 lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:gap-12 lg:py-20 section-fade-up">
           <div>
             <span className="badge bg-accent/15 text-sky-200">A more serious way to run the search</span>
-            <h1 className="mt-5 max-w-3xl text-3xl font-semibold leading-[1.08] tracking-tight text-ink sm:text-4xl xl:text-[3.4rem]">
+            <h1 className="mt-5 max-w-3xl text-2xl font-semibold tracking-normal text-ink sm:text-4xl xl:text-[3.4rem]">
               A calmer, clearer operating system for the modern job search.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-muted sm:text-lg">

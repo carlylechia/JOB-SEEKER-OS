@@ -96,6 +96,7 @@ export async function seedUserWorkspace(userId: string) {
       salaryMin: defaultPreferences.salaryMin,
       salaryTarget: defaultPreferences.salaryTarget,
       timezoneToleranceHours: defaultPreferences.timezoneToleranceHours,
+      onboardingCompleted: false,
     },
   });
 
@@ -148,6 +149,7 @@ export async function getUserWorkspace(userId: string) {
 
   return {
     preferences: mapDbPreferences(profile),
+    onboardingCompleted: Boolean(profile?.onboardingCompleted),
     jobs: jobs.map(mapDbJob),
     templates: templates.map((template) => ({
       id: template.id,
