@@ -1,11 +1,15 @@
-import { auth } from '@/auth';
-import { buildStoredJobPayload, getUserPreferences, mapDbJob } from '@/lib/db-helpers';
-import { handleOptions } from '@/lib/cors';
-import { prisma } from '@/lib/prisma';
-import { jobPayloadSchema } from '@/lib/job-schema';
-import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
-import { jsonError, jsonOk } from '@/lib/api';
-import { logImportantError, logImportantInfo } from '@/lib/observability';
+import { auth } from "@/auth";
+import {
+  buildStoredJobPayload,
+  getUserPreferences,
+  mapDbJob,
+} from "@/lib/db-helpers";
+import { handleOptions } from "@/lib/cors";
+import { prisma } from "@/lib/prisma";
+import { jobPayloadSchema } from "@/lib/job-schema";
+import { applyRateLimit, getRequestIp } from "@/lib/rate-limit";
+import { jsonError, jsonOk } from "@/lib/api";
+import { logImportantError, logImportantInfo } from "@/lib/observability";
 
 export async function OPTIONS(request: Request) {
   return handleOptions(request);
@@ -13,27 +17,45 @@ export async function OPTIONS(request: Request) {
 
 export async function GET(request: Request) {
   const session = await auth();
-  if (!session?.user?.id) return jsonError('Unauthorized', 401, undefined, request);
+  if (!session?.user?.id)
+    return jsonError("Unauthorized", 401, undefined, request);
 
-  const rate = applyRateLimit(`jobs:list:${session.user.id}:${getRequestIp(request)}`, 60, 60_000);
-  if (!rate.ok) return jsonError('Too many requests', 429, undefined, request);
+  const rate = applyRateLimit(
+    `jobs:list:${session.user.id}:${getRequestIp(request)}`,
+    60,
+    60_000,
+  );
+  if (!rate.ok) return jsonError("Too many requests", 429, undefined, request);
 
-  const jobs = await prisma.jobLead.findMany({ where: { userId: session.user.id }, orderBy: [{ updatedAt: 'desc' }, { dateFound: 'desc' }] });
+  const jobs = await prisma.jobLead.findMany({
+    where: { userId: session.user.id },
+    orderBy: [{ updatedAt: "desc" }, { dateFound: "desc" }],
+  });
   return jsonOk({ jobs: jobs.map(mapDbJob) }, request);
 }
 
 export async function POST(request: Request) {
   const session = await auth();
-  if (!session?.user?.id) return jsonError('Unauthorized', 401, undefined, request);
+  if (!session?.user?.id)
+    return jsonError("Unauthorized", 401, undefined, request);
 
-  const rate = applyRateLimit(`jobs:create:${session.user.id}:${getRequestIp(request)}`, 20, 60_000);
-  if (!rate.ok) return jsonError('Too many requests', 429, undefined, request);
+  const rate = applyRateLimit(
+    `jobs:create:${session.user.id}:${getRequestIp(request)}`,
+    20,
+    60_000,
+  );
+  if (!rate.ok) return jsonError("Too many requests", 429, undefined, request);
 
   try {
     const body = await request.json();
     const parsed = jobPayloadSchema.safeParse(body);
     if (!parsed.success) {
-      return jsonError('Invalid job payload', 422, parsed.error.issues.map((issue) => issue.message), request);
+      return jsonError(
+        "Invalid job payload",
+        422,
+        parsed.error.issues.map((issue) => issue.message),
+        request,
+      );
     }
 
     const preferences = await getUserPreferences(session.user.id);
@@ -67,10 +89,23 @@ export async function POST(request: Request) {
       },
     });
 
-    await logImportantInfo({ event: 'job_created', userId: session.user.id, jobId: created.id, route: '/api/jobs', context: { company: created.company, title: created.title } });
+    await logImportantInfo({
+      event: "job_created",
+      userId: session.user.id,
+      jobId: created.id,
+      route: "/api/jobs",
+      context: { company: created.company, title: created.title },
+    });
     return jsonOk({ job: mapDbJob(created) }, request, { status: 201 });
   } catch (error) {
-    await logImportantError({ event: 'job_create_failed', userId: session.user.id, route: '/api/jobs', error });
-    return jsonError('Unable to create job lead', 500, undefined, request);
+    await logImportantError({
+      event: "job_create_failed",
+      userId: session.user.id,
+      route: "/api/jobs",
+      error,
+      context: {
+        method: "POST",
+      },
+    });
   }
 }
