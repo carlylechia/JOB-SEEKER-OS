@@ -128,6 +128,14 @@ export type JobFormValues = {
   signalQuality: number;
 };
 
+export type JobIngestionResult = {
+  prefill: Partial<JobFormValues>;
+  signals: string[];
+  previewText: string;
+  fetchedUrl?: string;
+  sourceMode: 'url' | 'description' | 'url+description';
+};
+
 export type ApiError = {
   error: string;
   details?: string[];
