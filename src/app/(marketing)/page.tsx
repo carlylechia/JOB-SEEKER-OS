@@ -5,8 +5,8 @@ import { LandingMobileMenu } from '@/components/marketing/landing-mobile-menu';
 
 export default function LandingPage() {
   return (
-    <div className="shell py-12">
-      <header className="relative flex items-center justify-between gap-4">
+    <div className="shell pb-12">
+      <header className="relative flex items-center justify-between gap-4 order-line bg-card p-5 shadow-soft w-full!important rounded-2xl my-0!important">
         <Logo showSubtitle />
 
         <div className="hidden items-center gap-3 md:flex">
