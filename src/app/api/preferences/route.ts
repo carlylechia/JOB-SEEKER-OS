@@ -24,7 +24,7 @@ export async function PUT(request: Request) {
     const parsed = preferencesPayloadSchema.safeParse(body);
 
     if (!parsed.success) {
-      return jsonError('Invalid preferences payload', 422, parsed.error.issues.map((issue: { message: string }) => issue.message), request);
+      return jsonError('Invalid preferences payload', 422, parsed.error.issues.map((issue) => issue.message), request);
     }
 
     const { onboardingCompleted, ...data } = parsed.data;

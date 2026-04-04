@@ -30,7 +30,6 @@ function truncate(value: string, max = 1800) {
 
 function formatDiscordContent(payload: AlertPayload) {
   const level = payload.level ?? 'error';
-
   const lines = [
     `**[Job Seeker OS] ${payload.title}**`,
     '',
@@ -47,22 +46,15 @@ function formatDiscordContent(payload: AlertPayload) {
   return truncate(lines.join('\n'), 1900);
 }
 
-export async function sendAlert(payload: AlertPayload) {
+async function sendAlert(payload: AlertPayload) {
   const webhookUrl = process.env.ALERT_WEBHOOK_URL;
-
-  if (!webhookUrl) {
-    return;
-  }
+  if (!webhookUrl || payload.level !== 'error') return;
 
   try {
     const response = await fetch(webhookUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        content: formatDiscordContent(payload),
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: formatDiscordContent(payload) }),
     });
 
     if (!response.ok) {
