@@ -2,13 +2,14 @@ import Link from 'next/link';
 import { ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
 import { LandingMobileMenu } from '@/components/marketing/landing-mobile-menu';
-import { HeroProductPreview } from '@/components/marketing/hero-product-preview';
+import { HeroCarousel } from '@/components/marketing/hero-carousel';
 import { FeatureBentoGrid } from '@/components/marketing/feature-bento-grid';
 import { WorkflowSection } from '@/components/marketing/workflow-section';
 import { PersonalizationSection } from '@/components/marketing/personalization-section';
 import { FutureIntelligenceSection } from '@/components/marketing/future-intelligence-section';
 import { LandingFaq } from '@/components/marketing/landing-faq';
 import { DemoVideo } from '@/components/marketing/demo-video';
+import { SiteFooter } from '@/components/marketing/site-footer';
 
 const navLinks = [
   { href: '#features', label: 'Features' },
@@ -57,18 +58,18 @@ export default function LandingPage() {
           </div>
         </header>
 
-        <section className="grid gap-12 py-16 lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:py-24">
+        <section className="grid gap-10 py-14 lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:gap-12 lg:py-20 section-fade-up">
           <div>
             <span className="badge bg-accent/15 text-sky-200">A more serious way to run the search</span>
-            <h1 className="mt-6 max-w-4xl text-4xl font-semibold leading-tight text-ink sm:text-5xl xl:text-6xl">
-              The operating system for candidates who want clearer decisions, calmer execution, and better outcomes.
+            <h1 className="mt-5 max-w-3xl text-3xl font-semibold leading-[1.08] tracking-tight text-ink sm:text-4xl xl:text-[3.4rem]">
+              A calmer, clearer operating system for the modern job search.
             </h1>
-            <p className="mt-6 max-w-2xl text-base leading-8 text-muted sm:text-lg">
-              Job Seeker OS transforms the job hunt from a scattered collection of links, notes, and reminders into one
-              focused workflow: scoring, prioritization, outreach, follow-ups, interview prep, and execution.
+            <p className="mt-5 max-w-2xl text-base leading-8 text-muted sm:text-lg">
+              Job Seeker OS helps candidates replace scattered tabs, notes, reminders, and trackers with one focused system for
+              prioritization, execution, and better decisions.
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-7 flex flex-wrap gap-3">
               <Link className="btn-primary gap-2" href="/register">
                 Create your workspace
                 <ArrowRight className="h-4 w-4" />
@@ -78,7 +79,7 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-1">
+            <div className="mt-7 grid gap-3 sm:grid-cols-1">
               {heroBullets.map((bullet) => (
                 <div key={bullet} className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 text-sky-300" />
@@ -97,7 +98,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <HeroProductPreview />
+          <HeroCarousel />
         </section>
 
         <section className="py-8 sm:py-10">
@@ -149,6 +150,7 @@ export default function LandingPage() {
           </div>
         </section>
       </div>
+      <SiteFooter />
     </div>
   );
 }
