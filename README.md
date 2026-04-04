@@ -16,6 +16,7 @@ Instead of tracking opportunities across scattered notes, documents, and tabs, t
 - prepare for interviews
 - manage follow-ups
 - monitor progress through a clear dashboard
+- ingest job links and pasted descriptions faster
 
 ---
 
@@ -25,7 +26,9 @@ The project currently includes:
 
 - marketing landing page with modern product storytelling
 - authenticated user dashboard with KPIs and charts
+- onboarding flow for job-search preferences
 - job tracker with personalized fit scoring and priority logic
+- job ingestion from job links or pasted descriptions
 - job detail workspace
 - recruiter/contact CRM view
 - interview pipeline view
@@ -64,6 +67,7 @@ As of the current release, Job Seeker OS is a full-stack SaaS application with:
 - **Protected app routes** behind login
 - **PostgreSQL + Prisma** for persistent data storage
 - **User-driven personalized fit scoring**
+- **Onboarding-based preference capture** for better first-run relevance
 - **Responsive app shell** with authenticated and marketing navigation split cleanly
 - **Server-first public pages** with client components only where interactivity is needed
 - **Vercel deployment** with production-ready environment setup
@@ -112,14 +116,14 @@ Scoring is driven by factors such as:
 
 ## Security and Reliability Notes
 
-This release introduces important backend protections and operational safeguards:
+This release continues the backend protections and operational safeguards already in place:
 
-- job payloads validated with **Zod**
+- request validation with **Zod**
 - text and URLs sanitized before persistence
-- lightweight **per-user / per-IP rate limiting** on job endpoints
+- lightweight **per-user / per-IP rate limiting** on important endpoints
 - structured API error handling
-- optional webhook alerts for important production issues
-- important CRUD failures logged without noisy spam
+- Discord-compatible webhook alerts for important unexpected production issues via `ALERT_WEBHOOK_URL`
+- important CRUD and ingestion failures logged without noisy spam
 - Prisma indexes added for common job access patterns
 
 ---
@@ -222,7 +226,7 @@ Required:
 Optional:
 
 - `CORS_ORIGIN` — only if cross-origin API access is needed
-- `ALERT_WEBHOOK_URL` — webhook for important production issue alerts
+- `ALERT_WEBHOOK_URL` — Discord-compatible webhook for important production issue alerts
 
 ---
 
@@ -251,6 +255,9 @@ src/
     (app)/
     api/
   components/
+    marketing/
+    jobs/
+    onboarding/
   hooks/
   lib/
   types/
@@ -272,25 +279,33 @@ It also configures metadata with:
 - favicon
 - apple touch icon
 
-This ensures a cleaner production setup for branding and observability.
+This keeps branding and observability consistent in production.
 
 ---
 
 ## Release History
 
-### v4.0 — Landing Page Redesign (Current Release)
+### v5.0 — Onboarding + Job Ingestion (Current Release)
 
 This release adds:
 
-- premium server-first landing page redesign
-- stronger hero section and product positioning
-- generated product preview images
-- generated lightweight product demo video with lazy loading
-- expanded feature storytelling and workflow sections
-- personalization and future-intelligence sections
-- FAQ and stronger CTA bands
-- preservation of SEO-conscious server/client split for public pages
-- preservation of analytics, metadata, and current app baseline
+- onboarding flow for user-specific search preferences
+- first-run preference capture after account creation
+- job ingestion from links and pasted descriptions
+- parser-driven prefill into the job form
+- secure ingestion route with validation, rate limiting, and alerting
+- dashboard onboarding CTA for incomplete profiles
+- Discord-compatible alert formatting in observability utilities
+
+### v4.0 — Landing Page Redesign + Marketing Polish
+
+This release added:
+
+- redesigned landing page with stronger product positioning
+- smoother section flow and premium visual hierarchy
+- hero carousel and richer public storytelling
+- professional footer and smoother landing-page transitions
+- server-first marketing architecture with small client components only where needed
 
 ### v3.0 — Job CRUD + Detail Workspace
 
@@ -344,11 +359,10 @@ This release included:
 
 Upcoming work includes:
 
-- onboarding and demo workspace improvements
-- enhanced job ingestion from links
+- stronger job-detail workflow polish
+- AI-assisted fit explanations
 - email reminders and notifications
 - browser extension for quick job capture
-- AI-assisted fit explanations
 - smart daily best-fit job recommendations
 
 ---
