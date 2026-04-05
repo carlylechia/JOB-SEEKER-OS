@@ -9,6 +9,7 @@ const links = [
   { href: '/#workflow', label: 'Workflow' },
   { href: '/#faq', label: 'FAQ' },
   { href: '/demo', label: 'Live Demo' },
+  { href: '/jobs-public', label: 'Public Jobs' },
 ];
 
 export function LandingMobileMenu() {

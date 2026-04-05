@@ -10,6 +10,7 @@ import { FutureIntelligenceSection } from '@/components/marketing/future-intelli
 import { LandingFaq } from '@/components/marketing/landing-faq';
 import { DemoVideo } from '@/components/marketing/demo-video';
 import { SiteFooter } from '@/components/marketing/site-footer';
+import { QuickJumpNav } from '@/components/marketing/quick-jump-nav';
 
 const navLinks = [
   { href: '#features', label: 'Features' },
@@ -27,7 +28,7 @@ const signalChips = ['SEO-conscious build', 'Database-backed workflows', 'Produc
 
 export default function LandingPage() {
   return (
-    <div className="relative overflow-hidden">
+    <div id="top" className="relative min-h-screen overflow-hidden">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[540px] bg-[radial-gradient(circle_at_top_right,rgba(79,140,255,0.14),transparent_38%),radial-gradient(circle_at_top_left,rgba(99,102,241,0.12),transparent_32%)]" />
       <div className="shell relative py-8 sm:py-12">
         <header className="sticky top-0 z-20 rounded-2xl border border-white/10 bg-[#08111f]/70 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-[#08111f]/60 sm:px-5">
@@ -61,7 +62,7 @@ export default function LandingPage() {
         <section className="grid gap-10 py-14 lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:gap-12 lg:py-20 section-fade-up">
           <div>
             <span className="badge bg-accent/15 text-sky-200">A more serious way to run the search</span>
-            <h1 className="mt-5 max-w-3xl text-2xl font-semibold tracking-normal text-ink sm:text-4xl xl:text-[3.4rem]">
+            <h1 className="mt-5 max-w-3xl text-3xl font-semibold leading-[1.08] tracking-tight text-ink sm:text-4xl xl:text-[3.4rem]">
               A calmer, clearer operating system for the modern job search.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-muted sm:text-lg">
@@ -118,11 +119,11 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <FeatureBentoGrid />
-        <WorkflowSection />
+        <section id="features"><FeatureBentoGrid /></section>
+        <section id="workflow"><WorkflowSection /></section>
         <PersonalizationSection />
         <FutureIntelligenceSection />
-        <LandingFaq />
+        <section id="faq"><LandingFaq /></section>
 
         <section className="py-24">
           <div className="card-pad overflow-hidden bg-[linear-gradient(135deg,rgba(79,140,255,0.16),rgba(99,102,241,0.1))]">
@@ -150,6 +151,7 @@ export default function LandingPage() {
           </div>
         </section>
       </div>
+      <QuickJumpNav />
       <SiteFooter />
     </div>
   );
