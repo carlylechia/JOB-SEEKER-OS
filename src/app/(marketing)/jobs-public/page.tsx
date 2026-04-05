@@ -1,7 +1,11 @@
 import Link from 'next/link';
 import { auth } from '@/auth';
 import { Logo } from '@/components/shared/logo';
-import { prisma } from '@/lib/prisma';
+import {
+  formatPublicJobAge,
+  formatPublicJobLocation,
+  getPublicJobs,
+} from '@/lib/public-jobs';
 
 type JobsPublicPageProps = {
   searchParams: Promise<{
@@ -9,57 +13,14 @@ type JobsPublicPageProps = {
   }>;
 };
 
-function formatAge(date: Date) {
-  const now = Date.now();
-  const diffDays = Math.max(1, Math.floor((now - new Date(date).getTime()) / (1000 * 60 * 60 * 24)));
-
-  if (diffDays === 1) return 'Added 1 day ago';
-  if (diffDays < 7) return `Added ${diffDays} days ago`;
-
-  const weeks = Math.floor(diffDays / 7);
-  if (weeks === 1) return 'Added 1 week ago';
-  return `Added ${weeks} weeks ago`;
-}
-
-function formatLocation(remoteType: string | null, location: string | null) {
-  if (remoteType && location) return `${remoteType} · ${location}`;
-  if (remoteType) return remoteType;
-  if (location) return location;
-  return 'Location not specified';
-}
-
 export default async function PublicJobsPage({ searchParams }: JobsPublicPageProps) {
   const params = await searchParams;
   const query = params.q?.trim() ?? '';
   const session = await auth();
 
-  const since = new Date();
-  since.setDate(since.getDate() - 30);
-
-  const jobs = await prisma.jobLead.findMany({
-    where: {
-      createdAt: { gte: since },
-      ...(query
-        ? {
-            OR: [
-              { title: { contains: query, mode: 'insensitive' } },
-              { company: { contains: query, mode: 'insensitive' } },
-              { location: { contains: query, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: [{ createdAt: 'desc' }],
+  const jobs = await getPublicJobs({
+    q: query,
     take: 40,
-    select: {
-      id: true,
-      title: true,
-      company: true,
-      location: true,
-      remoteType: true,
-      createdAt: true,
-      notes: true,
-    },
   });
 
   return (
@@ -136,8 +97,8 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
                   </div>
 
                   <div className="mt-5 space-y-2 text-sm text-muted">
-                    <p>{formatLocation(job.remoteType, job.location)}</p>
-                    <p>{formatAge(job.createdAt)}</p>
+                    <p>{formatPublicJobLocation(job.remoteType, job.location)}</p>
+                    <p>{formatPublicJobAge(job.createdAt)}</p>
                   </div>
 
                   {job.notes ? (

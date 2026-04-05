@@ -1,67 +1,23 @@
 import Link from 'next/link';
 import { ArrowRight, BookmarkPlus, Clock3, Globe2 } from 'lucide-react';
 import { unstable_cache } from 'next/cache';
-import { prisma } from '@/lib/prisma';
+import {
+  formatPublicJobAge,
+  formatPublicJobLocation,
+  getPublicJobs,
+  type PublicJobRecord,
+} from '@/lib/public-jobs';
 
-type PublicJobPreview = {
-  id: string;
-  title: string;
-  company: string;
-  remoteType: string | null;
-  location: string | null;
-  createdAt: Date;
-};
-
-const getPublicJobPreview = unstable_cache(
-  async (): Promise<PublicJobPreview[]> => {
-    const since = new Date();
-    since.setDate(since.getDate() - 30);
-
-    const jobs = await prisma.jobLead.findMany({
-      where: {
-        createdAt: {
-          gte: since,
-        },
-      },
-      orderBy: [{ createdAt: 'desc' }],
-      take: 4,
-      select: {
-        id: true,
-        title: true,
-        company: true,
-        remoteType: true,
-        location: true,
-        createdAt: true,
-      },
-    });
-
-    return jobs;
+const getCachedPublicJobPreview = unstable_cache(
+  async (): Promise<PublicJobRecord[]> => {
+    return getPublicJobs({ take: 4 });
   },
   ['landing-public-jobs-preview'],
   { revalidate: 300 },
 );
 
-function formatAge(date: Date) {
-  const now = Date.now();
-  const diffDays = Math.max(1, Math.floor((now - new Date(date).getTime()) / (1000 * 60 * 60 * 24)));
-
-  if (diffDays === 1) return 'Added 1 day ago';
-  if (diffDays < 7) return `Added ${diffDays} days ago`;
-
-  const weeks = Math.floor(diffDays / 7);
-  if (weeks === 1) return 'Added 1 week ago';
-  return `Added ${weeks} weeks ago`;
-}
-
-function formatLocation(job: PublicJobPreview) {
-  if (job.remoteType && job.location) return `${job.remoteType} · ${job.location}`;
-  if (job.remoteType) return job.remoteType;
-  if (job.location) return job.location;
-  return 'Location not specified';
-}
-
 export async function PlatformJobsPreview() {
-  const jobs = await getPublicJobPreview();
+  const jobs = await getCachedPublicJobPreview();
 
   return (
     <section id="public-jobs" className="py-20 section-fade-up">
@@ -123,8 +79,8 @@ export async function PlatformJobsPreview() {
                 </div>
 
                 <div className="mt-5 space-y-2 text-sm text-muted">
-                  <p>{formatLocation(job)}</p>
-                  <p>{formatAge(job.createdAt)}</p>
+                  <p>{formatPublicJobLocation(job.remoteType, job.location)}</p>
+                  <p>{formatPublicJobAge(job.createdAt)}</p>
                 </div>
               </div>
             ))
