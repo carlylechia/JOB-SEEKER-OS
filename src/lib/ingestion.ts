@@ -19,19 +19,25 @@ function extractTitleFromHtml(html: string) {
   return ogTitle || metaTitle || title || '';
 }
 
+function extractDescriptionFromHtml(html: string) {
+  return html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)/i)?.[1] || '';
+}
+
+function extractJsonLdText(html: string) {
+  const matches = Array.from(html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi));
+  return matches.map((match) => match[1]).join('\n');
+}
+
 export async function ingestJobInput(input: { jobUrl?: string; jobDescription?: string }) {
   let combinedText = input.jobDescription?.trim() || '';
   let pageTitle = '';
   let fetchedUrl = '';
 
   if (input.jobUrl) {
-    if (!isSafeExternalUrl(input.jobUrl)) {
-      throw new Error('Only public http(s) job URLs are supported.');
-    }
+    if (!isSafeExternalUrl(input.jobUrl)) throw new Error('Only public http(s) job URLs are supported.');
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
-
     try {
       const response = await fetch(input.jobUrl, {
         signal: controller.signal,
@@ -41,34 +47,21 @@ export async function ingestJobInput(input: { jobUrl?: string; jobDescription?: 
         },
         cache: 'no-store',
       });
-
-      if (!response.ok) {
-        throw new Error(`Unable to fetch job posting (${response.status}).`);
-      }
-
+      if (!response.ok) throw new Error(`Unable to fetch job posting (${response.status}).`);
       const contentType = response.headers.get('content-type') || '';
-      if (!contentType.includes('text/html')) {
-        throw new Error('Only HTML job pages can be parsed right now.');
-      }
+      if (!contentType.includes('text/html')) throw new Error('Only HTML job pages can be parsed right now.');
 
       const html = await response.text();
       pageTitle = extractTitleFromHtml(html);
-      combinedText = [combinedText, pageTitle, stripHtml(html)].filter(Boolean).join('\n\n');
+      const description = extractDescriptionFromHtml(html);
+      const structured = extractJsonLdText(html);
+      combinedText = [combinedText, pageTitle, description, structured, stripHtml(html)].filter(Boolean).join('\n\n');
       fetchedUrl = input.jobUrl;
     } finally {
       clearTimeout(timeout);
     }
   }
 
-  const extracted = extractJobFields({
-    text: combinedText,
-    jobUrl: input.jobUrl,
-    pageTitle,
-  });
-
-  return {
-    ...extracted,
-    fetchedUrl,
-    sourceMode: input.jobUrl ? (input.jobDescription ? 'url+description' : 'url') : 'description',
-  };
+  const extracted = extractJobFields({ text: combinedText, jobUrl: input.jobUrl, pageTitle });
+  return { ...extracted, fetchedUrl, sourceMode: input.jobUrl ? (input.jobDescription ? 'url+description' : 'url') : 'description' };
 }
