@@ -1,69 +1,212 @@
-'use client';
-
-import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { PageHeader } from '@/components/shared/page-header';
-import { useJobs } from '@/hooks/use-job-data';
-import { JobLead } from '@/types';
+import { auth } from '@/auth';
+import { Logo } from '@/components/shared/logo';
+import { prisma } from '@/lib/prisma';
 
-export default function PublicJobsPage() {
-  const router = useRouter();
-  const { getPublicJobs, savePublicJob, titleOptions } = useJobs();
-  const [jobs, setJobs] = useState<JobLead[]>([]);
-  const [search, setSearch] = useState('');
-  const [titleFilter, setTitleFilter] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading'>('loading');
+type JobsPublicPageProps = {
+  searchParams: Promise<{
+    q?: string;
+  }>;
+};
 
-  useEffect(() => {
-    getPublicJobs().then(setJobs).finally(() => setStatus('idle'));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+function formatAge(date: Date) {
+  const now = Date.now();
+  const diffDays = Math.max(1, Math.floor((now - new Date(date).getTime()) / (1000 * 60 * 60 * 24)));
 
-  const filtered = useMemo(() => jobs.filter((job) => {
-    const query = search.toLowerCase();
-    const textMatch = !query || `${job.company} ${job.title} ${job.location}`.toLowerCase().includes(query);
-    const titleMatch = !titleFilter || job.title.toLowerCase().includes(titleFilter.toLowerCase());
-    return textMatch && titleMatch;
-  }), [jobs, search, titleFilter]);
+  if (diffDays === 1) return 'Added 1 day ago';
+  if (diffDays < 7) return `Added ${diffDays} days ago`;
 
-  async function handleSave(jobId: string) {
-    try {
-      await savePublicJob(jobId);
-      router.push('/dashboard');
-    } catch {
-      router.push(`/login?callbackUrl=${encodeURIComponent('/jobs-public')}`);
-    }
-  }
+  const weeks = Math.floor(diffDays / 7);
+  if (weeks === 1) return 'Added 1 week ago';
+  return `Added ${weeks} weeks ago`;
+}
+
+function formatLocation(remoteType: string | null, location: string | null) {
+  if (remoteType && location) return `${remoteType} · ${location}`;
+  if (remoteType) return remoteType;
+  if (location) return location;
+  return 'Location not specified';
+}
+
+export default async function PublicJobsPage({ searchParams }: JobsPublicPageProps) {
+  const params = await searchParams;
+  const query = params.q?.trim() ?? '';
+  const session = await auth();
+
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+
+  const jobs = await prisma.jobLead.findMany({
+    where: {
+      createdAt: { gte: since },
+      ...(query
+        ? {
+            OR: [
+              { title: { contains: query, mode: 'insensitive' } },
+              { company: { contains: query, mode: 'insensitive' } },
+              { location: { contains: query, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    },
+    orderBy: [{ createdAt: 'desc' }],
+    take: 40,
+    select: {
+      id: true,
+      title: true,
+      company: true,
+      location: true,
+      remoteType: true,
+      createdAt: true,
+      notes: true,
+    },
+  });
 
   return (
-    <div className="shell py-12 space-y-6">
-      <PageHeader title="Public Jobs" subtitle="Jobs shared on the platform in the last 30 days. Search, filter, and add a role to your workspace to score it against your settings." />
-      <div className="card-pad grid gap-4 md:grid-cols-[1fr_280px]">
-        <input className="input" placeholder="Search company, title, or location" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <input list="public-job-titles" className="input" placeholder="Filter by title" value={titleFilter} onChange={(e) => setTitleFilter(e.target.value)} />
-        <datalist id="public-job-titles">{titleOptions.map((option) => <option key={option} value={option} />)}</datalist>
-      </div>
-      {status === 'loading' ? <div className="card-pad">Loading recent public jobs…</div> : null}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {filtered.map((job) => (
-          <div key={job.id} className="card-pad">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-lg font-semibold">{job.title}</div>
-                <div className="muted mt-1">{job.company} · {job.location || 'Location not specified'}</div>
-              </div>
-              <span className="badge bg-white/10 text-slate-200">{job.remoteType || 'Role'}</span>
-            </div>
-            <p className="mt-4 text-sm leading-7 text-muted line-clamp-4">{job.notes || 'No additional notes captured for this listing yet.'}</p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              {job.jobUrl ? <Link href={job.jobUrl} target="_blank" className="btn-secondary">Open source</Link> : null}
-              <button className="btn-primary" onClick={() => void handleSave(job.id)}>Add to my workspace</button>
+    <div className="min-h-screen bg-[#050c18] text-ink">
+      <div className="shell py-8 sm:py-12">
+        <header className="sticky top-0 z-20 rounded-2xl border border-white/10 bg-[#08111f]/70 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-[#08111f]/60 sm:px-5">
+          <div className="flex items-center justify-between gap-4">
+            <Logo href="/" />
+
+            <div className="hidden items-center gap-3 md:flex">
+              <Link className="btn-secondary" href="/">
+                Back to Home
+              </Link>
+              {!session ? (
+                <>
+                  <Link className="btn-secondary" href="/login">
+                    Sign In
+                  </Link>
+                  <Link className="btn-primary" href="/register">
+                    Create Account
+                  </Link>
+                </>
+              ) : (
+                <Link className="btn-primary" href="/dashboard">
+                  Open App
+                </Link>
+              )}
             </div>
           </div>
-        ))}
+        </header>
+
+        <section className="py-14 lg:py-18">
+          <div className="max-w-3xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300">Public Jobs</p>
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+              Browse recent jobs added across the platform.
+            </h1>
+            <p className="mt-4 text-base leading-8 text-muted sm:text-lg">
+              This page shows jobs added on the platform in the last 30 days. If you sign in, you can bring a relevant job
+              into your own workspace and let your own preferences score and prioritize it.
+            </p>
+
+            <form className="mt-8 flex flex-col gap-3 sm:flex-row" action="/jobs-public" method="get">
+              <input
+                type="text"
+                name="q"
+                defaultValue={query}
+                placeholder="Search by title, company, or location"
+                className="input flex-1"
+              />
+              <button type="submit" className="btn-primary">
+                Search
+              </button>
+            </form>
+          </div>
+        </section>
+
+        <section className="pb-20">
+          {jobs.length > 0 ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {jobs.map((job) => (
+                <div
+                  key={job.id}
+                  className="rounded-[1.6rem] border border-white/10 bg-white/5 p-5 shadow-soft"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-lg font-semibold text-ink">{job.title}</p>
+                      <p className="mt-1 text-sm text-slate-300">{job.company}</p>
+                    </div>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-muted">
+                      Recent
+                    </span>
+                  </div>
+
+                  <div className="mt-5 space-y-2 text-sm text-muted">
+                    <p>{formatLocation(job.remoteType, job.location)}</p>
+                    <p>{formatAge(job.createdAt)}</p>
+                  </div>
+
+                  {job.notes ? (
+                    <p className="mt-5 line-clamp-3 text-sm leading-7 text-slate-200/85">{job.notes}</p>
+                  ) : null}
+
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    {!session ? (
+                      <>
+                        <Link className="btn-secondary" href="/login">
+                          Sign in to save
+                        </Link>
+                        <Link className="btn-primary" href="/register">
+                          Create account
+                        </Link>
+                      </>
+                    ) : (
+                      <Link className="btn-primary" href="/dashboard">
+                        Open app to save and score
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[1.6rem] border border-dashed border-white/10 bg-white/5 p-8 text-center">
+              <p className="text-lg font-semibold text-ink">No public jobs found</p>
+              <p className="mt-3 text-sm leading-7 text-muted">
+                Try a different search, or check back as users add more jobs to the platform.
+              </p>
+            </div>
+          )}
+        </section>
       </div>
-      {!status && filtered.length === 0 ? <div className="card-pad">No public jobs matched your filters.</div> : null}
+
+      <footer className="border-t border-white/10 bg-[#06101d]">
+        <div className="shell py-10">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm text-slate-300">© 2026 Job Seeker OS. All rights reserved.</p>
+              <p className="mt-2 max-w-2xl text-sm leading-7 text-muted">
+                Job Seeker OS helps users organize and evaluate job opportunities. Users remain responsible for the accuracy of
+                their applications, communications, and compliance with the terms of third-party platforms.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Link className="btn-secondary" href="/">
+                Landing Page
+              </Link>
+              {!session ? (
+                <>
+                  <Link className="btn-secondary" href="/login">
+                    Sign In
+                  </Link>
+                  <Link className="btn-primary" href="/register">
+                    Create Account
+                  </Link>
+                </>
+              ) : (
+                <Link className="btn-primary" href="/dashboard">
+                  Open App
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
