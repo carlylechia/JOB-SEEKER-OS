@@ -1,33 +1,42 @@
-import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  clearPendingPublicJobId,
+  getPendingPublicJobId,
+} from "@/lib/pending-public-job";
 import { logImportantError, logImportantInfo } from "@/lib/observability";
-import { setPendingPublicJobId } from "@/lib/pending-public-job";
 import { buildStoredJobPayload, getUserPreferences } from "@/lib/db-helpers";
 
-type Params = { params: Promise<{ id: string }> };
+type Props = {
+  searchParams: Promise<{ jobId?: string }>;
+};
 
-export async function POST(request: Request, { params }: Params) {
-  const { id } = await params;
+export default async function ImportPendingPublicJobPage({
+  searchParams,
+}: Props) {
   const session = await auth();
 
-  try {
-    if (!session?.user?.id) {
-      await setPendingPublicJobId(id);
-      return NextResponse.redirect(
-        new URL("/login?callbackUrl=/auth/continue", request.url),
-      );
-    }
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
 
+  const params = await searchParams;
+  const cookieJobId = await getPendingPublicJobId();
+  const sourceJobId = params.jobId ?? cookieJobId;
+
+  if (!sourceJobId) {
+    redirect("/dashboard");
+  }
+
+  try {
     const sourceJob = await prisma.jobLead.findFirst({
-      where: { id },
+      where: { id: sourceJobId },
     });
 
     if (!sourceJob) {
-      return NextResponse.json(
-        { error: "Public job not found" },
-        { status: 404 },
-      );
+      await clearPendingPublicJobId();
+      redirect("/jobs-public");
     }
     const preferences = await getUserPreferences(session.user.id);
     const jobPayload = buildStoredJobPayload(
@@ -56,29 +65,27 @@ export async function POST(request: Request, { params }: Params) {
       },
     });
 
+    await clearPendingPublicJobId();
+
     await logImportantInfo({
-      event: "public_job_saved_to_workspace",
+      event: "pending_public_job_imported",
       userId: session.user.id,
       jobId: cloned.id,
-      route: `/api/public-jobs/${id}/save`,
-      context: {
-        sourceJobId: id,
-      },
+      route: "/auth/continue/import",
+      context: { sourceJobId },
     });
 
-    return NextResponse.json({ ok: true, jobId: cloned.id });
+    redirect(`/jobs/${cloned.id}`);
   } catch (error) {
     await logImportantError({
-      event: "public_job_save_failed",
-      userId: session?.user?.id,
-      jobId: id,
-      route: `/api/public-jobs/${id}/save`,
+      event: "pending_public_job_import_failed",
+      userId: session.user.id,
+      jobId: sourceJobId,
+      route: "/auth/continue/import",
       error,
     });
 
-    return NextResponse.json(
-      { error: "Unable to save public job" },
-      { status: 500 },
-    );
+    await clearPendingPublicJobId();
+    redirect("/dashboard");
   }
 }
