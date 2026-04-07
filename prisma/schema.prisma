@@ -18,6 +18,7 @@ model User {
   profile      UserProfile?
   jobLeads     JobLead[]
   templates    FollowUpTemplate[]
+  createdJobTitles JobTitle[]    @relation("JobTitleCreator")
 
   @@index([createdAt])
 }
@@ -25,6 +26,11 @@ model User {
 model UserProfile {
   id                     String   @id @default(cuid())
   userId                 String   @unique
+  headline               String?
+  portfolioUrl           String?
+  githubUrl              String?
+  linkedinUrl            String?
+  resumeUrl              String?
   currentLevel           String   @default("MID")
   targetLevel            String   @default("MID")
   targetRoles            String[]
@@ -33,12 +39,15 @@ model UserProfile {
   preferredStack         String[]
   mustHaveTech           String[]
   workRegions            String[]
+  timezoneMatches        String[]
   remoteOnly             Boolean  @default(true)
-  salaryMin              Int      @default(2500)
-  salaryTarget           Int      @default(3200)
+  salaryMin              Int      @default(0)
+  salaryTarget           Int      @default(0)
   timezoneToleranceHours Int      @default(4)
   onboardingCompleted    Boolean  @default(false)
   onboardingCompletedAt  DateTime?
+  profileCompleted       Boolean  @default(false)
+  profileCompletedAt     DateTime?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
@@ -81,10 +90,11 @@ model JobLead {
   @@index([userId, priorityFlag])
   @@index([userId, nextFollowUp])
   @@index([userId, updatedAt])
+  @@index([createdAt])
 }
 
 model FollowUpTemplate {
-  id        String   @id @default(cuid())
+  id         String   @id @default(cuid())
   userId     String
   type       String
   name       String
@@ -97,4 +107,16 @@ model FollowUpTemplate {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, type])
+}
+
+model JobTitle {
+  id         String   @id @default(cuid())
+  name       String   @unique
+  slug       String   @unique
+  createdById String?
+  createdAt  DateTime @default(now())
+
+  createdBy  User?    @relation("JobTitleCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
 }

@@ -1,5 +1,5 @@
 import { FitTier, JobLead, PriorityFlag, ScoreFields, UserPreferences } from '@/types';
-import { defaultPreferences } from './preferences';
+import { defaultPreferences, titleMatchesAny } from './preferences';
 
 export const weights = {
   coreStackMatch: 25,
@@ -14,10 +14,7 @@ export const weights = {
 } as const;
 
 function getPenaltyMultiplier(value: number, dimension: 'seniority' | 'role'): number {
-  if (dimension === 'seniority') {
-    return [0.35, 0.5, 0.68, 0.82, 0.93, 1][value] ?? 1;
-  }
-
+  if (dimension === 'seniority') return [0.35, 0.5, 0.68, 0.82, 0.93, 1][value] ?? 1;
   return [0.35, 0.55, 0.72, 0.85, 0.95, 1][value] ?? 1;
 }
 
@@ -26,17 +23,26 @@ function includesAny(text: string, needles: string[]): boolean {
   return needles.some((needle) => hay.includes(needle.toLowerCase()));
 }
 
+function hasTitleMatch(job: JobLead, preferences: UserPreferences) {
+  const targets = [...preferences.targetRoles, ...preferences.preferredTitles].filter(Boolean);
+  if (!targets.length) return true;
+  return titleMatchesAny(job.title, targets);
+}
+
 function getPersonalizationModifier(job: JobLead, preferences: UserPreferences): number {
   let modifier = 1;
   const titleAndNotes = `${job.title} ${job.notes}`;
   const locationFields = `${job.location} ${job.eligibilityRegion} ${job.remoteType}`;
   const stackAndNotes = `${job.title} ${job.notes} ${job.prepPack?.topFitPoints ?? ''}`;
   const timezoneFields = `${job.timezoneRequirement} ${job.notes}`;
+  const titleMatch = hasTitleMatch(job, preferences);
 
-  if (preferences.targetRoles.length && includesAny(titleAndNotes, preferences.targetRoles)) modifier += 0.06;
-  if (preferences.preferredTitles.length && includesAny(titleAndNotes, preferences.preferredTitles)) modifier += 0.04;
+  if (titleMatch) modifier += 0.08;
+  else modifier -= 0.28;
+
   if (preferences.preferredRegions.length && includesAny(locationFields, preferences.preferredRegions)) modifier += 0.05;
-  if (preferences.workRegions.length && includesAny(timezoneFields, preferences.workRegions)) modifier += 0.04;
+  if (preferences.workRegions.length && includesAny(timezoneFields, preferences.workRegions)) modifier += 0.03;
+  if (preferences.timezoneMatches.length && includesAny(timezoneFields, preferences.timezoneMatches)) modifier += 0.05;
 
   const missingMustHaveCount = preferences.mustHaveTech.filter((tech) => !includesAny(stackAndNotes, [tech])).length;
   modifier -= missingMustHaveCount * 0.06;
@@ -45,29 +51,22 @@ function getPersonalizationModifier(job: JobLead, preferences: UserPreferences):
   if (job.salaryMax && preferences.salaryMin && job.salaryMax < preferences.salaryMin) modifier -= 0.12;
   if (job.salaryMin && preferences.salaryTarget && job.salaryMin >= preferences.salaryTarget) modifier += 0.03;
 
-  return Math.max(0.55, Math.min(1.15, modifier));
+  return Math.max(0.45, Math.min(1.15, modifier));
 }
 
 export function calculateBaseFitScore(score: ScoreFields): number {
   if (score.geographyEligibility === 0 || score.timezoneCompatibility === 0) return 0;
-
-  const total = Object.entries(weights).reduce((sum, [key, weight]) => {
-    const value = score[key as keyof ScoreFields];
-    return sum + (value / 5) * weight;
-  }, 0);
-
+  const total = Object.entries(weights).reduce((sum, [key, weight]) => sum + ((score[key as keyof ScoreFields] / 5) * weight), 0);
   return Math.round(total * 10) / 10;
 }
 
 export function calculateFitScore(job: JobLead, preferences: UserPreferences = defaultPreferences): number {
   if (job.score.geographyEligibility === 0 || job.score.timezoneCompatibility === 0) return 0;
-
   const baseScore = calculateBaseFitScore(job.score);
   const seniorityPenalty = getPenaltyMultiplier(job.score.seniorityFit, 'seniority');
   const rolePenalty = getPenaltyMultiplier(job.score.roleAlignment, 'role');
   const personalizationModifier = getPersonalizationModifier(job, preferences);
   const total = baseScore * seniorityPenalty * rolePenalty * personalizationModifier;
-
   return Math.round(Math.max(0, Math.min(100, total)) * 10) / 10;
 }
 
@@ -104,9 +103,10 @@ export function calculatePriority(job: JobLead): PriorityFlag {
 export function hydrateJob(job: JobLead, preferences: UserPreferences = defaultPreferences): JobLead {
   const fitScore = calculateFitScore(job, preferences);
   const fitTier = calculateFitTier(fitScore);
+  const titleMatch = hasTitleMatch(job, preferences);
   const hydrated = {
     ...job,
-    score: { ...job.score, fitScore, fitTier },
+    score: { ...job.score, fitScore, fitTier, titleMatch },
   };
   return { ...hydrated, priorityFlag: calculatePriority(hydrated) };
 }

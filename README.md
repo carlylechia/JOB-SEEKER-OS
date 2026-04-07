@@ -6,17 +6,17 @@ Job Seeker OS is a personalized job-search management web app built as a portfol
 
 ## Overview
 
-Job Seeker OS is designed to turn a messy, spreadsheet-driven job hunt into a focused system.
+Job Seeker OS turns a scattered, spreadsheet-driven job hunt into a focused workflow for serious candidates.
 
-Instead of tracking opportunities across scattered notes, documents, and tabs, the app gives users one place to:
+Instead of juggling notes, reminders, browser tabs, and disconnected documents, the app gives users one place to:
 
 - save and manage job leads
-- score job fit against their personal profile
+- score job fit against real personal preferences
 - track recruiters and contacts
 - prepare for interviews
 - manage follow-ups
-- monitor progress through a clear dashboard
-- ingest job links and pasted descriptions faster
+- browse public jobs shared on the platform
+- monitor search progress from a dashboard
 
 ---
 
@@ -24,21 +24,23 @@ Instead of tracking opportunities across scattered notes, documents, and tabs, t
 
 The project currently includes:
 
-- marketing landing page with modern product storytelling
+- premium marketing landing page with responsive mobile navigation
 - authenticated user dashboard with KPIs and charts
-- onboarding flow for job-search preferences
-- job tracker with personalized fit scoring and priority logic
-- job ingestion from job links or pasted descriptions
+- private job tracker with database-backed CRUD
+- personalized fit scoring and priority logic
 - job detail workspace
 - recruiter/contact CRM view
 - interview pipeline view
 - tailored application queue
 - prep packs view
 - follow-up templates view
-- profile and settings pages
-- persistent database-backed storage
-- responsive navigation for both app and marketing pages
+- onboarding flow for preference setup
+- job ingestion from links and pasted descriptions
+- profile management page
+- public jobs page (last 30 days)
+- persistent PostgreSQL-backed storage
 - Vercel Analytics integration
+- Discord-compatible production alerting for important route failures
 
 ---
 
@@ -66,9 +68,9 @@ As of the current release, Job Seeker OS is a full-stack SaaS application with:
 - **Email/password authentication** using Auth.js Credentials provider
 - **Protected app routes** behind login
 - **PostgreSQL + Prisma** for persistent data storage
+- **Private per-user job workspaces**
+- **Public jobs discovery** for roles added by users in the last 30 days
 - **User-driven personalized fit scoring**
-- **Onboarding-based preference capture** for better first-run relevance
-- **Responsive app shell** with authenticated and marketing navigation split cleanly
 - **Server-first public pages** with client components only where interactivity is needed
 - **Vercel deployment** with production-ready environment setup
 
@@ -82,19 +84,29 @@ Job Seeker OS uses user preferences to score and prioritize opportunities.
 
 Scoring is driven by factors such as:
 
-- target seniority level
+- current and target seniority level
+- primary job titles and adjacent preferred titles
 - preferred regions
-- preferred titles
+- preferred stack
+- must-have technologies
+- timezone overlap
 - salary expectations
 - remote preference
-- timezone compatibility
-- must-have tech stack requirements
+
+### Title Match Rule
+
+Job title matching is now the strongest personalization signal.
+
+- private dashboards only show jobs added by the signed-in user
+- jobs are still scored even when title match is weak
+- weaker title alignment produces a lower score
+- public jobs can be added into a user workspace and scored against that user’s preferences
 
 ### Base Scoring Weights
 
 - Core stack match — 25%
-- Role alignment — 15%
-- Seniority fit — 15%
+- Role alignment — 17%
+- Seniority fit — 20%
 - Geography eligibility — 10%
 - Time-zone compatibility — 10%
 - Compensation fit — 10%
@@ -116,15 +128,15 @@ Scoring is driven by factors such as:
 
 ## Security and Reliability Notes
 
-This release continues the backend protections and operational safeguards already in place:
+Current protections and operational safeguards include:
 
 - request validation with **Zod**
-- text and URLs sanitized before persistence
+- text and URL sanitization before persistence
 - lightweight **per-user / per-IP rate limiting** on important endpoints
 - structured API error handling
-- Discord-compatible webhook alerts for important unexpected production issues via `ALERT_WEBHOOK_URL`
-- important CRUD and ingestion failures logged without noisy spam
-- Prisma indexes added for common job access patterns
+- optional Discord-compatible webhook alerts through `ALERT_WEBHOOK_URL`
+- important unexpected route failures logged without noisy spam
+- Prisma indexes for common job access patterns
 
 ---
 
@@ -143,7 +155,7 @@ cp .env.example .env.local
 cp .env.local .env
 ```
 
-- `.env.local` is used by the Next.js app runtime
+- `.env.local` is used by the Next.js runtime
 - `.env` is used by Prisma CLI commands
 
 ### 3. Generate Prisma client
@@ -170,11 +182,7 @@ npm run prisma:seed
 npm run dev
 ```
 
-Open:
-
-```txt
-http://localhost:3000
-```
+Open `http://localhost:3000`.
 
 ---
 
@@ -197,20 +205,12 @@ brew services list
 pg_isready
 ```
 
-### Create your local environment file
-
-Example:
+### Example local env file
 
 ```env
 DATABASE_URL="postgresql://jobseekeros:YOUR_PASSWORD@localhost:5432/job_seeker_os?schema=public"
 AUTH_SECRET="YOUR_SECRET"
 AUTH_URL="http://localhost:3000"
-```
-
-Then copy it for Prisma:
-
-```bash
-cp .env.local .env
 ```
 
 ---
@@ -225,8 +225,8 @@ Required:
 
 Optional:
 
-- `CORS_ORIGIN` — only if cross-origin API access is needed
-- `ALERT_WEBHOOK_URL` — Discord-compatible webhook for important production issue alerts
+- `CORS_ORIGIN`
+- `ALERT_WEBHOOK_URL`
 
 ---
 
@@ -255,9 +255,6 @@ src/
     (app)/
     api/
   components/
-    marketing/
-    jobs/
-    onboarding/
   hooks/
   lib/
   types/
@@ -271,7 +268,7 @@ public/
 
 The app includes **Vercel Analytics** in the root layout.
 
-It also configures metadata with:
+Metadata is configured with:
 
 - default title
 - title template
@@ -279,33 +276,48 @@ It also configures metadata with:
 - favicon
 - apple touch icon
 
-This keeps branding and observability consistent in production.
-
 ---
 
 ## Release History
 
-### v5.0 — Onboarding + Job Ingestion (Current Release)
+### v6.0 — Taxonomy, Profile, Public Jobs, and Homepage UX (Current Release)
 
 This release adds:
 
-- onboarding flow for user-specific search preferences
-- first-run preference capture after account creation
-- job ingestion from links and pasted descriptions
-- parser-driven prefill into the job form
-- secure ingestion route with validation, rate limiting, and alerting
-- dashboard onboarding CTA for incomplete profiles
-- Discord-compatible alert formatting in observability utilities
+- footer cleanup and footer-gap fix
+- floating homepage quick-jump navigation
+- public jobs page for roles shared in the last 30 days
+- save-to-workspace flow for public jobs
+- dynamic job title taxonomy stored in the database
+- searchable dropdown-style title selection with add-new support
+- settings page converted away from stale autofilled text fields
+- profile page moved away from hardcoded values to real user-backed data
+- private dashboards now rely only on user-owned jobs
+- no seeded job data in starter workspaces
+- title match emphasized in score calculation
+- improved ingestion heuristics for title, company, metadata, and stack extraction
 
-### v4.0 — Landing Page Redesign + Marketing Polish
+### v5.0 — Onboarding + Job Ingestion
 
 This release added:
 
-- redesigned landing page with stronger product positioning
-- smoother section flow and premium visual hierarchy
-- hero carousel and richer public storytelling
-- professional footer and smoother landing-page transitions
-- server-first marketing architecture with small client components only where needed
+- onboarding flow inside the authenticated app
+- onboarding completion persistence
+- onboarding-aware first-run dashboard CTA
+- secure ingestion from job links and pasted descriptions
+- parser-driven job-form prefilling
+- safer URL handling for ingestion
+- route-level alerting added to important new endpoints
+
+### v4.0 — Landing Page Redesign / Marketing Polish
+
+This release added:
+
+- premium landing page redesign
+- richer section storytelling
+- lazy-loaded generated demo media
+- mobile marketing navigation
+- improved footer and responsive public-page UX foundation
 
 ### v3.0 — Job CRUD + Detail Workspace
 
@@ -323,22 +335,18 @@ This release added:
 
 ### v2.0 — Auth + Database
 
-**Transition from frontend MVP to SaaS-ready application**
-
 This release added:
 
-- Email/password authentication via Auth.js Credentials provider
+- email/password authentication via Auth.js Credentials provider
 - PostgreSQL database backend with Prisma ORM
-- Protected routes and user session management
-- Seeded starter workspace on user registration
-- Persistent user data for jobs, contacts, templates, and preferences
-- User-driven personalized fit scoring based on profile settings
-- Logo/favicon system for production branding
+- protected routes and user session management
+- seeded starter workspace on user registration
+- persistent user data for jobs, contacts, templates, and preferences
+- user-driven personalized fit scoring based on profile settings
+- logo/favicon system for production branding
 - Vercel deployment readiness
 
 ### v1.0 — Frontend MVP
-
-**Initial portfolio-ready prototype**
 
 This release included:
 
@@ -359,25 +367,11 @@ This release included:
 
 Upcoming work includes:
 
-- stronger job-detail workflow polish
-- AI-assisted fit explanations
+- stronger AI-assisted fit explanations
+- smarter public job recommendations
+- daily best-fit jobs shortlist
 - email reminders and notifications
 - browser extension for quick job capture
-- smart daily best-fit job recommendations
-
----
-
-## Long-Term Product Direction
-
-Job Seeker OS is gradually evolving across three layers:
-
-1. **Workflow layer**  
-   Track and manage the job search process
-
-2. **Decision layer**  
-   Score and prioritize opportunities
-
-3. **Intelligence layer**  
-   Recommend what to apply to next and explain why
+- deeper workflow polish for job detail and prep systems
 
 ---

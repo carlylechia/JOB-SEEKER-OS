@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
@@ -10,10 +11,13 @@ import { FutureIntelligenceSection } from '@/components/marketing/future-intelli
 import { LandingFaq } from '@/components/marketing/landing-faq';
 import { DemoVideo } from '@/components/marketing/demo-video';
 import { SiteFooter } from '@/components/marketing/site-footer';
+import { QuickJumpNav } from '@/components/marketing/quick-jump-nav';
+import { PlatformJobsPreview } from '@/components/marketing/platform-jobs-preview';
 
 const navLinks = [
   { href: '#features', label: 'Features' },
   { href: '#workflow', label: 'Workflow' },
+  { href: '#public-jobs', label: 'Public Jobs' },
   { href: '#faq', label: 'FAQ' },
 ];
 
@@ -25,9 +29,49 @@ const heroBullets = [
 
 const signalChips = ['SEO-conscious build', 'Database-backed workflows', 'Production-ready foundation'];
 
+function PlatformJobsPreviewFallback() {
+  return (
+    <section id="public-jobs" className="py-20 section-fade-up">
+      <div className="grid gap-8 rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-soft lg:grid-cols-[0.88fr_1.12fr] lg:p-7">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300">Platform Jobs</p>
+          <h2 className="mt-4 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
+            Explore jobs that platform users are actively capturing and working through.
+          </h2>
+          <p className="mt-4 max-w-xl text-sm leading-7 text-muted sm:text-base">
+            A few recent opportunities already being tracked across the platform. Browse more, save what fits, and move it
+            into your own workflow.
+          </p>
+
+          <div className="mt-7 flex flex-wrap gap-3">
+            <Link className="btn-primary gap-2" href="/jobs-public">
+              View more public jobs
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={index}
+              className="rounded-2xl border border-white/10 bg-[#0a1528]/90 p-4 shadow-soft"
+            >
+              <div className="h-4 w-2/3 rounded bg-white/10" />
+              <div className="mt-3 h-3 w-1/2 rounded bg-white/10" />
+              <div className="mt-6 h-3 w-3/4 rounded bg-white/10" />
+              <div className="mt-2 h-3 w-1/3 rounded bg-white/10" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function LandingPage() {
   return (
-    <div className="relative overflow-hidden">
+    <div id="top" className="relative min-h-screen overflow-hidden">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[540px] bg-[radial-gradient(circle_at_top_right,rgba(79,140,255,0.14),transparent_38%),radial-gradient(circle_at_top_left,rgba(99,102,241,0.12),transparent_32%)]" />
       <div className="shell relative py-8 sm:py-12">
         <header className="sticky top-0 z-20 rounded-2xl border border-white/10 bg-[#08111f]/70 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-[#08111f]/60 sm:px-5">
@@ -43,6 +87,9 @@ export default function LandingPage() {
             </nav>
 
             <div className="hidden items-center gap-3 md:flex">
+              <Link className="btn-secondary" href="/jobs-public">
+                Public Jobs
+              </Link>
               <Link className="btn-secondary" href="/demo">
                 Live Demo
               </Link>
@@ -61,7 +108,7 @@ export default function LandingPage() {
         <section className="grid gap-10 py-14 lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:gap-12 lg:py-20 section-fade-up">
           <div>
             <span className="badge bg-accent/15 text-sky-200">A more serious way to run the search</span>
-            <h1 className="mt-5 max-w-3xl text-2xl font-semibold tracking-normal text-ink sm:text-4xl xl:text-[3.4rem]">
+            <h1 className="mt-5 max-w-3xl text-3xl font-semibold leading-[1.08] tracking-tight text-ink sm:text-4xl xl:text-[3.4rem]">
               A calmer, clearer operating system for the modern job search.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-muted sm:text-lg">
@@ -118,11 +165,24 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <FeatureBentoGrid />
-        <WorkflowSection />
+        <section id="features">
+          <FeatureBentoGrid />
+        </section>
+
+        <section id="workflow">
+          <WorkflowSection />
+        </section>
+
+        <Suspense fallback={<PlatformJobsPreviewFallback />}>
+          <PlatformJobsPreview />
+        </Suspense>
+
         <PersonalizationSection />
         <FutureIntelligenceSection />
-        <LandingFaq />
+
+        <section id="faq">
+          <LandingFaq />
+        </section>
 
         <section className="py-24">
           <div className="card-pad overflow-hidden bg-[linear-gradient(135deg,rgba(79,140,255,0.16),rgba(99,102,241,0.1))]">
@@ -150,6 +210,8 @@ export default function LandingPage() {
           </div>
         </section>
       </div>
+
+      <QuickJumpNav />
       <SiteFooter />
     </div>
   );

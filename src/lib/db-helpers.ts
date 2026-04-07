@@ -1,7 +1,7 @@
 import { prisma } from './prisma';
-import { demoJobs, demoTemplates } from './demo-data';
-import { defaultPreferences } from './preferences';
-import { JobLead, JobFormValues, Template, UserPreferences } from '@/types';
+import { demoTemplates } from './demo-data';
+import { defaultPreferences, defaultTitleOptions } from './preferences';
+import { JobLead, JobFormValues, Template, UserPreferences, UserProfileDetails } from '@/types';
 import { calculateFitScore, calculateFitTier, calculatePriority } from './scoring';
 
 export type DbJob = {
@@ -73,6 +73,7 @@ export function mapDbPreferences(profile: any): UserPreferences {
     preferredStack: profile.preferredStack,
     mustHaveTech: profile.mustHaveTech,
     workRegions: profile.workRegions,
+    timezoneMatches: profile.timezoneMatches ?? [],
     remoteOnly: profile.remoteOnly,
     salaryMin: profile.salaryMin,
     salaryTarget: profile.salaryTarget,
@@ -80,7 +81,32 @@ export function mapDbPreferences(profile: any): UserPreferences {
   };
 }
 
+export function mapDbProfile(user: any, profile: any): UserProfileDetails {
+  return {
+    fullName: user?.name || '',
+    headline: profile?.headline || '',
+    portfolioUrl: profile?.portfolioUrl || '',
+    githubUrl: profile?.githubUrl || '',
+    linkedinUrl: profile?.linkedinUrl || '',
+    resumeUrl: profile?.resumeUrl || '',
+    profileCompleted: Boolean(profile?.profileCompleted),
+  };
+}
+
+export async function ensureDefaultJobTitles() {
+  for (const name of defaultTitleOptions) {
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    await prisma.jobTitle.upsert({
+      where: { slug },
+      update: {},
+      create: { name, slug },
+    });
+  }
+}
+
 export async function seedUserWorkspace(userId: string) {
+  await ensureDefaultJobTitles();
+
   await prisma.userProfile.create({
     data: {
       userId,
@@ -92,40 +118,14 @@ export async function seedUserWorkspace(userId: string) {
       preferredStack: defaultPreferences.preferredStack,
       mustHaveTech: defaultPreferences.mustHaveTech,
       workRegions: defaultPreferences.workRegions,
+      timezoneMatches: defaultPreferences.timezoneMatches,
       remoteOnly: defaultPreferences.remoteOnly,
       salaryMin: defaultPreferences.salaryMin,
       salaryTarget: defaultPreferences.salaryTarget,
       timezoneToleranceHours: defaultPreferences.timezoneToleranceHours,
       onboardingCompleted: false,
+      profileCompleted: false,
     },
-  });
-
-  await prisma.jobLead.createMany({
-    data: demoJobs.map((job) => ({
-      userId,
-      company: job.company,
-      title: job.title,
-      source: job.source,
-      jobUrl: job.jobUrl,
-      location: job.location,
-      remoteType: job.remoteType,
-      timezoneRequirement: job.timezoneRequirement,
-      eligibilityRegion: job.eligibilityRegion,
-      salaryMin: job.salaryMin,
-      salaryMax: job.salaryMax,
-      currency: job.currency,
-      notes: job.notes,
-      status: job.status,
-      dateFound: new Date(job.dateFound),
-      dateApplied: job.dateApplied ? new Date(job.dateApplied) : null,
-      nextFollowUp: job.nextFollowUp ? new Date(job.nextFollowUp) : null,
-      priorityFlag: job.priorityFlag,
-      score: job.score,
-      checklist: job.checklist,
-      contacts: job.contacts,
-      interviews: job.interviews,
-      prepPack: job.prepPack,
-    })),
   });
 
   await prisma.followUpTemplate.createMany({
@@ -141,15 +141,19 @@ export async function seedUserWorkspace(userId: string) {
 }
 
 export async function getUserWorkspace(userId: string) {
-  const [profile, jobs, templates] = await Promise.all([
+  await ensureDefaultJobTitles();
+  const [user, profile, jobs, templates, titleOptions] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId } }),
     prisma.userProfile.findUnique({ where: { userId } }),
     prisma.jobLead.findMany({ where: { userId }, orderBy: [{ updatedAt: 'desc' }, { dateFound: 'desc' }] }),
     prisma.followUpTemplate.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
+    prisma.jobTitle.findMany({ orderBy: { name: 'asc' } }),
   ]);
 
   return {
     preferences: mapDbPreferences(profile),
     onboardingCompleted: Boolean(profile?.onboardingCompleted),
+    profile: mapDbProfile(user, profile),
     jobs: jobs.map(mapDbJob),
     templates: templates.map((template) => ({
       id: template.id,
@@ -158,6 +162,7 @@ export async function getUserWorkspace(userId: string) {
       subject: template.subject || undefined,
       body: template.body,
     })) as Template[],
+    titleOptions: titleOptions.map((item) => item.name),
   };
 }
 
@@ -198,6 +203,7 @@ export function buildStoredJobPayload(values: JobFormValues | any, preferences: 
       signalQuality: Number(values.signalQuality),
       fitScore: 0,
       fitTier: 'D' as JobLead['score']['fitTier'],
+      titleMatch: false,
     },
     checklist: {
       resumeTailored: false,

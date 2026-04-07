@@ -10,9 +10,10 @@ export const preferencesPayloadSchema = z.object({
   preferredStack: z.array(z.unknown()).transform((values) => sanitizeArray(values, 20)).default([]),
   mustHaveTech: z.array(z.unknown()).transform((values) => sanitizeArray(values, 12)).default([]),
   workRegions: z.array(z.enum(['US', 'EU', 'AFRICA', 'WORLDWIDE', 'FLEXIBLE'])).max(5).default(['WORLDWIDE']),
+  timezoneMatches: z.array(z.unknown()).transform((values) => sanitizeArray(values, 8)).default([]),
   remoteOnly: z.coerce.boolean().default(true),
-  salaryMin: z.coerce.number().min(0).max(1_000_000).default(2500),
-  salaryTarget: z.coerce.number().min(0).max(1_000_000).default(3200),
+  salaryMin: z.coerce.number().min(0).max(1_000_000).default(0),
+  salaryTarget: z.coerce.number().min(0).max(1_000_000).default(0),
   timezoneToleranceHours: z.coerce.number().min(0).max(12).default(4),
   onboardingCompleted: z.coerce.boolean().optional().default(false),
 });

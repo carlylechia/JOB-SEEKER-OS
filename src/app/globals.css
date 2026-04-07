@@ -7,9 +7,11 @@
 }
 
 * { box-sizing: border-box; }
-html, body { padding: 0; margin: 0; }
+html, body {
+  min-height: 100vh; padding: 0; margin: 0; min-height: 100%; }
 html { scroll-behavior: smooth; scroll-padding-top: 104px; }
 body {
+  min-height: 100vh;
   background: linear-gradient(180deg, #08111f 0%, #0b1528 100%);
   color: #e7edf7;
   font-family: Arial, Helvetica, sans-serif;

@@ -25,10 +25,21 @@ export type UserPreferences = {
   preferredStack: string[];
   mustHaveTech: string[];
   workRegions: WorkRegion[];
+  timezoneMatches: string[];
   remoteOnly: boolean;
   salaryMin: number;
   salaryTarget: number;
   timezoneToleranceHours: number;
+};
+
+export type UserProfileDetails = {
+  fullName: string;
+  headline: string;
+  portfolioUrl: string;
+  githubUrl: string;
+  linkedinUrl: string;
+  resumeUrl: string;
+  profileCompleted: boolean;
 };
 
 export type Checklist = {
@@ -95,7 +106,7 @@ export type JobLead = {
   dateApplied?: string;
   nextFollowUp?: string;
   priorityFlag: PriorityFlag;
-  score: ScoreFields & { fitScore: number; fitTier: FitTier };
+  score: ScoreFields & { fitScore: number; fitTier: FitTier; titleMatch?: boolean };
   checklist: Checklist;
   contacts: Contact[];
   interviews: Interview[];
@@ -147,4 +158,13 @@ export type Template = {
   name: string;
   subject?: string;
   body: string;
+};
+
+export type BootstrapPayload = {
+  jobs: JobLead[];
+  templates: Template[];
+  preferences: UserPreferences;
+  onboardingCompleted: boolean;
+  profile: UserProfileDetails;
+  titleOptions: string[];
 };

@@ -3,14 +3,17 @@
 import { useEffect, useState } from 'react';
 import { PageHeader } from '@/components/shared/page-header';
 import { useJobs } from '@/hooks/use-job-data';
-import { defaultPreferences, parseCommaList, stringifyList } from '@/lib/preferences';
+import { defaultPreferences, defaultTimezoneOptions } from '@/lib/preferences';
 import { SeniorityLevel, UserPreferences, WorkRegion } from '@/types';
+import { MultiSelectCombobox } from '@/components/shared/multi-select-combobox';
 
 const seniorityOptions: SeniorityLevel[] = ['ENTRY', 'MID', 'SENIOR', 'FLEXIBLE'];
 const regionOptions: WorkRegion[] = ['US', 'EU', 'AFRICA', 'WORLDWIDE', 'FLEXIBLE'];
+const preferredRegionOptions = ['Africa', 'Europe', 'EMEA', 'LATAM', 'Worldwide', 'United States', 'Remote-first'];
+const stackOptions = ['TypeScript', 'JavaScript', 'Next.js', 'React', 'Node.js', 'NestJS', 'PostgreSQL', 'Docker', 'Redis', 'AWS', 'GCP'];
 
 export default function SettingsPage() {
-  const { preferences, updatePreferences } = useJobs();
+  const { preferences, updatePreferences, titleOptions, createTitle } = useJobs();
   const [form, setForm] = useState<UserPreferences>(preferences ?? defaultPreferences);
   const [saved, setSaved] = useState(false);
 
@@ -23,15 +26,15 @@ export default function SettingsPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function handleSave() {
-    updatePreferences(form);
+  async function handleSave() {
+    await updatePreferences(form);
     setSaved(true);
     window.setTimeout(() => setSaved(false), 2500);
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Settings" subtitle="Personalize scoring so rankings reflect each user's level, location, salary, and stack priorities." />
+      <PageHeader title="Settings" subtitle="Control what kinds of roles you want to pursue so scoring compares real preferences against the jobs you save." />
       <div className="card-pad grid gap-4 md:grid-cols-2">
         <div>
           <label className="mb-2 block text-sm text-muted">Current level</label>
@@ -45,33 +48,22 @@ export default function SettingsPage() {
             {seniorityOptions.map((option) => <option key={option} value={option}>{option}</option>)}
           </select>
         </div>
-        <div>
-          <label className="mb-2 block text-sm text-muted">Target roles</label>
-          <input className="input" value={stringifyList(form.targetRoles)} onChange={(e) => setField('targetRoles', parseCommaList(e.target.value))} />
-        </div>
-        <div>
-          <label className="mb-2 block text-sm text-muted">Preferred titles</label>
-          <input className="input" value={stringifyList(form.preferredTitles)} onChange={(e) => setField('preferredTitles', parseCommaList(e.target.value))} />
-        </div>
-        <div>
-          <label className="mb-2 block text-sm text-muted">Preferred regions</label>
-          <input className="input" value={stringifyList(form.preferredRegions)} onChange={(e) => setField('preferredRegions', parseCommaList(e.target.value))} />
-        </div>
-        <div>
-          <label className="mb-2 block text-sm text-muted">Preferred stack</label>
-          <input className="input" value={stringifyList(form.preferredStack)} onChange={(e) => setField('preferredStack', parseCommaList(e.target.value))} />
-        </div>
-        <div>
-          <label className="mb-2 block text-sm text-muted">Must-have tech</label>
-          <input className="input" value={stringifyList(form.mustHaveTech)} onChange={(e) => setField('mustHaveTech', parseCommaList(e.target.value))} />
-        </div>
+
+        <MultiSelectCombobox label="Primary job titles" values={form.targetRoles} options={titleOptions} onChange={(values) => setField('targetRoles', values)} onCreateOption={createTitle} placeholder="Software Engineer" limit={5} />
+        <MultiSelectCombobox label="Preferred titles / adjacent matches" values={form.preferredTitles} options={titleOptions} onChange={(values) => setField('preferredTitles', values)} onCreateOption={createTitle} placeholder="Product Engineer" limit={6} />
+        <MultiSelectCombobox label="Preferred regions" values={form.preferredRegions} options={preferredRegionOptions} onChange={(values) => setField('preferredRegions', values)} placeholder="Africa" limit={5} />
+        <MultiSelectCombobox label="Preferred stack" values={form.preferredStack} options={stackOptions} onChange={(values) => setField('preferredStack', values)} placeholder="TypeScript" limit={10} />
+        <MultiSelectCombobox label="Must-have tech" values={form.mustHaveTech} options={stackOptions} onChange={(values) => setField('mustHaveTech', values)} placeholder="Node.js" limit={6} />
+        <MultiSelectCombobox label="Timezone matches" values={form.timezoneMatches} options={defaultTimezoneOptions} onChange={(values) => setField('timezoneMatches', values)} placeholder="CET overlap" limit={5} />
+
         <div>
           <label className="mb-2 block text-sm text-muted">Work-region overlap</label>
-          <select className="select" multiple value={form.workRegions} onChange={(e) => setField('workRegions', Array.from(e.target.selectedOptions).map((option) => option.value as WorkRegion))}>
+          <select className="select min-h-32" multiple value={form.workRegions} onChange={(e) => setField('workRegions', Array.from(e.target.selectedOptions).map((option) => option.value as WorkRegion))}>
             {regionOptions.map((option) => <option key={option} value={option}>{option}</option>)}
           </select>
-          <p className="mt-2 muted">Hold Cmd/Ctrl to select multiple.</p>
+          <p className="mt-2 muted">Hold Cmd/Ctrl to select multiple regions.</p>
         </div>
+
         <div>
           <label className="mb-2 block text-sm text-muted">Minimum monthly salary (USD)</label>
           <input className="input" type="number" value={form.salaryMin} onChange={(e) => setField('salaryMin', Number(e.target.value) || 0)} />
@@ -90,8 +82,8 @@ export default function SettingsPage() {
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <button className="btn-primary" onClick={handleSave}>Save preferences</button>
-        {saved ? <span className="text-sm text-emerald-300">Preferences saved. Rankings will update automatically.</span> : null}
+        <button className="btn-primary" onClick={() => void handleSave()}>Save preferences</button>
+        {saved ? <span className="text-sm text-emerald-300">Preferences saved. Job scoring will use these settings immediately.</span> : null}
       </div>
     </div>
   );
