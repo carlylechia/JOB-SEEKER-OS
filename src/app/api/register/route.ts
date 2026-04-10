@@ -10,18 +10,29 @@ export async function POST(req: Request) {
     const parsed = registerSchema.safeParse(body);
 
     if (!parsed.success) {
-      return Response.json({ error: parsed.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+      return Response.json(
+        { error: parsed.error.issues[0]?.message || 'Invalid input' },
+        { status: 400 }
+      );
     }
 
     const { name, email, password } = parsed.data;
     const normalizedEmail = email.toLowerCase();
 
-    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    const existing = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
     if (existing) {
-      return Response.json({ error: 'An account with this email already exists.' }, { status: 409 });
+      return Response.json(
+        { error: 'An account with this email already exists.' },
+        { status: 409 }
+      );
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
+
+    // ✅ STEP 1: Create user (CRITICAL PATH)
     const user = await prisma.user.create({
       data: {
         name,
@@ -30,12 +41,39 @@ export async function POST(req: Request) {
       },
     });
 
-    await seedUserWorkspace(user.id);
-    await logImportantInfo({ event: 'user_registered', userId: user.id, route: '/api/register' });
+    // ✅ STEP 2: Seed workspace (NON-CRITICAL → MUST NOT BREAK FLOW)
+    try {
+      await seedUserWorkspace(user.id);
+    } catch (seedError) {
+      // 🔥 Do NOT crash registration if seeding fails
+      await logImportantError({
+        event: 'user_workspace_seed_failed',
+        userId: user.id,
+        route: '/api/register',
+        error: seedError,
+      });
+    }
 
+    // ✅ STEP 3: Log success
+    await logImportantInfo({
+      event: 'user_registered',
+      userId: user.id,
+      route: '/api/register',
+    });
+
+    // ✅ STEP 4: Always return success if user created
     return Response.json({ ok: true });
+
   } catch (error) {
-    await logImportantError({ event: 'user_register_failed', route: '/api/register', error });
-    return Response.json({ error: 'Unable to create account right now.' }, { status: 500 });
+    await logImportantError({
+      event: 'user_register_failed',
+      route: '/api/register',
+      error,
+    });
+
+    return Response.json(
+      { error: 'Unable to create account right now.' },
+      { status: 500 }
+    );
   }
 }

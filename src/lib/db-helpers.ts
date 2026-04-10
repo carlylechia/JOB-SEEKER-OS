@@ -145,7 +145,7 @@ export async function getUserWorkspace(userId: string) {
   const [user, profile, jobs, templates, titleOptions] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
     prisma.userProfile.findUnique({ where: { userId } }),
-    prisma.jobLead.findMany({ where: { userId }, orderBy: [{ updatedAt: 'desc' }, { dateFound: 'desc' }] }),
+    prisma.jobLead.findMany({ where: { userId, deletedAt: null }, orderBy: [{ updatedAt: 'desc' }, { dateFound: 'desc' }] }),
     prisma.followUpTemplate.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
     prisma.jobTitle.findMany({ orderBy: { name: 'asc' } }),
   ]);

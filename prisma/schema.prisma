@@ -79,6 +79,8 @@ model JobLead {
   contacts            Json
   interviews          Json
   prepPack            Json
+  expiresAt           DateTime?
+  deletedAt           DateTime?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -91,6 +93,7 @@ model JobLead {
   @@index([userId, nextFollowUp])
   @@index([userId, updatedAt])
   @@index([createdAt])
+  @@index([expiresAt])
 }
 
 model FollowUpTemplate {
