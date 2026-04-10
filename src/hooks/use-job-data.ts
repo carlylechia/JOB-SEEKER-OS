@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ApiError, BootstrapPayload, JobFormValues, JobLead, Template, UserPreferences, UserProfileDetails } from '@/types';
+import { ApiError, BootstrapPayload, Contact, EnrichedContact, JobFormValues, JobLead, PrepPack, QueueTask, Template, UserPreferences, UserProfileDetails } from '@/types';
 import { checklistCompletion, hydrateJob } from '@/lib/scoring';
 
 type PublicJobsResponse = { jobs: JobLead[] };
@@ -56,6 +56,100 @@ export function useJobs() {
 
   const contacts = useMemo(() => jobs.flatMap((job) => job.contacts), [jobs]);
   const interviews = useMemo(() => jobs.flatMap((job) => job.interviews), [jobs]);
+
+  const enrichedContacts = useMemo<EnrichedContact[]>(
+    () =>
+      jobs.flatMap((job) =>
+        job.contacts.map((c) => ({
+          ...c,
+          jobId: job.id,
+          jobTitle: job.title,
+          jobCompany: job.company,
+        })),
+      ),
+    [jobs],
+  );
+
+  const queueTasks = useMemo<QueueTask[]>(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const fiveDaysAgo = new Date(today);
+    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+
+    const tasks: QueueTask[] = [];
+
+    for (const job of jobs) {
+      if (['ARCHIVED', 'OFFER'].includes(job.status)) continue;
+
+      const base = {
+        jobId: job.id,
+        company: job.company,
+        title: job.title,
+        priority: job.priorityFlag,
+        fitScore: job.score.fitScore,
+        fitTier: job.score.fitTier,
+      };
+
+      // Follow-up NOW (overrides other follow-up tasks)
+      if (job.nextFollowUp) {
+        const due = new Date(job.nextFollowUp);
+        if (due <= today) {
+          tasks.push({
+            ...base,
+            taskId: `followup-now-${job.id}`,
+            type: 'FOLLOW_UP_NOW',
+            label: 'Follow up now',
+            description: `Follow-up due for ${job.company}`,
+            dueDate: job.nextFollowUp,
+          });
+          continue;
+        }
+      }
+
+      if (['LEAD', 'SAVED'].includes(job.status)) {
+        tasks.push({
+          ...base,
+          taskId: `apply-${job.id}`,
+          type: 'APPLY',
+          label: 'Apply to this job',
+          description: `${job.title} at ${job.company} is waiting for your application`,
+        });
+      } else if (['APPLYING', 'APPLIED'].includes(job.status)) {
+        const lastActivity = job.dateApplied
+          ? new Date(job.dateApplied)
+          : null;
+        const stale = !lastActivity || lastActivity <= fiveDaysAgo;
+        if (stale) {
+          tasks.push({
+            ...base,
+            taskId: `followup-${job.id}`,
+            type: 'FOLLOW_UP',
+            label: 'Follow up',
+            description: `No activity for 5+ days on ${job.company}`,
+          });
+        }
+      } else if (job.status === 'INTERVIEWING') {
+        tasks.push({
+          ...base,
+          taskId: `prepare-${job.id}`,
+          type: 'PREPARE',
+          label: 'Prepare for interview',
+          description: `Interview prep needed for ${job.company}`,
+        });
+      } else if (job.status === 'REJECTED') {
+        // No tasks for rejected
+      }
+    }
+
+    // Sort: FOLLOW_UP_NOW > PREPARE > APPLY > FOLLOW_UP
+    const order: Record<QueueTask['type'], number> = {
+      FOLLOW_UP_NOW: 0,
+      PREPARE: 1,
+      APPLY: 2,
+      FOLLOW_UP: 3,
+    };
+    return tasks.sort((a, b) => order[a.type] - order[b.type] || b.fitScore - a.fitScore);
+  }, [jobs]);
 
   const dashboard = useMemo(() => {
     const total = jobs.length;
@@ -145,6 +239,57 @@ export function useJobs() {
     return payload.title;
   }
 
+  async function patchStatus(jobId: string, status: JobLead['status']) {
+    const res = await fetch(`/api/jobs/${jobId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    const payload = await parseApiResponse<{ job: JobLead }>(res);
+    setRawJobs((prev) => prev.map((j) => (j.id === jobId ? payload.job : j)));
+    return payload.job;
+  }
+
+  async function addContact(jobId: string, contact: Omit<Contact, 'id'>) {
+    const res = await fetch(`/api/jobs/${jobId}/contacts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contact),
+    });
+    const payload = await parseApiResponse<{ job: JobLead }>(res);
+    setRawJobs((prev) => prev.map((j) => (j.id === jobId ? payload.job : j)));
+    return payload.job;
+  }
+
+  async function updateContact(jobId: string, contactId: string, contact: Omit<Contact, 'id'>) {
+    const res = await fetch(`/api/jobs/${jobId}/contacts/${contactId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contact),
+    });
+    const payload = await parseApiResponse<{ job: JobLead }>(res);
+    setRawJobs((prev) => prev.map((j) => (j.id === jobId ? payload.job : j)));
+    return payload.job;
+  }
+
+  async function removeContact(jobId: string, contactId: string) {
+    const res = await fetch(`/api/jobs/${jobId}/contacts/${contactId}`, { method: 'DELETE' });
+    const payload = await parseApiResponse<{ job: JobLead }>(res);
+    setRawJobs((prev) => prev.map((j) => (j.id === jobId ? payload.job : j)));
+    return payload.job;
+  }
+
+  async function updatePrepPack(jobId: string, prepPack: PrepPack) {
+    const res = await fetch(`/api/jobs/${jobId}/prep`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(prepPack),
+    });
+    const payload = await parseApiResponse<{ job: JobLead }>(res);
+    setRawJobs((prev) => prev.map((j) => (j.id === jobId ? payload.job : j)));
+    return payload.job;
+  }
+
   async function getPublicJobs() {
     const res = await fetch('/api/public-jobs', { cache: 'no-store' });
     const payload = await parseApiResponse<PublicJobsResponse>(res);
@@ -163,6 +308,8 @@ export function useJobs() {
     jobs,
     templates,
     contacts,
+    enrichedContacts,
+    queueTasks,
     interviews,
     dashboard,
     preferences,
@@ -176,6 +323,11 @@ export function useJobs() {
     createJob,
     updateJob,
     deleteJob,
+    patchStatus,
+    addContact,
+    updateContact,
+    removeContact,
+    updatePrepPack,
     createTitle,
     getPublicJobs,
     savePublicJob,
