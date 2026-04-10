@@ -73,6 +73,10 @@ export async function getPublicJobs(options: PublicJobsQueryOptions = {}): Promi
     : {};
 
   const where = {
+    OR: [
+      { expiresAt: null },
+      { expiresAt: { gt: new Date() } },
+    ],
     ...dateFilter,
     ...textFilter,
     ...titleFilter,
@@ -326,9 +330,13 @@ export async function clonePublicJobForUser(
     preferences,
   );
 
+  const sixMonthsFromNow = new Date();
+  sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+
   const cloned = await prisma.jobLead.create({
     data: {
       userId,
+      expiresAt: sixMonthsFromNow,
       company: jobPayload.company,
       title: jobPayload.title,
       source: jobPayload.source,

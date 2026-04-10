@@ -20,7 +20,7 @@ export async function GET(request: Request, { params }: Params) {
   const { id } = await params;
 
   try {
-    const job = await prisma.jobLead.findFirst({ where: { id, userId: session.user.id } });
+    const job = await prisma.jobLead.findFirst({ where: { id, userId: session.user.id, deletedAt: null } });
     if (!job) return jsonError('Job not found', 404, undefined, request);
 
     return jsonOk({ job: mapDbJob(job) }, request);
@@ -39,7 +39,7 @@ export async function PATCH(request: Request, { params }: Params) {
   if (!rate.ok) return jsonError('Too many requests', 429, undefined, request);
 
   try {
-    const existing = await prisma.jobLead.findFirst({ where: { id, userId: session.user.id } });
+    const existing = await prisma.jobLead.findFirst({ where: { id, userId: session.user.id, deletedAt: null } });
     if (!existing) return jsonError('Job not found', 404, undefined, request);
 
     const body = await request.json();
@@ -91,10 +91,10 @@ export async function DELETE(request: Request, { params }: Params) {
   if (!rate.ok) return jsonError('Too many requests', 429, undefined, request);
 
   try {
-    const job = await prisma.jobLead.findFirst({ where: { id, userId: session.user.id } });
+    const job = await prisma.jobLead.findFirst({ where: { id, userId: session.user.id, deletedAt: null } });
     if (!job) return jsonError('Job not found', 404, undefined, request);
 
-    await prisma.jobLead.delete({ where: { id } });
+    await prisma.jobLead.update({ where: { id }, data: { deletedAt: new Date() } });
     await logImportantInfo({ event: 'job_deleted', userId: session.user.id, jobId: id, route: `/api/jobs/${id}`, context: { company: job.company, title: job.title } });
     return jsonOk({ ok: true }, request);
   } catch (error) {

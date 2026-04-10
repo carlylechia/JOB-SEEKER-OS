@@ -10,7 +10,8 @@ import {
 
 const getCachedPublicJobPreview = unstable_cache(
   async (): Promise<PublicJobRecord[]> => {
-    return getPublicJobs({ take: 4 });
+    const result = await getPublicJobs({ take: 4 });
+    return result.jobs;
   },
   ['landing-public-jobs-preview'],
   { revalidate: 300 },

@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   if (!rate.ok) return jsonError('Too many requests', 429, undefined, request);
 
   try {
-    const jobs = await prisma.jobLead.findMany({ where: { userId: session.user.id }, orderBy: [{ updatedAt: 'desc' }, { dateFound: 'desc' }] });
+    const jobs = await prisma.jobLead.findMany({ where: { userId: session.user.id, deletedAt: null }, orderBy: [{ updatedAt: 'desc' }, { dateFound: 'desc' }] });
     return jsonOk({ jobs: jobs.map(mapDbJob) }, request);
   } catch (error) {
     await logImportantError({ event: 'jobs_list_failed', userId: session.user.id, route: '/api/jobs', error, context: { method: 'GET' } });
@@ -44,9 +44,13 @@ export async function POST(request: Request) {
     const preferences = await getUserPreferences(session.user.id);
     const job = buildStoredJobPayload(parsed.data as any, preferences);
 
+    const sixMonthsFromNow = new Date();
+    sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+
     const created = await prisma.jobLead.create({
       data: {
         userId: session.user.id,
+        expiresAt: sixMonthsFromNow,
         company: job.company,
         title: job.title,
         source: job.source,
