@@ -160,6 +160,26 @@ export type Template = {
   body: string;
 };
 
+export type QueueTask = {
+  taskId: string;
+  type: 'APPLY' | 'FOLLOW_UP' | 'FOLLOW_UP_NOW' | 'PREPARE';
+  label: string;
+  description: string;
+  jobId: string;
+  company: string;
+  title: string;
+  priority: PriorityFlag;
+  fitScore: number;
+  fitTier: FitTier;
+  dueDate?: string;
+};
+
+export type EnrichedContact = Contact & {
+  jobId: string;
+  jobTitle: string;
+  jobCompany: string;
+};
+
 export type BootstrapPayload = {
   jobs: JobLead[];
   templates: Template[];
