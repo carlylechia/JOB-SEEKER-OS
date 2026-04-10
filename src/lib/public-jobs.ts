@@ -276,7 +276,7 @@ export async function clonePublicJobForUser(
     throw new Error(`Public job not found: ${sourceJobId}`);
   }
 
-  // Deduplication: check by jobUrl OR company+title
+  // Deduplication: check by jobUrl OR company+title (including soft-deleted)
   const existing = await prisma.jobLead.findFirst({
     where: {
       userId,
@@ -288,6 +288,13 @@ export async function clonePublicJobForUser(
   });
 
   if (existing) {
+    // If the job was soft-deleted, restore it — but keep the original expiresAt
+    if (existing.deletedAt !== null) {
+      await prisma.jobLead.update({
+        where: { id: existing.id },
+        data: { deletedAt: null },
+      });
+    }
     return existing.id;
   }
 
@@ -330,13 +337,11 @@ export async function clonePublicJobForUser(
     preferences,
   );
 
-  const sixMonthsFromNow = new Date();
-  sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
-
   const cloned = await prisma.jobLead.create({
     data: {
       userId,
-      expiresAt: sixMonthsFromNow,
+      // Inherit the source job's expiry — expiresAt is per job posting, set once
+      expiresAt: sourceJob.expiresAt,
       company: jobPayload.company,
       title: jobPayload.title,
       source: jobPayload.source,
