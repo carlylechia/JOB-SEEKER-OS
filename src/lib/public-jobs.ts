@@ -5,7 +5,20 @@ import { SeniorityLevel, UserPreferences } from '@/types';
 
 export type PublicJobsQueryOptions = {
   q?: string;
+  /** Filter title specifically (in addition to q which also searches company/location) */
+  title?: string;
+  /** How many days back to look. 0 = no limit */
+  days?: number;
   take?: number;
+  /** 1-based page number */
+  page?: number;
+};
+
+export type PublicJobsResult = {
+  jobs: PublicJobRecord[];
+  total: number;
+  page: number;
+  totalPages: number;
 };
 
 export type PublicJobRecord = {
@@ -33,27 +46,42 @@ export function clampPublicJobsTake(value?: number, min = 1, max = 40) {
   return Math.min(Math.max(Number(value), min), max);
 }
 
-export async function getPublicJobs(options: PublicJobsQueryOptions = {}): Promise<PublicJobRecord[]> {
+export async function getPublicJobs(options: PublicJobsQueryOptions = {}): Promise<PublicJobsResult> {
   const q = normalizePublicJobsSearchQuery(options.q);
-  const take = clampPublicJobsTake(options.take);
+  const titleQ = options.title?.trim() ?? '';
+  const perPage = clampPublicJobsTake(options.take, 1, 40);
+  const page = Math.max(1, Math.floor(options.page ?? 1));
+  const days = options.days ?? 30;
 
-  return prisma.jobLead.findMany({
-    where: {
-      createdAt: {
-        gte: getPublicJobsSinceDate(30),
-      },
-      ...(q
-        ? {
-            OR: [
-              { title: { contains: q, mode: 'insensitive' } },
-              { company: { contains: q, mode: 'insensitive' } },
-              { location: { contains: q, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
-    },
+  const dateFilter = days > 0
+    ? { createdAt: { gte: getPublicJobsSinceDate(days) } }
+    : {};
+
+  // Build the text search filter
+  const textFilter = q
+    ? {
+        OR: [
+          { title: { contains: q, mode: 'insensitive' as const } },
+          { company: { contains: q, mode: 'insensitive' as const } },
+          { location: { contains: q, mode: 'insensitive' as const } },
+        ],
+      }
+    : {};
+
+  const titleFilter = titleQ
+    ? { title: { contains: titleQ, mode: 'insensitive' as const } }
+    : {};
+
+  const where = {
+    ...dateFilter,
+    ...textFilter,
+    ...titleFilter,
+  };
+
+  // Fetch one extra to detect next page without a second COUNT query
+  const rawRows = await prisma.jobLead.findMany({
+    where,
     orderBy: [{ createdAt: 'desc' }],
-    take,
     select: {
       id: true,
       title: true,
@@ -64,6 +92,26 @@ export async function getPublicJobs(options: PublicJobsQueryOptions = {}): Promi
       notes: true,
     },
   });
+
+  // Deduplicate: keep only the most-recent entry per (normalised company + title).
+  // The query is already ordered by createdAt desc so the first occurrence wins.
+  const seen = new Set<string>();
+  const deduped: PublicJobRecord[] = [];
+  for (const row of rawRows) {
+    const key = `${row.company.toLowerCase().trim()}|${row.title.toLowerCase().trim()}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      deduped.push(row);
+    }
+  }
+
+  const total = deduped.length;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  const clampedPage = Math.min(page, totalPages);
+  const start = (clampedPage - 1) * perPage;
+  const jobs = deduped.slice(start, start + perPage);
+
+  return { jobs, total, page: clampedPage, totalPages };
 }
 
 export function formatPublicJobAge(date: Date) {

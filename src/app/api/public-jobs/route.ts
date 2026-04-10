@@ -15,14 +15,14 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const q = searchParams.get('q')?.trim() ?? '';
-    const takeParam = Number(searchParams.get('take') ?? '40');
+    const title = searchParams.get('title')?.trim() ?? '';
+    const days = Number(searchParams.get('days') ?? '30');
+    const take = Number(searchParams.get('take') ?? '20');
+    const page = Number(searchParams.get('page') ?? '1');
 
-    const jobs = await getPublicJobs({
-      q,
-      take: takeParam,
-    });
+    const result = await getPublicJobs({ q, title, days, take, page });
 
-    return jsonOk({ jobs }, request);
+    return jsonOk(result, request);
   } catch (error) {
     await logImportantError({
       event: 'public_jobs_fetch_failed',
