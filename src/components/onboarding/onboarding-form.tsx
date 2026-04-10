@@ -45,7 +45,7 @@ export function OnboardingForm({
         throw new Error(payload.error || 'Unable to save onboarding details.');
       }
 
-      router.push('/dashboard');
+      router.push('/auth/continue');
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to save onboarding details.');
@@ -125,7 +125,7 @@ export function OnboardingForm({
           <button className="btn-primary" type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Saving preferences...' : onboardingCompleted ? 'Update onboarding profile' : 'Save and continue'}
           </button>
-          <button className="btn-secondary" type="button" onClick={() => router.push('/dashboard')}>
+          <button className="btn-secondary" type="button" onClick={() => router.push('/auth/continue')}>
             Skip for now
           </button>
         </div>

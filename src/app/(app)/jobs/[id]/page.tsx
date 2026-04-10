@@ -159,7 +159,7 @@ export default function JobDetailsPage() {
               <h3 className="text-lg font-semibold">Score breakdown</h3>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {Object.entries(job.score)
-                  .filter(([k]) => !["fitScore", "fitTier"].includes(k))
+                  .filter(([k]) => !["fitScore", "fitTier", "titleMatch"].includes(k))
                   .map(([key, value]) => (
                     <div
                       key={key}
@@ -171,6 +171,16 @@ export default function JobDetailsPage() {
                       </div>
                     </div>
                   ))}
+                {job.score.titleMatch !== undefined && (
+                  <div className="rounded-xl border border-line p-3">
+                    <div className="muted">titleMatch</div>
+                    <div className="mt-1">
+                      <span className={`badge ${job.score.titleMatch ? "bg-emerald-500/15 text-emerald-300" : "bg-white/10 text-white"}`}>
+                        {job.score.titleMatch ? "Match" : "No match"}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="card-pad">

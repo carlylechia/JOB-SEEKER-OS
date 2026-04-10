@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { auth } from '@/auth';
 import { Logo } from '@/components/shared/logo';
+import { SavePublicJobButton } from '@/components/marketing/save-public-job-button';
 import {
   formatPublicJobAge,
   formatPublicJobLocation,
@@ -106,20 +107,7 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
                   ) : null}
 
                   <div className="mt-6 flex flex-wrap gap-3">
-                    {!session ? (
-                      <>
-                        <Link className="btn-secondary" href="/login">
-                          Sign in to save
-                        </Link>
-                        <Link className="btn-primary" href="/register">
-                          Create account
-                        </Link>
-                      </>
-                    ) : (
-                      <Link className="btn-primary" href="/dashboard">
-                        Open app to save and score
-                      </Link>
-                    )}
+                    <SavePublicJobButton jobId={job.id} isAuthenticated={!!session} />
                   </div>
                 </div>
               ))}

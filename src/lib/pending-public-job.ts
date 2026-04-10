@@ -1,14 +1,19 @@
-import { cookies } from 'next/headers';
+import { cookies } from "next/headers";
 
-const PENDING_PUBLIC_JOB_COOKIE = 'pending_public_job_id';
+const PENDING_PUBLIC_JOB_COOKIE = "pending_public_job_id";
+
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  path: "/",
+};
 
 export async function setPendingPublicJobId(jobId: string) {
   const store = await cookies();
+
   store.set(PENDING_PUBLIC_JOB_COOKIE, jobId, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
+    ...COOKIE_OPTIONS,
     maxAge: 60 * 30, // 30 minutes
   });
 }
@@ -20,5 +25,10 @@ export async function getPendingPublicJobId() {
 
 export async function clearPendingPublicJobId() {
   const store = await cookies();
-  store.delete(PENDING_PUBLIC_JOB_COOKIE);
+
+  // ✅ Proper deletion (overwrite with expired cookie)
+  store.set(PENDING_PUBLIC_JOB_COOKIE, "", {
+    ...COOKIE_OPTIONS,
+    maxAge: 0,
+  });
 }
