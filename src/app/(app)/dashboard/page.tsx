@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { DailyQueue } from '@/components/dashboard/daily-queue';
 import { KpiCard } from '@/components/dashboard/kpi-card';
 import { TopPriorityList } from '@/components/dashboard/top-priority-list';
 import { UpcomingList } from '@/components/dashboard/upcoming-list';
@@ -83,6 +84,8 @@ export default function DashboardPage() {
           </div>
 
           <TopPriorityList jobs={dashboard.topPriority} />
+
+          <DailyQueue />
         </>
       )}
     </div>
