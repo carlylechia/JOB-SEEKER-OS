@@ -4,13 +4,13 @@
  *
  * Required env vars:
  *   RESEND_API_KEY  — get from resend.com
- *   RESEND_FROM     — verified sender address, e.g. "Job Seeker OS <noreply@yourapp.com>"
+ *   EMAIL_FROM     — verified sender address, e.g. "Job Seeker OS <noreply@yourapp.com>"
  *   NEXT_PUBLIC_APP_URL — e.g. https://yourapp.com
  */
 
 import { Resend } from 'resend';
 
-const FROM = process.env.RESEND_FROM ?? 'Job Seeker OS <noreply@jobseekeros.com>';
+const FROM = process.env.EMAIL_FROM ?? 'Job Seeker OS <noreply@jobseekeros.com>';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 export async function sendVerificationEmail(email: string, token: string): Promise<void> {

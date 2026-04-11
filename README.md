@@ -69,7 +69,7 @@ As of the current release, Job Seeker OS is a full-stack SaaS application with:
 - **Protected app routes** behind login
 - **PostgreSQL + Prisma** for persistent data storage
 - **Private per-user job workspaces**
-- **Public jobs discovery** for roles added by users in the last 30 days
+- **Public jobs discovery** for roles added by users in the last 6months
 - **User-driven personalized fit scoring**
 - **Server-first public pages** with client components only where interactivity is needed
 - **Vercel deployment** with production-ready environment setup
@@ -183,6 +183,13 @@ npm run dev
 ```
 
 Open `http://localhost:3000`.
+
+### 7. Log in
+For now, to signup and access the app features, use these credentials:
+email: **jobseekermain@gmail.com**
+password: **Leavepasswordempty4now**
+
+since that's the only verifiable email for localhost.
 
 ---
 
