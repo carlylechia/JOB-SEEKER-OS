@@ -290,6 +290,17 @@ export function useJobs() {
     return payload.job;
   }
 
+  async function updateChecklist(jobId: string, checklist: JobLead['checklist']) {
+    const res = await fetch(`/api/jobs/${jobId}/checklist`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(checklist),
+    });
+    const payload = await parseApiResponse<{ job: JobLead }>(res);
+    setRawJobs((prev) => prev.map((j) => (j.id === jobId ? payload.job : j)));
+    return payload.job;
+  }
+
   async function getPublicJobs() {
     const res = await fetch('/api/public-jobs', { cache: 'no-store' });
     const payload = await parseApiResponse<PublicJobsResponse>(res);
@@ -328,6 +339,7 @@ export function useJobs() {
     updateContact,
     removeContact,
     updatePrepPack,
+    updateChecklist,
     createTitle,
     getPublicJobs,
     savePublicJob,
