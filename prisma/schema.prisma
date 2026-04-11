@@ -15,12 +15,17 @@ model User {
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 
+  emailVerified              DateTime?
+  emailVerificationToken     String?   @unique
+  emailVerificationExpires   DateTime?
+
   profile      UserProfile?
   jobLeads     JobLead[]
   templates    FollowUpTemplate[]
   createdJobTitles JobTitle[]    @relation("JobTitleCreator")
 
   @@index([createdAt])
+  @@index([emailVerificationToken])
 }
 
 model UserProfile {

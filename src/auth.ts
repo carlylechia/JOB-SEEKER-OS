@@ -2,6 +2,7 @@ import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
+import { logImportantInfo } from '@/lib/observability';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: 'jwt' },
@@ -20,12 +21,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const user = await prisma.user.findUnique({
           where: { email: email.toLowerCase() },
-          select: { id: true, email: true, passwordHash: true, name: true },
+          select: { id: true, email: true, passwordHash: true, name: true, emailVerified: true },
         });
         if (!user) return null;
 
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
+
+        // Block login for unverified accounts
+        if (!user.emailVerified) {
+          await logImportantInfo({
+            event: 'login_blocked_unverified',
+            userId: user.id,
+            route: '/api/auth/callback/credentials',
+            context: { email: user.email },
+          });
+          // NextAuth looks for this specific message format to surface it
+          throw new Error('EMAIL_NOT_VERIFIED');
+        }
 
         return {
           id: user.id,

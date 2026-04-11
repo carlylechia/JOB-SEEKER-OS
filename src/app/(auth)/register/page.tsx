@@ -2,19 +2,19 @@
 
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import { Logo } from '@/components/shared/logo';
 
 function RegisterForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const callbackUrl = searchParams.get('callbackUrl') || '/onboarding';
 
@@ -26,7 +26,7 @@ function RegisterForm() {
     const response = await fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, confirmPassword }),
     });
 
     const payload = await response.json();
@@ -37,16 +37,30 @@ function RegisterForm() {
       return;
     }
 
-    // Login user
-    await signIn('credentials', {
-      email,
-      password,
-      redirect: false,
-    });
+    setSuccess(true);
+  }
 
-    // Redirect properly
-    router.push(callbackUrl);
-    router.refresh();
+  if (success) {
+    return (
+      <div className="shell flex min-h-screen items-center justify-center py-12">
+        <div className="card-pad w-full max-w-md text-center">
+          <div className="mb-6 flex justify-center">
+            <Logo centered />
+          </div>
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-8">
+            <div className="text-3xl">📧</div>
+            <h2 className="mt-3 text-lg font-semibold text-emerald-300">Check your inbox!</h2>
+            <p className="mt-2 text-sm text-muted">
+              We sent a verification link to <strong className="text-foreground">{email}</strong>.
+              Click it to activate your account.
+            </p>
+            <Link href="/login" className="btn-primary mt-5 inline-block">
+              Go to sign in
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -85,6 +99,16 @@ function RegisterForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+          />
+
+          <input
+            className="input"
+            placeholder="Confirm password"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
             required
             minLength={8}
           />

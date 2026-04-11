@@ -29,7 +29,11 @@ function LoginForm() {
     });
 
     if (result?.error) {
-      setError('Invalid email or password.');
+      if (result.error === 'EMAIL_NOT_VERIFIED') {
+        setError('EMAIL_NOT_VERIFIED');
+      } else {
+        setError('Invalid email or password.');
+      }
       setIsSubmitting(false);
       return;
     }
@@ -70,7 +74,12 @@ function LoginForm() {
             required
           />
 
-          {error ? (
+          {error === 'EMAIL_NOT_VERIFIED' ? (
+            <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-200">
+              Please verify your email before signing in.{' '}
+              <strong>Check your inbox</strong> for the verification link.
+            </div>
+          ) : error ? (
             <div className="rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
               {error}
             </div>
