@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { Bell, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
 import { TopbarMobileMenu } from './topbar-mobile-menu';
 import { SignOutButton } from './sign-out-button';
+import { NotificationBell } from './notification-bell';
 
 export function Topbar({ user }: { user: { name?: string | null; email?: string | null } }) {
   const label = user.name || user.email || 'Account';
@@ -23,7 +24,7 @@ export function Topbar({ user }: { user: { name?: string | null; email?: string 
 
         <div className="hidden items-center gap-3 lg:flex">
           <span className="hidden rounded-xl border border-line bg-white/5 px-3 py-2 text-sm text-muted md:inline-flex">{label}</span>
-          <button className="btn-secondary inline-flex items-center justify-center" aria-label="Notifications"><Bell className="h-4 w-4" /></button>
+          <NotificationBell />
           <Link href="/jobs/new" className="btn-primary inline-flex items-center justify-center">Add Job</Link>
           <Link href="/settings" className="btn-secondary inline-flex items-center justify-center">Settings</Link>
           <SignOutButton />

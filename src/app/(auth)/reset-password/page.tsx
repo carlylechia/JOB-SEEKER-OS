@@ -2,44 +2,66 @@
 
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
 
-function RegisterForm() {
+function ResetPasswordForm() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const token = searchParams.get('token') ?? '';
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const callbackUrl = searchParams.get('callbackUrl') || '/onboarding';
+  if (!token) {
+    return (
+      <div className="shell flex min-h-screen items-center justify-center py-12">
+        <div className="card-pad w-full max-w-md text-center">
+          <div className="mb-6 flex justify-center">
+            <Logo centered />
+          </div>
+          <div className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-8">
+            <div className="text-3xl">❌</div>
+            <h2 className="mt-3 text-lg font-semibold text-red-300">Invalid reset link</h2>
+            <p className="mt-2 text-sm text-muted">
+              This link is missing a reset token. Please request a new one.
+            </p>
+            <Link href="/forgot-password" className="btn-primary mt-5 inline-block">
+              Request new link
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     setIsSubmitting(true);
     setError(null);
 
-    const response = await fetch('/api/register', {
+    const res = await fetch('/api/reset-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, confirmPassword }),
+      body: JSON.stringify({ token, password, confirmPassword }),
     });
 
-    const payload = await response.json();
+    const payload = await res.json();
 
-    if (!response.ok) {
-      setError(payload.error || 'Unable to create your account.');
+    if (!res.ok) {
+      const msg = payload.details?.[0] ?? payload.error ?? 'Something went wrong.';
+      setError(msg);
       setIsSubmitting(false);
       return;
     }
 
     setSuccess(true);
+    setTimeout(() => router.push('/login'), 3000);
   }
 
   if (success) {
@@ -50,14 +72,13 @@ function RegisterForm() {
             <Logo centered />
           </div>
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-8">
-            <div className="text-3xl">📧</div>
-            <h2 className="mt-3 text-lg font-semibold text-emerald-300">Check your inbox!</h2>
+            <div className="text-3xl">✅</div>
+            <h2 className="mt-3 text-lg font-semibold text-emerald-300">Password updated!</h2>
             <p className="mt-2 text-sm text-muted">
-              We sent a verification link to <strong className="text-foreground">{email}</strong>.
-              Click it to activate your account.
+              Your password has been changed. Redirecting you to sign in…
             </p>
             <Link href="/login" className="btn-primary mt-5 inline-block">
-              Go to sign in
+              Sign in now
             </Link>
           </div>
         </div>
@@ -72,33 +93,14 @@ function RegisterForm() {
           <Logo centered />
         </div>
 
-        <h1 className="text-2xl font-semibold">Create your workspace</h1>
-        <p className="muted mt-1">
-          We’ll create a seeded starter workspace so you can explore the product immediately.
-        </p>
+        <h1 className="text-2xl font-semibold">Set a new password</h1>
+        <p className="muted mt-1">Choose a strong password (at least 8 characters).</p>
 
         <form className="mt-6 space-y-3" onSubmit={handleSubmit}>
-          <input
-            className="input"
-            placeholder="Full name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-
-          <input
-            className="input"
-            placeholder="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-
           <div className="relative">
             <input
               className="input pr-10"
-              placeholder="Password"
+              placeholder="New password"
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -117,7 +119,7 @@ function RegisterForm() {
 
           <input
             className="input"
-            placeholder="Confirm password"
+            placeholder="Confirm new password"
             type={showPassword ? 'text' : 'password'}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
@@ -131,27 +133,16 @@ function RegisterForm() {
             </div>
           ) : null}
 
-          <button
-            className="btn-primary w-full"
-            disabled={isSubmitting}
-            type="submit"
-          >
-            {isSubmitting ? 'Creating account...' : 'Create account'}
+          <button className="btn-primary w-full" disabled={isSubmitting} type="submit">
+            {isSubmitting ? 'Updating password...' : 'Update password'}
           </button>
         </form>
-
-        <p className="mt-4 text-sm text-muted">
-          Already have an account?{' '}
-          <Link href={callbackUrl && callbackUrl !== '/onboarding' ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/login'} className="text-accent">
-            Sign in
-          </Link>
-        </p>
       </div>
     </div>
   );
 }
 
-export default function RegisterPage() {
+export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
@@ -160,13 +151,13 @@ export default function RegisterPage() {
             <div className="mb-6 flex justify-center">
               <Logo centered />
             </div>
-            <h1 className="text-2xl font-semibold">Create your workspace</h1>
+            <h1 className="text-2xl font-semibold">Set a new password</h1>
             <p className="muted mt-1">Loading...</p>
           </div>
         </div>
       }
     >
-      <RegisterForm />
+      <ResetPasswordForm />
     </Suspense>
   );
 }

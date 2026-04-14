@@ -22,6 +22,7 @@ export function useJobs() {
   const [profile, setProfile] = useState<UserProfileDetails | null>(null);
   const [titleOptions, setTitleOptions] = useState<string[]>([]);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [streakCount, setStreakCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export function useJobs() {
         setProfile(data.profile);
         setTitleOptions(data.titleOptions ?? []);
         setOnboardingCompleted(data.onboardingCompleted);
+        setStreakCount(data.streakCount ?? 0);
       } catch (error) {
         console.error(error);
       } finally {
@@ -327,6 +329,7 @@ export function useJobs() {
     profile,
     titleOptions,
     onboardingCompleted,
+    streakCount,
     getJob,
     updateTemplate,
     updatePreferences,

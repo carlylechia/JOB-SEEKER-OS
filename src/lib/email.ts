@@ -84,3 +84,130 @@ export async function sendVerificationEmail(email: string, token: string): Promi
     throw new Error(`Resend error: ${error.message}`);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Password Reset Email
+// ---------------------------------------------------------------------------
+
+export async function sendPasswordResetEmail(email: string, token: string): Promise<void> {
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resetUrl = `${APP_URL}/reset-password?token=${encodeURIComponent(token)}`;
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Reset your password — Job Seeker OS</title>
+  <style>
+    body { margin: 0; padding: 0; background: #08111f; color: #e7edf7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .wrapper { max-width: 560px; margin: 40px auto; padding: 0 16px; }
+    .card { background: #0f1a2e; border: 1px solid #22314d; border-radius: 16px; padding: 40px; }
+    .logo { font-size: 20px; font-weight: 700; color: #4f8cff; margin-bottom: 28px; }
+    h1 { margin: 0 0 12px; font-size: 22px; font-weight: 600; }
+    p { margin: 0 0 20px; font-size: 15px; line-height: 1.6; color: #98a7c4; }
+    .btn { display: inline-block; background: #4f8cff; color: #ffffff !important; text-decoration: none; font-weight: 600; font-size: 15px; padding: 14px 28px; border-radius: 10px; }
+    .small { font-size: 13px; color: #98a7c4; margin-top: 24px; }
+    .small a { color: #4f8cff; word-break: break-all; }
+    .footer { margin-top: 24px; font-size: 12px; color: #4a5e7a; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="card">
+      <div class="logo">Job Seeker OS</div>
+      <h1>Reset your password</h1>
+      <p>We received a request to reset the password for your account. Click the button below to set a new password. This link expires in <strong>1 hour</strong>.</p>
+      <a class="btn" href="${resetUrl}">Reset my password</a>
+      <p class="small">
+        If the button doesn't work, copy and paste this link:<br />
+        <a href="${resetUrl}">${resetUrl}</a>
+      </p>
+      <p class="small" style="margin-bottom:0;">
+        If you didn't request a password reset, you can safely ignore this email. Your password won't change.
+      </p>
+    </div>
+    <div class="footer">© ${new Date().getFullYear()} Job Seeker OS</div>
+  </div>
+</body>
+</html>`.trim();
+
+  const text = [
+    'Reset your Job Seeker OS password',
+    '',
+    'Click the link below to set a new password (expires in 1 hour):',
+    '',
+    resetUrl,
+    '',
+    "If you didn't request this, ignore this email.",
+  ].join('\n');
+
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: 'Reset your password — Job Seeker OS',
+    html,
+    text,
+  });
+
+  if (error) {
+    throw new Error(`Resend error: ${error.message}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Generic notification email (for in-app notifications sent via email)
+// ---------------------------------------------------------------------------
+
+export async function sendNotificationEmail(
+  email: string,
+  title: string,
+  message: string,
+): Promise<void> {
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
+  const escaped = (s: string) => s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>${escaped(title)} — Job Seeker OS</title>
+  <style>
+    body { margin: 0; padding: 0; background: #08111f; color: #e7edf7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .wrapper { max-width: 560px; margin: 40px auto; padding: 0 16px; }
+    .card { background: #0f1a2e; border: 1px solid #22314d; border-radius: 16px; padding: 40px; }
+    .logo { font-size: 20px; font-weight: 700; color: #4f8cff; margin-bottom: 28px; }
+    h1 { margin: 0 0 12px; font-size: 20px; font-weight: 600; }
+    p { margin: 0 0 20px; font-size: 15px; line-height: 1.6; color: #98a7c4; }
+    .btn { display: inline-block; background: #4f8cff; color: #ffffff !important; text-decoration: none; font-weight: 600; font-size: 15px; padding: 14px 28px; border-radius: 10px; }
+    .footer { margin-top: 24px; font-size: 12px; color: #4a5e7a; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="card">
+      <div class="logo">Job Seeker OS</div>
+      <h1>${escaped(title)}</h1>
+      <p>${escaped(message)}</p>
+      <a class="btn" href="${APP_URL}/dashboard">Open dashboard</a>
+    </div>
+    <div class="footer">© ${new Date().getFullYear()} Job Seeker OS</div>
+  </div>
+</body>
+</html>`.trim();
+
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: `${title} — Job Seeker OS`,
+    html,
+    text: `${title}\n\n${message}\n\nOpen your dashboard: ${APP_URL}/dashboard`,
+  });
+
+  if (error) {
+    throw new Error(`Resend error: ${error.message}`);
+  }
+}
+

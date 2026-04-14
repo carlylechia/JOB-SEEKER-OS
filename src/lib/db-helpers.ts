@@ -163,6 +163,7 @@ export async function getUserWorkspace(userId: string) {
       body: template.body,
     })) as Template[],
     titleOptions: titleOptions.map((item) => item.name),
+    streakCount: user?.streakCount ?? 0,
   };
 }
 

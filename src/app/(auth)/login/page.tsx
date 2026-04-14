@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Eye, EyeOff } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
 
 function LoginForm() {
@@ -12,6 +13,7 @@ function LoginForm() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -65,14 +67,24 @@ function LoginForm() {
             required
           />
 
-          <input
-            className="input"
-            placeholder="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <div className="relative">
+            <input
+              className="input pr-10"
+              placeholder="Password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <button
+              type="button"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
 
           {error === 'EMAIL_NOT_VERIFIED' ? (
             <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-200">
@@ -98,6 +110,12 @@ function LoginForm() {
           No account yet?{' '}
           <Link href={callbackUrl && callbackUrl !== '/dashboard' ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/register'} className="text-accent">
             Create one
+          </Link>
+        </p>
+
+        <p className="mt-2 text-sm text-muted">
+          <Link href="/forgot-password" className="text-accent">
+            Forgot your password?
           </Link>
         </p>
       </div>

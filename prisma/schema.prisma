@@ -19,13 +19,26 @@ model User {
   emailVerificationToken     String?   @unique
   emailVerificationExpires   DateTime?
 
-  profile      UserProfile?
+  // Password reset
+  passwordResetToken         String?   @unique
+  passwordResetExpires       DateTime?
+
+  // Streak / engagement
+  streakCount                Int       @default(0)
+  lastActiveDate             DateTime?
+
+  // OAuth
+  linkedinId                 String?   @unique
+
+  profile        UserProfile?
+  notifications  Notification[]
   jobLeads     JobLead[]
   templates    FollowUpTemplate[]
   createdJobTitles JobTitle[]    @relation("JobTitleCreator")
 
   @@index([createdAt])
   @@index([emailVerificationToken])
+  @@index([passwordResetToken])
 }
 
 model UserProfile {
@@ -127,4 +140,20 @@ model JobTitle {
   createdBy  User?    @relation("JobTitleCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // queue | follow_up | streak | system | password_reset
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  emailSent Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }

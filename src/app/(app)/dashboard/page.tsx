@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { DailyQueue } from '@/components/dashboard/daily-queue';
 import { KpiCard } from '@/components/dashboard/kpi-card';
+import { StreakWidget } from '@/components/dashboard/streak-widget';
 import { TopPriorityList } from '@/components/dashboard/top-priority-list';
 import { UpcomingList } from '@/components/dashboard/upcoming-list';
 import { WeeklyTrendChart } from '@/components/dashboard/weekly-trend-chart';
@@ -10,7 +11,7 @@ import { PageHeader } from '@/components/shared/page-header';
 import { useJobs } from '@/hooks/use-job-data';
 
 export default function DashboardPage() {
-  const { dashboard, jobs, interviews, preferences, onboardingCompleted, profile, isLoading } = useJobs();
+  const { dashboard, jobs, interviews, preferences, onboardingCompleted, profile, streakCount, isLoading } = useJobs();
 
   if (isLoading) return <div className="card-pad">Loading your workspace…</div>;
 
@@ -48,6 +49,8 @@ export default function DashboardPage() {
           </div>
         </div>
       ) : null}
+
+      <StreakWidget streakCount={streakCount} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         <KpiCard label="Total leads" value={dashboard.total} />

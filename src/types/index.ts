@@ -187,4 +187,5 @@ export type BootstrapPayload = {
   onboardingCompleted: boolean;
   profile: UserProfileDetails;
   titleOptions: string[];
+  streakCount: number;
 };
