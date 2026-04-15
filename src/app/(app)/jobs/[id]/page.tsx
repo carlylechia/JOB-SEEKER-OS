@@ -32,7 +32,7 @@ const CHECKLIST_LABELS: Record<keyof Checklist, string> = {
 export default function JobDetailsPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { getJob, updateJob, deleteJob, patchStatus, addContact, removeContact, updateChecklist, titleOptions, createTitle, isLoading } = useJobs();
+  const { getJob, updateJob, deleteJob, patchStatus, patchFollowUp, rescoreJob, addContact, removeContact, updateChecklist, titleOptions, createTitle, isLoading } = useJobs();
   const [isEditing, setIsEditing] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
@@ -41,6 +41,7 @@ export default function JobDetailsPage() {
   const [followUpDate, setFollowUpDate] = useState('');
   const [savingFollowUp, setSavingFollowUp] = useState(false);
   const [checklistSaving, setChecklistSaving] = useState(false);
+  const [rescoring, setRescoring] = useState(false);
 
   const job = getJob(params.id);
 
@@ -75,10 +76,19 @@ export default function JobDetailsPage() {
     if (!followUpDate) return;
     setSavingFollowUp(true);
     try {
-      await updateJob(job!.id, { ...(job as any), nextFollowUp: followUpDate });
+      await patchFollowUp(job!.id, followUpDate);
       setFollowUpDate('');
     } finally {
       setSavingFollowUp(false);
+    }
+  }
+
+  async function handleRescore() {
+    setRescoring(true);
+    try {
+      await rescoreJob(job!.id);
+    } finally {
+      setRescoring(false);
     }
   }
 
@@ -117,6 +127,14 @@ export default function JobDetailsPage() {
                 Open listing
               </Link>
             ) : null}
+            <button
+              className="btn-secondary"
+              type="button"
+              disabled={rescoring}
+              onClick={handleRescore}
+            >
+              {rescoring ? 'Rescoring…' : 'Re-score'}
+            </button>
             <button
               className="btn-primary"
               type="button"

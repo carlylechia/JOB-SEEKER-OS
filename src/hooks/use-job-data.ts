@@ -303,6 +303,24 @@ export function useJobs() {
     return payload.job;
   }
 
+  async function patchFollowUp(jobId: string, nextFollowUp: string | null) {
+    const res = await fetch(`/api/jobs/${jobId}/followup`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nextFollowUp }),
+    });
+    const payload = await parseApiResponse<{ job: JobLead }>(res);
+    setRawJobs((prev) => prev.map((j) => (j.id === jobId ? payload.job : j)));
+    return payload.job;
+  }
+
+  async function rescoreJob(jobId: string) {
+    const res = await fetch(`/api/jobs/${jobId}/rescore`, { method: 'POST' });
+    const payload = await parseApiResponse<{ job: JobLead }>(res);
+    setRawJobs((prev) => prev.map((j) => (j.id === jobId ? payload.job : j)));
+    return payload.job;
+  }
+
   async function getPublicJobs() {
     const res = await fetch('/api/public-jobs', { cache: 'no-store' });
     const payload = await parseApiResponse<PublicJobsResponse>(res);
@@ -338,6 +356,8 @@ export function useJobs() {
     updateJob,
     deleteJob,
     patchStatus,
+    patchFollowUp,
+    rescoreJob,
     addContact,
     updateContact,
     removeContact,
