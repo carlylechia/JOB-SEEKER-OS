@@ -1,6 +1,6 @@
 # Job Seeker OS
 
-Job Seeker OS is a personalized job-search management web app built as a portfolio-ready SaaS MVP. It helps candidates discover, score, track, and manage job applications through one structured workflow.
+Job Seeker OS is a full-stack job search management platform. It helps candidates discover, score, prioritize, track, and execute their applications through one structured, intelligent workflow.
 
 ---
 
@@ -353,7 +353,7 @@ This release added:
 - logo/favicon system for production branding
 - Vercel deployment readiness
 
-### v1.0 — Frontend MVP
+### v1.0 — Frontend Foundation
 
 This release included:
 

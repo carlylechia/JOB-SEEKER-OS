@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 const items = [
   { href: '#features', label: 'Features' },
-  { href: '#workflow', label: 'Workflow' },
+  { href: '#how-it-works', label: 'How It Works' },
   { href: '#public-jobs', label: 'Public Jobs' },
   { href: '#faq', label: 'FAQ' },
 ];
