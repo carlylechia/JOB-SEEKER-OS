@@ -36,6 +36,12 @@ a { color: inherit; text-decoration: none; }
   100% { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes demo-enter {
+  from { opacity: 0; transform: translateY(18px) scale(0.985); filter: blur(6px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0px); }
+}
+.demo-enter { animation: demo-enter 0.7s cubic-bezier(0.22,1,0.36,1) both; }
+
 .section-fade-up {
   animation: fade-up-soft 0.7s ease-out both;
 }
@@ -70,6 +76,71 @@ a { color: inherit; text-decoration: none; }
 .orb-drift-1 { animation: orb-drift-1 20s ease-in-out infinite; }
 .orb-drift-2 { animation: orb-drift-2 25s ease-in-out infinite; }
 .orb-drift-3 { animation: orb-drift-3 16s ease-in-out infinite 3s; }
+
+/* ── Marketing: hero beam field ─────────────────────────────────────── */
+@keyframes hero-beam-pan {
+  0% { transform: rotate(0deg) scale(1); opacity: 0.62; }
+  50% { transform: rotate(18deg) scale(1.04); opacity: 0.78; }
+  100% { transform: rotate(36deg) scale(1); opacity: 0.62; }
+}
+.hero-beam-pan { transform-origin: 50% 50%; animation: hero-beam-pan 18s ease-in-out infinite; }
+
+/* ── Marketing: fidget spinner motion ───────────────────────────────── */
+@keyframes spinner-rotate-glide {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes spinner-rotate-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+@keyframes spinner-rotate-snap {
+  0% { transform: rotate(0deg); }
+  18% { transform: rotate(120deg); }
+  36% { transform: rotate(240deg); }
+  54% { transform: rotate(360deg); }
+  72% { transform: rotate(480deg); }
+  100% { transform: rotate(720deg); }
+}
+@keyframes spinner-wobble {
+  0%, 100% { transform: rotate(0deg) translateY(0px) scale(1); }
+  25% { transform: rotate(90deg) translateY(-4px) scale(1.01); }
+  50% { transform: rotate(180deg) translateY(1px) scale(0.995); }
+  75% { transform: rotate(270deg) translateY(-3px) scale(1.008); }
+}
+@keyframes spinner-sheen-sweep {
+  0% { opacity: 0; transform: translateX(-70px) translateY(20px); }
+  18% { opacity: 0.42; }
+  36% { opacity: 0.06; transform: translateX(300px) translateY(-90px); }
+  100% { opacity: 0; transform: translateX(300px) translateY(-90px); }
+}
+
+.spinner-spin-glide,
+.spinner-spin-reverse,
+.spinner-spin-snap,
+.spinner-spin-wobble {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+
+.spinner-spin-glide { animation: spinner-rotate-glide 2.9s linear infinite; }
+.spinner-spin-reverse { animation: spinner-rotate-reverse 4.2s linear infinite; }
+.spinner-spin-snap { animation: spinner-rotate-snap 3.6s cubic-bezier(0.22,1,0.36,1) infinite; }
+.spinner-spin-wobble { animation: spinner-wobble 3.8s cubic-bezier(0.22,1,0.36,1) infinite; }
+.spinner-sheen { animation: spinner-sheen-sweep 5.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner-spin-glide,
+  .spinner-spin-reverse,
+  .spinner-spin-snap,
+  .spinner-spin-wobble,
+  .spinner-sheen,
+  .demo-enter,
+  .hero-beam-pan {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
 
 /* ── Landing page: hero text staggered reveal ───────────────────────── */
 @keyframes hero-slide-up {
