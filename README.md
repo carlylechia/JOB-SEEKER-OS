@@ -235,4 +235,9 @@ This repository is actively evolving. Recent branch work expanded:
 - marketing storytelling and product walkthroughs
 - favicon and branding consistency
 
----
+The next releases are expected to be much more AI-intensive, including:
+
+- smart resume building
+- AI job fetching and ranking
+- AI-assisted auto-apply workflows
+- smarter suggestions across queue, scoring, and execution
