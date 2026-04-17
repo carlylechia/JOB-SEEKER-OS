@@ -73,33 +73,33 @@ function SlideGraphic({ slide }: { slide: Slide }) {
 
   return (
     <div className="relative mx-auto w-full max-w-[560px]">
-      <div className={`absolute -inset-14 rounded-[56px] blur-[76px] opacity-80 ${a.glow}`} aria-hidden />
-      <div className="absolute inset-x-[10%] -top-10 h-24 rounded-full bg-white/8 blur-3xl" aria-hidden />
+      <div className={`absolute -inset-8 rounded-[40px] blur-[56px] opacity-80 sm:-inset-14 sm:rounded-[56px] sm:blur-[76px] ${a.glow}`} aria-hidden />
+      <div className="absolute inset-x-[10%] -top-6 h-16 rounded-full bg-white/8 blur-3xl sm:-top-10 sm:h-24" aria-hidden />
 
-      <div className={`relative overflow-hidden rounded-[40px] border border-white/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.09),rgba(255,255,255,0.03))] shadow-[0_32px_110px_rgba(0,0,0,0.58)] backdrop-blur-2xl ring-1 ${a.ring}`}>
+      <div className={`relative overflow-hidden rounded-[28px] border border-white/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.09),rgba(255,255,255,0.03))] shadow-[0_24px_80px_rgba(0,0,0,0.52)] backdrop-blur-2xl ring-1 sm:rounded-[40px] sm:shadow-[0_32px_110px_rgba(0,0,0,0.58)] ${a.ring}`}>
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.14),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.06),transparent_30%)]" />
-        <div className="flex items-center justify-between gap-4 border-b border-white/10 px-6 py-4">
+        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05]">
-              <Icon className="h-5 w-5 text-white" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] sm:h-10 sm:w-10">
+              <Icon className="h-4 w-4 text-white sm:h-5 sm:w-5" />
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">{slide.kicker}</p>
-              <p className="mt-0.5 text-sm font-semibold text-white">{slide.title}</p>
+              <p className="mt-0.5 line-clamp-2 text-sm font-semibold text-white">{slide.title}</p>
             </div>
           </div>
-          <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${a.chip}`}>
+          <span className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold sm:px-3 sm:text-[11px] ${a.chip}`}>
             {slide.status ?? 'Now'}
           </span>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {slide.id === 'scoring' ? (
             <div className="grid gap-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                   <p className="text-xs text-slate-400">Fit score</p>
-                  <p className="mt-2 text-4xl font-bold text-white">92</p>
+                  <p className="mt-2 text-3xl font-bold text-white sm:text-4xl">92</p>
                   <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/10">
                     <div className="h-full w-[78%] rounded-full bg-cyan-300/80" />
                   </div>
@@ -118,7 +118,7 @@ function SlideGraphic({ slide }: { slide: Slide }) {
                 </div>
                 <div className="rounded-3xl border border-white/10 bg-white/[0.05] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                   <p className="text-xs text-slate-400">Confidence</p>
-                  <p className="mt-2 text-4xl font-bold text-white">High</p>
+                  <p className="mt-2 text-3xl font-bold text-white sm:text-4xl">High</p>
                   <div className="mt-3 grid gap-2">
                     {['Skills match', 'Scope alignment', 'Seniority'].map((label) => (
                       <div key={label} className="flex items-center justify-between gap-3">
@@ -148,7 +148,7 @@ function SlideGraphic({ slide }: { slide: Slide }) {
                 { title: 'Tailor resume — role fit', tag: 'Next', value: 'Medium', tone: 'bg-cyan-300/70' },
                 { title: 'Schedule screen — prep notes', tag: 'This week', value: 'High', tone: 'bg-indigo-300/70' },
               ].map((row) => (
-                <div key={row.title} className="flex items-center justify-between gap-4 rounded-3xl border border-white/10 bg-white/[0.05] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                <div key={row.title} className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/[0.05] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className={`h-2.5 w-2.5 rounded-full ${row.tone}`} />
@@ -156,8 +156,8 @@ function SlideGraphic({ slide }: { slide: Slide }) {
                     </div>
                     <p className="mt-1 text-xs text-slate-400">{row.tag}</p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="hidden sm:block h-2 w-24 overflow-hidden rounded-full bg-white/10">
+                  <div className="flex items-center justify-between gap-3 sm:justify-start">
+                    <div className="h-2 w-full max-w-24 overflow-hidden rounded-full bg-white/10">
                       <div className="h-full w-[70%] rounded-full bg-indigo-300/80" />
                     </div>
                     <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-semibold text-slate-200">
@@ -175,7 +175,7 @@ function SlideGraphic({ slide }: { slide: Slide }) {
             </div>
           ) : slide.id === 'pipeline' ? (
             <div className="grid gap-4">
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {['Saved', 'Applied', 'Interview', 'Offer'].map((stage, i) => (
                   <div key={stage} className="rounded-3xl border border-white/10 bg-white/[0.05] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                     <p className="text-xs font-semibold text-slate-200">{stage}</p>
@@ -243,7 +243,7 @@ function SlideGraphic({ slide }: { slide: Slide }) {
                 { name: 'Jordan — Eng Manager', note: 'Warm intro · send portfolio' },
                 { name: 'Sam — Talent Partner', note: 'Resume submitted · waiting' },
               ].map((c) => (
-                <div key={c.name} className="flex items-center justify-between gap-4 rounded-3xl border border-white/10 bg-white/[0.05] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                <div key={c.name} className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/[0.05] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                   <div className="flex min-w-0 items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-sm font-bold text-white">
                       {c.name[0]}
@@ -418,7 +418,7 @@ export function DemoSlideshow() {
   const a = accentStyles(active.accent);
 
   return (
-    <div className="relative h-screen overflow-hidden">
+    <div className="relative min-h-[100svh] overflow-x-hidden overflow-y-auto lg:h-screen lg:overflow-hidden">
       {/* background */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
         <div className="absolute inset-0 bg-[#040812]" />
@@ -432,24 +432,24 @@ export function DemoSlideshow() {
       </div>
 
       {/* top bar */}
-      <header className="relative z-20 pt-4">
+      <header className="relative z-20 px-3 pt-3 sm:px-0 sm:pt-4">
         <div className="shell">
-          <div className="rounded-[28px] border border-white/12 bg-[#08111f]/66 px-4 py-3 shadow-[0_18px_60px_rgba(1,8,20,0.34)] backdrop-blur-2xl sm:px-5">
-            <div className="flex items-center justify-between gap-4">
+          <div className="rounded-[24px] border border-white/12 bg-[#08111f]/66 px-3 py-3 shadow-[0_18px_60px_rgba(1,8,20,0.34)] backdrop-blur-2xl sm:rounded-[28px] sm:px-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
               <div className="flex items-center gap-3">
                 <Link
                   href="/"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] hover:text-white"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-3 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] hover:text-white sm:px-4"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Home
                 </Link>
-                <div className="hidden md:block">
+                <div className="hidden sm:block md:block">
                   <Logo compact href="/" />
                 </div>
               </div>
 
-              <div className="hidden md:flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] p-1.5">
+              <div className="order-3 flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] p-1.5 sm:order-none sm:w-auto md:flex">
                 {slides.map((s, i) => (
                   <button
                     key={s.id}
@@ -461,10 +461,10 @@ export function DemoSlideshow() {
                 ))}
               </div>
 
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2">
                 <Link
                   href="/jobs-public"
-                  className="hidden sm:inline-flex items-center rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] hover:text-white"
+                  className="hidden md:inline-flex items-center rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] hover:text-white"
                 >
                   Browse public jobs
                 </Link>
@@ -483,28 +483,28 @@ export function DemoSlideshow() {
 
       {/* content */}
       <main
-        className="relative z-10 flex h-[calc(100vh-88px)] items-center"
+        className="relative z-10 flex min-h-[calc(100svh-88px)] items-start py-6 sm:py-8 lg:h-[calc(100vh-88px)] lg:min-h-0 lg:items-center lg:py-0"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
         onFocusCapture={() => setIsPaused(true)}
         onBlurCapture={() => setIsPaused(false)}
       >
         <div className="shell w-full">
-          <div className="grid items-center gap-10 lg:grid-cols-2">
-            <div key={active.id} className="demo-enter max-w-xl">
+          <div className="grid items-start gap-8 pb-8 lg:grid-cols-2 lg:items-center lg:gap-10 lg:pb-0">
+            <div key={active.id} className="demo-enter max-w-xl px-1 sm:px-0">
               <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${a.chip}`}>
                 <BadgeCheck className="h-3.5 w-3.5" />
                 {active.status ?? 'Now'}
               </span>
 
-              <h1 className="mt-5 text-4xl font-bold tracking-tight text-white sm:text-5xl">
+              <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:mt-5 sm:text-5xl">
                 {active.title}
               </h1>
-              <p className="mt-5 text-base leading-8 text-slate-300/90 sm:text-lg">
+              <p className="mt-4 text-sm leading-7 text-slate-300/90 sm:mt-5 sm:text-lg sm:leading-8">
                 {active.description}
               </p>
 
-              <div className="mt-7 grid gap-2">
+              <div className="mt-6 grid gap-2 sm:mt-7">
                 {active.bullets.map((b) => (
                   <div key={b} className="flex items-start gap-2 text-sm text-slate-200/90">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 text-cyan-300" />
@@ -513,11 +513,11 @@ export function DemoSlideshow() {
                 ))}
               </div>
 
-              <div className="mt-9 flex flex-wrap gap-3">
+              <div className="mt-8 flex flex-col gap-3 sm:mt-9 sm:flex-row sm:flex-wrap">
                 <button
                   type="button"
                   onClick={prev}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] hover:text-white"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] hover:text-white sm:w-auto"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Prev
@@ -525,14 +525,14 @@ export function DemoSlideshow() {
                 <button
                   type="button"
                   onClick={next}
-                  className="inline-flex items-center gap-2 rounded-full bg-cyan-400 px-5 py-2.5 text-sm font-semibold text-slate-950 shadow-[0_10px_32px_rgba(34,211,238,0.28)] transition hover:bg-cyan-300"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-cyan-400 px-5 py-2.5 text-sm font-semibold text-slate-950 shadow-[0_10px_32px_rgba(34,211,238,0.28)] transition hover:bg-cyan-300 sm:w-auto"
                 >
                   Next
                   <ArrowRight className="h-4 w-4" />
                 </button>
                 <Link
                   href="/login"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.02] px-5 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] hover:text-white"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/12 bg-white/[0.02] px-5 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] hover:text-white sm:w-auto"
                 >
                   <ShieldCheck className="h-4 w-4" />
                   Sign in
@@ -559,12 +559,12 @@ export function DemoSlideshow() {
                 </div>
               </div>
 
-              <p className="mt-4 text-xs text-slate-500">
+              <p className="mt-4 text-xs leading-5 text-slate-500">
                 Tip: use ← and → to navigate, or hover to pause the auto tour.
               </p>
             </div>
 
-            <div key={`${active.id}-graphic`} className="demo-enter float-soft" style={{ animationDelay: '110ms' }}>
+            <div key={`${active.id}-graphic`} className="demo-enter float-soft px-1 sm:px-0" style={{ animationDelay: '110ms' }}>
               <SlideGraphic slide={active} />
             </div>
           </div>
