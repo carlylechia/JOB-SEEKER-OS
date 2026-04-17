@@ -9,16 +9,16 @@ export const metadata: Metadata = {
   },
   description: 'Personalized job-search management platform with scoring, CRM, and interview workflows.',
   icons: {
+    apple: '/apple-touch-icon.png',
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',
-    apple: '/apple-touch-icon.png',
   },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      <body suppressHydrationWarning>
         {children}
         <Analytics />
       </body>

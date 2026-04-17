@@ -1,10 +1,42 @@
 import Link from 'next/link';
-import { Bell, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
 import { TopbarMobileMenu } from './topbar-mobile-menu';
 import { SignOutButton } from './sign-out-button';
+import { NotificationBell } from './notification-bell';
 
-export function Topbar({ user }: { user: { name?: string | null; email?: string | null } }) {
+type TopbarUser = {
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+};
+
+function UserAvatar({ user }: { user: TopbarUser }) {
+  const initials = (user.name ?? user.email ?? '?')
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  if (user.image) {
+    return (
+      <img
+        src={user.image}
+        alt={user.name ?? 'Profile'}
+        className="h-8 w-8 rounded-full object-cover ring-2 ring-white/10"
+      />
+    );
+  }
+
+  return (
+    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold text-accent ring-2 ring-accent/20">
+      {initials}
+    </span>
+  );
+}
+
+export function Topbar({ user }: { user: TopbarUser }) {
   const label = user.name || user.email || 'Account';
 
   return (
@@ -22,8 +54,11 @@ export function Topbar({ user }: { user: { name?: string | null; email?: string 
         </div>
 
         <div className="hidden items-center gap-3 lg:flex">
-          <span className="hidden rounded-xl border border-line bg-white/5 px-3 py-2 text-sm text-muted md:inline-flex">{label}</span>
-          <button className="btn-secondary inline-flex items-center justify-center" aria-label="Notifications"><Bell className="h-4 w-4" /></button>
+          <Link href="/profile" className="flex items-center gap-2 rounded-xl border border-line bg-white/5 px-3 py-1.5 text-sm text-muted transition-colors hover:bg-white/10 hover:text-ink">
+            <UserAvatar user={user} />
+            <span>{label}</span>
+          </Link>
+          <NotificationBell />
           <Link href="/jobs/new" className="btn-primary inline-flex items-center justify-center">Add Job</Link>
           <Link href="/settings" className="btn-secondary inline-flex items-center justify-center">Settings</Link>
           <SignOutButton />

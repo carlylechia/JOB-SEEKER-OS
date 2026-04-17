@@ -6,6 +6,7 @@ import { jobPayloadSchema } from '@/lib/job-schema';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 import { jsonError, jsonOk } from '@/lib/api';
 import { logImportantError, logImportantInfo } from '@/lib/observability';
+import { touchStreak } from '@/lib/streak';
 
 export async function OPTIONS(request: Request) {
   return handleOptions(request);
@@ -75,6 +76,7 @@ export async function PATCH(request: Request, { params }: Params) {
     });
 
     await logImportantInfo({ event: 'job_updated', userId: session.user.id, jobId: id, route: `/api/jobs/${id}`, context: { status: updated.status } });
+    await touchStreak(session.user.id).catch(() => null); // non-critical
     return jsonOk({ job: mapDbJob(updated) }, request);
   } catch (error) {
     await logImportantError({ event: 'job_update_failed', userId: session.user.id, jobId: id, route: `/api/jobs/${id}`, error, context: { method: 'PATCH' } });

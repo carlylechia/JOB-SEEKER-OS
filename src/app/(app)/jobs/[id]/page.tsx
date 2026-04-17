@@ -10,15 +10,29 @@ import { ScoreBadge } from "@/components/shared/score-badge";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useJobs } from "@/hooks/use-job-data";
 import { checklistCompletion } from "@/lib/scoring";
-import { Contact, JobFormValues, JobStatus } from "@/types";
+import { Checklist, Contact, JobFormValues, JobStatus } from "@/types";
 
 const ALL_STATUSES: JobStatus[] = ['LEAD', 'SAVED', 'APPLYING', 'APPLIED', 'INTERVIEWING', 'OFFER', 'REJECTED', 'ARCHIVED'];
 const RELATIONSHIP_TYPES = ['RECRUITER', 'HIRING_MANAGER', 'REFERRAL', 'NETWORK', 'OTHER'];
 
+// Statuses where the full application has been submitted — auto-complete the checklist
+const AUTO_COMPLETE_STATUSES: JobStatus[] = ['APPLIED', 'INTERVIEWING', 'OFFER'];
+
+const CHECKLIST_LABELS: Record<keyof Checklist, string> = {
+  resumeTailored:      'Resume tailored for this role',
+  pdfChecked:          'PDF formatting checked',
+  coverLetterReady:    'Cover letter ready',
+  portfolioAdded:      'Portfolio / work samples added',
+  videoDone:           'Video introduction done',
+  compensationChecked: 'Compensation & package reviewed',
+  eligibilityChecked:  'Eligibility & visa confirmed',
+  submitted:           'Application submitted',
+};
+
 export default function JobDetailsPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { getJob, updateJob, deleteJob, patchStatus, addContact, removeContact, titleOptions, createTitle, isLoading } = useJobs();
+  const { getJob, updateJob, deleteJob, patchStatus, patchFollowUp, rescoreJob, addContact, removeContact, updateChecklist, titleOptions, createTitle, isLoading } = useJobs();
   const [isEditing, setIsEditing] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
@@ -26,6 +40,8 @@ export default function JobDetailsPage() {
   const [savingContact, setSavingContact] = useState(false);
   const [followUpDate, setFollowUpDate] = useState('');
   const [savingFollowUp, setSavingFollowUp] = useState(false);
+  const [checklistSaving, setChecklistSaving] = useState(false);
+  const [rescoring, setRescoring] = useState(false);
 
   const job = getJob(params.id);
 
@@ -60,10 +76,19 @@ export default function JobDetailsPage() {
     if (!followUpDate) return;
     setSavingFollowUp(true);
     try {
-      await updateJob(job!.id, { ...(job as any), nextFollowUp: followUpDate });
+      await patchFollowUp(job!.id, followUpDate);
       setFollowUpDate('');
     } finally {
       setSavingFollowUp(false);
+    }
+  }
+
+  async function handleRescore() {
+    setRescoring(true);
+    try {
+      await rescoreJob(job!.id);
+    } finally {
+      setRescoring(false);
     }
   }
 
@@ -79,6 +104,17 @@ export default function JobDetailsPage() {
     }
   }
 
+  async function handleToggleChecklist(key: keyof Checklist) {
+    if (!job || AUTO_COMPLETE_STATUSES.includes(job.status)) return;
+    setChecklistSaving(true);
+    try {
+      const updated = { ...job.checklist, [key]: !job.checklist[key] };
+      await updateChecklist(job.id, updated);
+    } finally {
+      setChecklistSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -91,6 +127,14 @@ export default function JobDetailsPage() {
                 Open listing
               </Link>
             ) : null}
+            <button
+              className="btn-secondary"
+              type="button"
+              disabled={rescoring}
+              onClick={handleRescore}
+            >
+              {rescoring ? 'Rescoring…' : 'Re-score'}
+            </button>
             <button
               className="btn-primary"
               type="button"
@@ -311,25 +355,85 @@ export default function JobDetailsPage() {
               </div>
             </div>
             <div className="card-pad">
-              <h3 className="text-lg font-semibold">Submission checklist</h3>
-              <div className="mt-2 text-sm text-muted">
-                Completion: {checklistCompletion(job)}%
-              </div>
-              <div className="mt-4 grid gap-2">
-                {Object.entries(job.checklist).map(([key, value]) => (
-                  <div
-                    key={key}
-                    className="flex items-center justify-between rounded-xl border border-line p-3"
-                  >
-                    <span>{key}</span>
-                    <span
-                      className={`badge ${value ? "bg-emerald-500/15 text-emerald-300" : "bg-white/10 text-white"}`}
-                    >
-                      {value ? "Done" : "Pending"}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              {(() => {
+                const isAutoCompleted = AUTO_COMPLETE_STATUSES.includes(job.status);
+                const effectiveChecklist = isAutoCompleted
+                  ? (Object.fromEntries(Object.keys(job.checklist).map((k) => [k, true])) as Checklist)
+                  : job.checklist;
+                const completedCount = Object.values(effectiveChecklist).filter(Boolean).length;
+                const total = Object.values(effectiveChecklist).length;
+                const pct = Math.round((completedCount / total) * 100);
+                const allDone = pct === 100;
+
+                return (
+                  <>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="text-lg font-semibold">Submission checklist</h3>
+                      {checklistSaving && <span className="text-xs text-muted animate-pulse">Saving…</span>}
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="mt-2 flex items-center gap-3">
+                      <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                        <div
+                          className={`h-2 rounded-full transition-all duration-500 ${allDone ? 'bg-emerald-500' : 'bg-accent'}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className={`text-sm font-semibold tabular-nums ${allDone ? 'text-emerald-400' : 'text-ink'}`}>
+                        {pct}%
+                      </span>
+                    </div>
+
+                    {/* Auto-complete banner */}
+                    {isAutoCompleted && (
+                      <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-3 py-2 text-xs text-emerald-300">
+                        ✓ Status is <strong>{job.status.charAt(0) + job.status.slice(1).toLowerCase()}</strong> — all items are marked complete automatically. Move the job back to <em>Applying</em> or earlier to edit individually.
+                      </div>
+                    )}
+
+                    {/* Checklist items */}
+                    <div className="mt-4 grid gap-2">
+                      {(Object.keys(effectiveChecklist) as Array<keyof Checklist>).map((key) => {
+                        const checked = effectiveChecklist[key];
+                        const label = CHECKLIST_LABELS[key] ?? key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            disabled={isAutoCompleted || checklistSaving}
+                            onClick={() => handleToggleChecklist(key)}
+                            className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors
+                              ${checked
+                                ? 'border-emerald-500/30 bg-emerald-500/8 hover:bg-emerald-500/12'
+                                : 'border-line bg-white/3 hover:bg-white/6'}
+                              ${isAutoCompleted ? 'cursor-default' : 'cursor-pointer'}
+                              disabled:opacity-75`}
+                          >
+                            {/* Custom checkbox */}
+                            <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors
+                              ${checked ? 'border-emerald-500 bg-emerald-500' : 'border-white/30 bg-transparent'}`}
+                            >
+                              {checked && (
+                                <svg className="h-3 w-3 text-white" viewBox="0 0 12 10" fill="none">
+                                  <path d="M1 5l3.5 3.5L11 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              )}
+                            </span>
+                            <span className={`flex-1 text-sm ${checked ? 'line-through text-muted' : 'text-ink'}`}>
+                              {label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {!isAutoCompleted && (
+                      <p className="mt-3 text-xs text-muted">Click any item to toggle. Changes save automatically.</p>
+                    )}
+                  </>
+                );
+              })()}
             </div>
             <div className="card-pad">
               <div className="flex items-center justify-between mb-4">

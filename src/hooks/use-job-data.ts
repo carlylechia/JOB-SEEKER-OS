@@ -22,6 +22,8 @@ export function useJobs() {
   const [profile, setProfile] = useState<UserProfileDetails | null>(null);
   const [titleOptions, setTitleOptions] = useState<string[]>([]);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [onboardingSkipped, setOnboardingSkipped] = useState(false);
+  const [streakCount, setStreakCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -37,6 +39,8 @@ export function useJobs() {
         setProfile(data.profile);
         setTitleOptions(data.titleOptions ?? []);
         setOnboardingCompleted(data.onboardingCompleted);
+        setOnboardingSkipped(data.onboardingSkipped ?? false);
+        setStreakCount(data.streakCount ?? 0);
       } catch (error) {
         console.error(error);
       } finally {
@@ -189,7 +193,7 @@ export function useJobs() {
     });
   }
 
-  async function saveProfile(nextProfile: Omit<UserProfileDetails, 'profileCompleted'>) {
+  async function saveProfile(nextProfile: Omit<UserProfileDetails, 'profileCompleted' | 'profilePictureUrl'>) {
     const res = await fetch('/api/profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -290,6 +294,35 @@ export function useJobs() {
     return payload.job;
   }
 
+  async function updateChecklist(jobId: string, checklist: JobLead['checklist']) {
+    const res = await fetch(`/api/jobs/${jobId}/checklist`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(checklist),
+    });
+    const payload = await parseApiResponse<{ job: JobLead }>(res);
+    setRawJobs((prev) => prev.map((j) => (j.id === jobId ? payload.job : j)));
+    return payload.job;
+  }
+
+  async function patchFollowUp(jobId: string, nextFollowUp: string | null) {
+    const res = await fetch(`/api/jobs/${jobId}/followup`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nextFollowUp }),
+    });
+    const payload = await parseApiResponse<{ job: JobLead }>(res);
+    setRawJobs((prev) => prev.map((j) => (j.id === jobId ? payload.job : j)));
+    return payload.job;
+  }
+
+  async function rescoreJob(jobId: string) {
+    const res = await fetch(`/api/jobs/${jobId}/rescore`, { method: 'POST' });
+    const payload = await parseApiResponse<{ job: JobLead }>(res);
+    setRawJobs((prev) => prev.map((j) => (j.id === jobId ? payload.job : j)));
+    return payload.job;
+  }
+
   async function getPublicJobs() {
     const res = await fetch('/api/public-jobs', { cache: 'no-store' });
     const payload = await parseApiResponse<PublicJobsResponse>(res);
@@ -316,6 +349,8 @@ export function useJobs() {
     profile,
     titleOptions,
     onboardingCompleted,
+    onboardingSkipped,
+    streakCount,
     getJob,
     updateTemplate,
     updatePreferences,
@@ -324,10 +359,13 @@ export function useJobs() {
     updateJob,
     deleteJob,
     patchStatus,
+    patchFollowUp,
+    rescoreJob,
     addContact,
     updateContact,
     removeContact,
     updatePrepPack,
+    updateChecklist,
     createTitle,
     getPublicJobs,
     savePublicJob,

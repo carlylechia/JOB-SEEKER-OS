@@ -6,6 +6,7 @@ import { jobPayloadSchema } from '@/lib/job-schema';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 import { jsonError, jsonOk } from '@/lib/api';
 import { logImportantError, logImportantInfo } from '@/lib/observability';
+import { touchStreak } from '@/lib/streak';
 
 export async function OPTIONS(request: Request) {
   return handleOptions(request);
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
     });
 
     await logImportantInfo({ event: 'job_created', userId: session.user.id, jobId: created.id, route: '/api/jobs', context: { company: created.company, title: created.title } });
+    await touchStreak(session.user.id).catch(() => null); // non-critical
     return jsonOk({ job: mapDbJob(created) }, request, { status: 201 });
   } catch (error) {
     await logImportantError({ event: 'job_create_failed', userId: session.user.id, route: '/api/jobs', error, context: { method: 'POST' } });

@@ -39,6 +39,7 @@ export type UserProfileDetails = {
   githubUrl: string;
   linkedinUrl: string;
   resumeUrl: string;
+  profilePictureUrl: string;
   profileCompleted: boolean;
 };
 
@@ -185,6 +186,8 @@ export type BootstrapPayload = {
   templates: Template[];
   preferences: UserPreferences;
   onboardingCompleted: boolean;
+  onboardingSkipped: boolean;
   profile: UserProfileDetails;
   titleOptions: string[];
+  streakCount: number;
 };

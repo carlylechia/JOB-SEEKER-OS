@@ -89,6 +89,7 @@ export function mapDbProfile(user: any, profile: any): UserProfileDetails {
     githubUrl: profile?.githubUrl || '',
     linkedinUrl: profile?.linkedinUrl || '',
     resumeUrl: profile?.resumeUrl || '',
+    profilePictureUrl: profile?.profilePictureUrl || '',
     profileCompleted: Boolean(profile?.profileCompleted),
   };
 }
@@ -153,6 +154,7 @@ export async function getUserWorkspace(userId: string) {
   return {
     preferences: mapDbPreferences(profile),
     onboardingCompleted: Boolean(profile?.onboardingCompleted),
+    onboardingSkipped: Boolean(profile?.onboardingSkipped),
     profile: mapDbProfile(user, profile),
     jobs: jobs.map(mapDbJob),
     templates: templates.map((template) => ({
@@ -163,6 +165,7 @@ export async function getUserWorkspace(userId: string) {
       body: template.body,
     })) as Template[],
     titleOptions: titleOptions.map((item) => item.name),
+    streakCount: user?.streakCount ?? 0,
   };
 }
 
