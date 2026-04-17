@@ -1,146 +1,116 @@
 # Job Seeker OS
 
-Job Seeker OS is a full-stack job search management platform. It helps candidates discover, score, prioritize, track, and execute their applications through one structured, intelligent workflow.
+Job Seeker OS is a full-stack job search operating system for candidates who want more structure than a spreadsheet and more clarity than a generic tracker.
 
----
+It combines AI-assisted fit scoring, a daily action queue, pipeline tracking, recruiter CRM, onboarding, public job discovery, and auth/account workflows into one application.
 
-## Overview
+## What It Does
 
-Job Seeker OS turns a scattered, spreadsheet-driven job hunt into a focused workflow for serious candidates.
+Job Seeker OS gives users one place to:
 
-Instead of juggling notes, reminders, browser tabs, and disconnected documents, the app gives users one place to:
+- capture and manage job leads
+- score roles against personal preferences
+- prioritize the best next action each day
+- track pipeline movement from saved lead to offer
+- manage recruiter and referral relationships
+- prepare for interviews with structured prep packs
+- browse and import public jobs into a private workspace
+- maintain momentum with streaks, reminders, and notifications
 
-- save and manage job leads
-- score job fit against real personal preferences
-- track recruiters and contacts
-- prepare for interviews
-- manage follow-ups
-- browse public jobs shared on the platform
-- monitor search progress from a dashboard
+## Current Product Surface
 
----
+### Core app
 
-## Current Features
+- AI fit scoring with explainable sub-signals
+- private job workspace with CRUD and detail views
+- daily smart queue for ranked next actions
+- drag-and-drop application pipeline
+- per-job recruiter/contact CRM
+- follow-up scheduling and reminders
+- dashboard with KPI cards, weekly trends, top priorities, streaks, and upcoming items
+- interview prep workspace and reusable follow-up templates
 
-The project currently includes:
+### Intake and onboarding
 
-- premium marketing landing page with responsive mobile navigation
-- authenticated user dashboard with KPIs and charts
-- private job tracker with database-backed CRUD
-- personalized fit scoring and priority logic
-- job detail workspace
-- recruiter/contact CRM view
-- interview pipeline view
-- tailored application queue
-- prep packs view
-- follow-up templates view
-- onboarding flow for preference setup
-- job ingestion from links and pasted descriptions
-- profile management page
-- public jobs page (last 30 days)
-- persistent PostgreSQL-backed storage
+- multi-step onboarding flow with autosaved progress
+- onboarding skip and complete flows
+- resume upload and parsing
+- profile picture upload support
+- preference-driven scoring setup for titles, stack, salary, timezone, and remote fit
+- job ingestion from pasted descriptions and job URLs
+
+### Auth and account flows
+
+- email/password auth with Auth.js
+- LinkedIn sign-in
+- email verification flow
+- forgot password and reset password flows
+- protected app routes with per-user workspaces
+
+### Public and marketing surface
+
+- redesigned landing page and demo experience
+- public jobs browser for recent platform jobs
+- save-to-workspace flow for public jobs
 - Vercel Analytics integration
-- Discord-compatible production alerting for important route failures
-
----
 
 ## Tech Stack
 
-Built with modern production-ready tools:
+- Next.js 15
+- React 19
+- TypeScript
+- Tailwind CSS
+- Auth.js / NextAuth
+- Prisma ORM
+- PostgreSQL
+- Zod
+- Recharts
+- Lucide React
+- Vercel Analytics
+- Resend
 
-- **Next.js 15.2.8**
-- **React 19**
-- **TypeScript**
-- **Tailwind CSS**
-- **Auth.js / NextAuth**
-- **Prisma ORM**
-- **PostgreSQL**
-- **Recharts**
-- **Lucide React**
-- **Vercel Analytics**
+## Architecture Notes
 
----
+- Server-rendered App Router application with focused client-side interactivity where needed
+- JWT session strategy via Auth.js
+- Prisma + PostgreSQL persistence for users, profiles, jobs, notifications, templates, and public job data
+- per-user workspaces for private data isolation
+- public job discovery with authenticated import into private workspaces
+- request validation, sanitization, and lightweight rate limiting on important endpoints
+- observability hooks for important route failures and product events
 
-## Architecture
+## Scoring Model
 
-As of the current release, Job Seeker OS is a full-stack SaaS application with:
+Job fit is personalized using profile and preference data such as:
 
-- **Email/password authentication** using Auth.js Credentials provider
-- **Protected app routes** behind login
-- **PostgreSQL + Prisma** for persistent data storage
-- **Private per-user job workspaces**
-- **Public jobs discovery** for roles added by users in the last 6months
-- **User-driven personalized fit scoring**
-- **Server-first public pages** with client components only where interactivity is needed
-- **Vercel deployment** with production-ready environment setup
-
----
-
-## Product Logic
-
-### Personalized Fit Scoring
-
-Job Seeker OS uses user preferences to score and prioritize opportunities.
-
-Scoring is driven by factors such as:
-
-- current and target seniority level
-- primary job titles and adjacent preferred titles
-- preferred regions
-- preferred stack
-- must-have technologies
-- timezone overlap
-- salary expectations
+- target job titles
+- current and target seniority
+- preferred stack and technologies
+- location and timezone overlap
 - remote preference
+- salary expectations
+- job signal quality and friction
 
-### Title Match Rule
+Priority states are then used to surface what matters now, including:
 
-Job title matching is now the strongest personalization signal.
+- apply today
+- apply this week
+- follow up due
+- interview soon
+- prepare assets
+- monitor
+- skip
 
-- private dashboards only show jobs added by the signed-in user
-- jobs are still scored even when title match is weak
-- weaker title alignment produces a lower score
-- public jobs can be added into a user workspace and scored against that user’s preferences
+## Security and Reliability
 
-### Base Scoring Weights
+- schema validation with Zod
+- sanitized text, URL, and array inputs before persistence
+- lightweight per-user and per-IP rate limiting on key routes
+- structured error handling for API responses
+- optional webhook-based alerting for important failures
+- database indexes for common query paths
 
-- Core stack match — 25%
-- Role alignment — 17%
-- Seniority fit — 20%
-- Geography eligibility — 10%
-- Time-zone compatibility — 10%
-- Compensation fit — 10%
-- Domain relevance — 5%
-- Application friction — 5%
-- Signal quality — 5%
-
-### Priority Flags
-
-- Apply Today
-- Apply This Week
-- Prepare Assets
-- Follow Up Due
-- Interview Soon
-- Monitor
-- Skip
-
----
-
-## Security and Reliability Notes
-
-Current protections and operational safeguards include:
-
-- request validation with **Zod**
-- text and URL sanitization before persistence
-- lightweight **per-user / per-IP rate limiting** on important endpoints
-- structured API error handling
-- optional Discord-compatible webhook alerts through `ALERT_WEBHOOK_URL`
-- important unexpected route failures logged without noisy spam
-- Prisma indexes for common job access patterns
-
----
-
-## Setup
+## Local Setup
 
 ### 1. Install dependencies
 
@@ -148,94 +118,69 @@ Current protections and operational safeguards include:
 npm install
 ```
 
-### 2. Create local environment files
+### 2. Create environment files
 
 ```bash
 cp .env.example .env.local
 cp .env.local .env
 ```
 
-- `.env.local` is used by the Next.js runtime
-- `.env` is used by Prisma CLI commands
+### 3. Configure environment variables
 
-### 3. Generate Prisma client
-
-```bash
-npm run prisma:generate
-```
-
-### 4. Push the schema
-
-```bash
-npm run prisma:push
-```
-
-### 5. Optionally seed sample data
-
-```bash
-npm run prisma:seed
-```
-
-### 6. Start development server
-
-```bash
-npm run dev
-```
-
-Open `http://localhost:3000`.
-
-### 7. Log in
-For now, to signup and access the app features, use these credentials:
-email: **jobseekermain@gmail.com**
-password: **Leavepasswordempty4now**
-
-since that's the only verifiable email for localhost.
-
----
-
-## Local Database Setup
-
-If you are using PostgreSQL installed with Homebrew on macOS:
-
-### Start PostgreSQL
-
-For PostgreSQL 16:
-
-```bash
-brew services start postgresql@16
-```
-
-Check status:
-
-```bash
-brew services list
-pg_isready
-```
-
-### Example local env file
+Minimum local setup:
 
 ```env
-DATABASE_URL="postgresql://jobseekeros:YOUR_PASSWORD@localhost:5432/job_seeker_os?schema=public"
-AUTH_SECRET="YOUR_SECRET"
+DATABASE_URL="postgresql://jobseekeros:password@localhost:5432/job_seeker_os?schema=public"
+AUTH_SECRET="replace-with-a-long-random-secret"
 AUTH_URL="http://localhost:3000"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
----
+If you want email flows locally, also set:
 
-## Environment Variables
+```env
+RESEND_API_KEY="re_xxxxxxxxx"
+EMAIL_FROM="Job Seeker OS <noreply@yourdomain.com>"
+EMAIL_REPLY_TO="support@yourdomain.com"
+```
 
-Required:
+If you want LinkedIn auth locally, also set:
 
-- `DATABASE_URL`
-- `AUTH_SECRET`
-- `AUTH_URL`
+```env
+LINKEDIN_CLIENT_ID="your-linkedin-client-id"
+LINKEDIN_CLIENT_SECRET="your-linkedin-client-secret"
+```
 
 Optional:
 
 - `CORS_ORIGIN`
 - `ALERT_WEBHOOK_URL`
 
----
+### 4. Generate Prisma client
+
+```bash
+npm run prisma:generate
+```
+
+### 5. Push the schema
+
+```bash
+npm run prisma:push
+```
+
+### 6. Optionally seed local data
+
+```bash
+npm run prisma:seed
+```
+
+### 7. Start the app
+
+```bash
+npm run dev
+```
+
+Open `http://localhost:3000`.
 
 ## Scripts
 
@@ -249,8 +194,6 @@ npm run prisma:push
 npm run prisma:seed
 npm run prisma:studio
 ```
-
----
 
 ## Project Structure
 
@@ -269,116 +212,27 @@ prisma/
 public/
 ```
 
----
+## Demo
 
-## Analytics and Metadata
+The demo route highlights the current product surface:
 
-The app includes **Vercel Analytics** in the root layout.
+- dashboard and queue workflows
+- fit scoring
+- pipeline tracking
+- recruiter CRM
+- interview prep
+- streaks, notifications, and ingestion flows
+- auth and onboarding improvements
 
-Metadata is configured with:
+## Status
 
-- default title
-- title template
-- description
-- favicon
-- apple touch icon
+This repository is actively evolving. Recent branch work expanded:
 
----
-
-## Release History
-
-### v6.0 — Taxonomy, Profile, Public Jobs, and Homepage UX (Current Release)
-
-This release adds:
-
-- footer cleanup and footer-gap fix
-- floating homepage quick-jump navigation
-- public jobs page for roles shared in the last 30 days
-- save-to-workspace flow for public jobs
-- dynamic job title taxonomy stored in the database
-- searchable dropdown-style title selection with add-new support
-- settings page converted away from stale autofilled text fields
-- profile page moved away from hardcoded values to real user-backed data
-- private dashboards now rely only on user-owned jobs
-- no seeded job data in starter workspaces
-- title match emphasized in score calculation
-- improved ingestion heuristics for title, company, metadata, and stack extraction
-
-### v5.0 — Onboarding + Job Ingestion
-
-This release added:
-
-- onboarding flow inside the authenticated app
-- onboarding completion persistence
-- onboarding-aware first-run dashboard CTA
-- secure ingestion from job links and pasted descriptions
-- parser-driven job-form prefilling
-- safer URL handling for ingestion
-- route-level alerting added to important new endpoints
-
-### v4.0 — Landing Page Redesign / Marketing Polish
-
-This release added:
-
-- premium landing page redesign
-- richer section storytelling
-- lazy-loaded generated demo media
-- mobile marketing navigation
-- improved footer and responsive public-page UX foundation
-
-### v3.0 — Job CRUD + Detail Workspace
-
-This release added:
-
-- database-backed job CRUD
-- reusable job form
-- richer job detail workspace
-- profile-aware fit recalculation on save
-- input validation and sanitization for job endpoints
-- lightweight CORS handling
-- endpoint rate limiting
-- important event/error logging with optional webhook alerting
-- extra Prisma indexes for common job queries
-
-### v2.0 — Auth + Database
-
-This release added:
-
-- email/password authentication via Auth.js Credentials provider
-- PostgreSQL database backend with Prisma ORM
-- protected routes and user session management
-- seeded starter workspace on user registration
-- persistent user data for jobs, contacts, templates, and preferences
-- user-driven personalized fit scoring based on profile settings
-- logo/favicon system for production branding
-- Vercel deployment readiness
-
-### v1.0 — Frontend Foundation
-
-This release included:
-
-- marketing landing page and demo view
-- authenticated dashboard with KPI cards and weekly trends
-- job tracker with mock scoring and priority badges
-- CRM contacts view
-- interview pipeline tracker
-- application queue management
-- prep packs and templates views
-- profile and settings pages
-- browser local storage persistence
-- responsive design with Tailwind CSS and Lucide icons
-
----
-
-## Planned Features
-
-Upcoming work includes:
-
-- stronger AI-assisted fit explanations
-- smarter public job recommendations
-- daily best-fit jobs shortlist
-- email reminders and notifications
-- browser extension for quick job capture
-- deeper workflow polish for job detail and prep systems
+- onboarding and resume parsing
+- notification and streak systems
+- LinkedIn auth and password recovery
+- queue workflows and dashboard depth
+- marketing storytelling and product walkthroughs
+- favicon and branding consistency
 
 ---
