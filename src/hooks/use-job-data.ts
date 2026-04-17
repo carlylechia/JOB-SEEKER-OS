@@ -22,6 +22,7 @@ export function useJobs() {
   const [profile, setProfile] = useState<UserProfileDetails | null>(null);
   const [titleOptions, setTitleOptions] = useState<string[]>([]);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [onboardingSkipped, setOnboardingSkipped] = useState(false);
   const [streakCount, setStreakCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -38,6 +39,7 @@ export function useJobs() {
         setProfile(data.profile);
         setTitleOptions(data.titleOptions ?? []);
         setOnboardingCompleted(data.onboardingCompleted);
+        setOnboardingSkipped(data.onboardingSkipped ?? false);
         setStreakCount(data.streakCount ?? 0);
       } catch (error) {
         console.error(error);
@@ -191,7 +193,7 @@ export function useJobs() {
     });
   }
 
-  async function saveProfile(nextProfile: Omit<UserProfileDetails, 'profileCompleted'>) {
+  async function saveProfile(nextProfile: Omit<UserProfileDetails, 'profileCompleted' | 'profilePictureUrl'>) {
     const res = await fetch('/api/profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -347,6 +349,7 @@ export function useJobs() {
     profile,
     titleOptions,
     onboardingCompleted,
+    onboardingSkipped,
     streakCount,
     getJob,
     updateTemplate,

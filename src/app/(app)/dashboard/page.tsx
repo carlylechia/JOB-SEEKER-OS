@@ -29,7 +29,7 @@ function getFormattedDate(): string {
 }
 
 export default function DashboardPage() {
-  const { dashboard, jobs, interviews, preferences, onboardingCompleted, profile, streakCount, isLoading } = useJobs();
+  const { dashboard, jobs, interviews, preferences, onboardingCompleted, onboardingSkipped, profile, streakCount, isLoading } = useJobs();
 
   if (isLoading) {
     return (
@@ -69,7 +69,7 @@ export default function DashboardPage() {
 
   // Setup actions count
   const setupItems = [
-    !onboardingCompleted,
+    !onboardingCompleted || onboardingSkipped,
     !profile?.profileCompleted,
   ].filter(Boolean).length;
 
@@ -114,16 +114,27 @@ export default function DashboardPage() {
       {/* ── Setup banners ────────────────────────────────────────────── */}
       {setupItems > 0 && (
         <div className="space-y-3">
-          {!onboardingCompleted && (
+          {(!onboardingCompleted || onboardingSkipped) && (
             <div className="flex flex-col gap-4 rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.07] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
                 <Settings className="mt-0.5 h-4 w-4 flex-shrink-0 text-cyan-400" />
                 <div>
-                  <p className="text-sm font-semibold text-cyan-200">Complete onboarding to improve scoring quality</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-300/70">Set your level, job titles, preferred regions, and work-hour overlap so rankings reflect what you actually want.</p>
+                  {onboardingSkipped ? (
+                    <>
+                      <p className="text-sm font-semibold text-cyan-200">Your onboarding is incomplete</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-300/70">You skipped setup earlier. Resume onboarding to improve your fit scores and personalise your job search experience.</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-semibold text-cyan-200">Complete onboarding to improve scoring quality</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-300/70">Set your level, job titles, preferred regions, and work-hour overlap so rankings reflect what you actually want.</p>
+                    </>
+                  )}
                 </div>
               </div>
-              <Link href="/onboarding" className="btn-primary flex-shrink-0 text-sm">Complete onboarding</Link>
+              <Link href="/onboarding" className="btn-primary flex-shrink-0 text-sm">
+                {onboardingSkipped ? 'Resume onboarding' : 'Complete onboarding'}
+              </Link>
             </div>
           )}
 

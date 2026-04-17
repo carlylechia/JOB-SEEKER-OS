@@ -49,6 +49,7 @@ export async function PUT(request: Request) {
         githubUrl: profile.githubUrl || '',
         linkedinUrl: profile.linkedinUrl || '',
         resumeUrl: profile.resumeUrl || '',
+        profilePictureUrl: profile.profilePictureUrl || '',
         profileCompleted,
       },
     }, request);

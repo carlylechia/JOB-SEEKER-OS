@@ -11,6 +11,9 @@ export function sanitizeText(value: unknown, max = 5000) {
 export function sanitizeUrl(value: unknown) {
   const raw = sanitizeText(value, 2048);
   if (!raw) return '';
+  // Allow relative paths for internally-generated upload URLs.
+  // These are produced by our own API routes and are always under /uploads/.
+  if (/^\/uploads\/[a-zA-Z0-9/._-]+$/.test(raw)) return raw;
   try {
     const url = new URL(raw);
     if (!['http:', 'https:'].includes(url.protocol)) return '';

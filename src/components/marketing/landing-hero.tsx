@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2, Menu, X } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Menu, X, LayoutDashboard } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
 import { SpinnerHeroClient } from '@/components/marketing/spinner-hero.client';
+import { auth } from '@/auth';
 
 const navLinks = [
   { href: '#features', label: 'Features' },
@@ -10,7 +11,8 @@ const navLinks = [
   { href: '#faq', label: 'FAQ' },
 ];
 
-export function LandingHero() {
+export async function LandingHero() {
+  const session = await auth();
   return (
     <section id="top" className="relative flex min-h-screen flex-col overflow-hidden bg-[#05060a]">
       {/* ── Uniform ominous background ── */}
@@ -49,13 +51,25 @@ export function LandingHero() {
               </nav>
 
               <div className="hidden md:flex items-center gap-2.5">
-                <Link className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] hover:text-white" href="/login">
-                  Sign In
-                </Link>
-                <Link className="inline-flex items-center gap-1.5 rounded-full bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-[0_10px_32px_rgba(34,211,238,0.28)] transition hover:bg-cyan-300" href="/register">
-                  Start free
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
+                {session?.user ? (
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-[0_10px_32px_rgba(34,211,238,0.28)] transition hover:bg-cyan-300"
+                  >
+                    <LayoutDashboard className="h-3.5 w-3.5" />
+                    Go to Dashboard
+                  </Link>
+                ) : (
+                  <>
+                    <Link className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] hover:text-white" href="/login">
+                      Sign In
+                    </Link>
+                    <Link className="inline-flex items-center gap-1.5 rounded-full bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-[0_10px_32px_rgba(34,211,238,0.28)] transition hover:bg-cyan-300" href="/register">
+                      Start free
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </>
+                )}
               </div>
 
               {/* Mobile menu (no JS, no client component) */}
@@ -92,18 +106,30 @@ export function LandingHero() {
                     >
                       Watch demo
                     </Link>
-                    <Link
-                      href="/login"
-                      className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-100 transition hover:bg-white/[0.08]"
-                    >
-                      Sign In
-                    </Link>
-                    <Link
-                      href="/register"
-                      className="inline-flex items-center justify-center rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-[0_10px_32px_rgba(34,211,238,0.18)] transition hover:bg-cyan-300"
-                    >
-                      Start free
-                    </Link>
+                    {session?.user ? (
+                      <Link
+                        href="/dashboard"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-[0_10px_32px_rgba(34,211,238,0.18)] transition hover:bg-cyan-300"
+                      >
+                        <LayoutDashboard className="h-4 w-4" />
+                        Go to Dashboard
+                      </Link>
+                    ) : (
+                      <>
+                        <Link
+                          href="/login"
+                          className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-100 transition hover:bg-white/[0.08]"
+                        >
+                          Sign In
+                        </Link>
+                        <Link
+                          href="/register"
+                          className="inline-flex items-center justify-center rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-[0_10px_32px_rgba(34,211,238,0.18)] transition hover:bg-cyan-300"
+                        >
+                          Start free
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </div>
               </details>

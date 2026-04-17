@@ -59,6 +59,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = (profile?.email as string | undefined)?.toLowerCase();
         if (!email) return false;
 
+        const linkedinPhoto = (profile?.picture as string | undefined) ?? (profile?.image as string | undefined) ?? '';
+
         const existingUser = await prisma.user.findUnique({
           where: { email },
           select: { id: true, linkedinId: true, emailVerified: true, name: true },
@@ -70,6 +72,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (!existingUser.emailVerified) patch.emailVerified = new Date();
           if (Object.keys(patch).length > 0) {
             await prisma.user.update({ where: { id: existingUser.id }, data: patch });
+          }
+          // Save LinkedIn photo to profile (upsert so it works for new & existing)
+          if (linkedinPhoto) {
+            await prisma.userProfile.upsert({
+              where: { userId: existingUser.id },
+              create: { userId: existingUser.id, linkedinPhotoUrl: linkedinPhoto },
+              update: { linkedinPhotoUrl: linkedinPhoto },
+            });
           }
           await logImportantInfo({
             event: 'linkedin_login',
@@ -87,6 +97,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               emailVerified: new Date(),
             },
           });
+          if (linkedinPhoto) {
+            await prisma.userProfile.upsert({
+              where: { userId: newUser.id },
+              create: { userId: newUser.id, linkedinPhotoUrl: linkedinPhoto },
+              update: { linkedinPhotoUrl: linkedinPhoto },
+            });
+          }
           await logImportantInfo({
             event: 'linkedin_login',
             userId: newUser.id,

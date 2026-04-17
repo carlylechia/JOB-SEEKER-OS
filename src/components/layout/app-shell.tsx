@@ -1,10 +1,12 @@
 import { SidebarNav } from './sidebar-nav';
 import { Topbar } from './topbar';
+import { BackToSiteButton } from './back-to-site-button';
 
 type UserLike = {
   id: string;
   email?: string | null;
   name?: string | null;
+  image?: string | null;
 };
 
 export function AppShell({ children, user }: { children: React.ReactNode; user: UserLike }) {
@@ -15,6 +17,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
         <Topbar user={user} />
         <main className="flex-1 p-4 lg:p-8">{children}</main>
       </div>
+      <BackToSiteButton />
     </div>
   );
 }
