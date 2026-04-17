@@ -3,8 +3,7 @@ import { NextResponse } from 'next/server';
 import { logImportantError, logImportantInfo } from '@/lib/observability';
 import { prisma } from '@/lib/prisma';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
-import path from 'path';
-import fs from 'fs/promises';
+import { deleteStoredAsset, uploadUserAsset } from '@/lib/durable-upload';
 
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4 MB
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
@@ -37,19 +36,18 @@ export async function POST(request: Request) {
     }
 
     const ext = MIME_TO_EXT[file.type] ?? 'jpg';
-    const fileName = `${session.user.id}.${ext}`;
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'avatars');
-    await fs.mkdir(uploadsDir, { recursive: true });
+    const currentProfile = await prisma.userProfile.findUnique({
+      where: { userId: session.user.id },
+      select: { profilePictureUrl: true },
+    });
 
-    // Remove old avatar files with any different extension
-    for (const oldExt of ['jpg', 'png', 'webp', 'gif']) {
-      if (oldExt === ext) continue;
-      await fs.unlink(path.join(uploadsDir, `${session.user.id}.${oldExt}`)).catch(() => undefined);
-    }
-
-    const bytes = await file.arrayBuffer();
-    await fs.writeFile(path.join(uploadsDir, fileName), Buffer.from(bytes));
-    const profilePictureUrl = `/uploads/avatars/${fileName}`;
+    const profilePictureUrl = await uploadUserAsset({
+      kind: 'avatar',
+      userId: session.user.id,
+      file,
+      ext,
+      existingUrl: currentProfile?.profilePictureUrl,
+    });
 
     await prisma.userProfile.upsert({
       where: { userId: session.user.id },
@@ -73,11 +71,12 @@ export async function DELETE(request: Request) {
   if (!rate.ok) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
 
   try {
-    // Remove all avatar files on disk
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'avatars');
-    for (const ext of ['jpg', 'png', 'webp', 'gif']) {
-      await fs.unlink(path.join(uploadsDir, `${session.user.id}.${ext}`)).catch(() => undefined);
-    }
+    const currentProfile = await prisma.userProfile.findUnique({
+      where: { userId: session.user.id },
+      select: { profilePictureUrl: true },
+    });
+
+    await deleteStoredAsset(currentProfile?.profilePictureUrl);
 
     await prisma.userProfile.update({
       where: { userId: session.user.id },

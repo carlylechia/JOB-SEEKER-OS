@@ -151,6 +151,12 @@ LINKEDIN_CLIENT_ID="your-linkedin-client-id"
 LINKEDIN_CLIENT_SECRET="your-linkedin-client-secret"
 ```
 
+For durable resume and avatar uploads in production, also set:
+
+```env
+BLOB_READ_WRITE_TOKEN="vercel_blob_rw_xxxxxxxxx"
+```
+
 Optional:
 
 - `CORS_ORIGIN`

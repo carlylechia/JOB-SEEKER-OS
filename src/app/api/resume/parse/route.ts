@@ -3,8 +3,7 @@ import { NextResponse } from 'next/server';
 import { logImportantError } from '@/lib/observability';
 import { extractResumeProfile } from '@/lib/resume';
 import { prisma } from '@/lib/prisma';
-import path from 'path';
-import fs from 'fs/promises';
+import { uploadUserAsset } from '@/lib/durable-upload';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = new Set([
@@ -43,26 +42,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Only PDF, DOCX, and TXT resumes are supported' }, { status: 415 });
     }
 
-    // ── Save file to public/uploads/resumes/<userId>.<ext> ──
     const ext = MIME_TO_EXT[file.type] ?? 'bin';
-    const fileName = `${session.user.id}.${ext}`;
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'resumes');
-    await fs.mkdir(uploadsDir, { recursive: true });
-
-    // Delete stale files with different extensions (e.g. old .pdf when uploading .docx)
-    for (const oldExt of ['pdf', 'docx', 'txt', 'bin']) {
-      if (oldExt === ext) continue;
-      const oldPath = path.join(uploadsDir, `${session.user.id}.${oldExt}`);
-      await fs.unlink(oldPath).catch(() => undefined); // ignore if not found
-    }
-
-    const filePath = path.join(uploadsDir, fileName);
-    const bytes = await file.arrayBuffer();
-    await fs.writeFile(filePath, Buffer.from(bytes));
-    const resumeUrl = `/uploads/resumes/${fileName}`;
-
-    // ── Parse resume ──
     const extracted = await extractResumeProfile(file);
+
+    const currentProfile = await prisma.userProfile.findUnique({
+      where: { userId: session.user.id },
+      select: { resumeUrl: true },
+    });
+
+    const resumeUrl = await uploadUserAsset({
+      kind: 'resume',
+      userId: session.user.id,
+      file,
+      ext,
+      existingUrl: currentProfile?.resumeUrl,
+    });
 
     // ── Immediately persist resumeUrl to UserProfile (layer 1 of persistence) ──
     // This ensures the resume survives even if the user abandons onboarding after upload.
