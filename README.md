@@ -168,10 +168,10 @@ Optional:
 npm run prisma:generate
 ```
 
-### 5. Push the schema
+### 5. Apply migrations
 
 ```bash
-npm run prisma:push
+npm run prisma:migrate:deploy
 ```
 
 ### 6. Optionally seed local data
@@ -193,12 +193,43 @@ Open `http://localhost:3000`.
 ```bash
 npm run dev
 npm run build
+npm run build:vercel
 npm run start
 npm run lint
 npm run prisma:generate
+npm run prisma:migrate:dev -- --name your_change
+npm run prisma:migrate:deploy
+npm run prisma:migrate:status
 npm run prisma:push
 npm run prisma:seed
 npm run prisma:studio
+```
+
+## Production DB Sync
+
+The repository now includes a committed Prisma baseline migration. The expected workflow is:
+
+- use `npm run prisma:migrate:dev -- --name your_change` whenever `prisma/schema.prisma` changes in development
+- commit the generated `prisma/migrations/...` files with the schema change
+- let Vercel run `prisma migrate deploy` during every production build before `next build`
+
+If production ever drifts again, repair it once by syncing the schema, then mark the baseline as applied:
+
+```bash
+DATABASE_URL="your-production-url" npx prisma db push
+DATABASE_URL="your-production-url" npx prisma migrate resolve --applied 20260417000100_init
+```
+
+For an existing local database that predates migration history, either reset it if it is disposable:
+
+```bash
+npx prisma migrate reset
+```
+
+or mark the baseline as applied if the schema already matches:
+
+```bash
+npx prisma migrate resolve --applied 20260417000100_init
 ```
 
 ## Project Structure
