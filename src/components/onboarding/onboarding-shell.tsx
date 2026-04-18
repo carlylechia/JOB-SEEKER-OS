@@ -316,7 +316,7 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
           </div>
 
           {/* Step content with slide animation */}
-          <div className="relative overflow-hidden rounded-3xl border border-white/8 bg-white/[0.03] p-8 shadow-2xl backdrop-blur-sm">
+          <div className="relative overflow-hidden rounded-3xl border border-white/8 bg-white/[0.03] p-5 shadow-2xl backdrop-blur-sm sm:p-8">
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={step}

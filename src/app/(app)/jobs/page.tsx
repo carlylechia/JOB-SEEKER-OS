@@ -45,11 +45,11 @@ export default function JobsPage() {
             <tr>
               <th>Company</th>
               <th>Role</th>
-              <th>Fit</th>
-              <th>Priority</th>
+              <th className="hidden sm:table-cell">Fit</th>
+              <th className="hidden sm:table-cell">Priority</th>
               <th>Status</th>
-              <th>Date found</th>
-              <th>Next follow-up</th>
+              <th className="hidden md:table-cell">Date found</th>
+              <th className="hidden lg:table-cell">Next follow-up</th>
             </tr>
           </thead>
           <tbody>
@@ -57,11 +57,11 @@ export default function JobsPage() {
               <tr key={job.id}>
                 <td className="font-medium">{job.company}</td>
                 <td><Link className="hover:text-accent" href={`/jobs/${job.id}`}>{job.title}</Link></td>
-                <td><ScoreBadge score={job.score.fitScore} tier={job.score.fitTier} /></td>
-                <td><PriorityBadge priority={job.priorityFlag} /></td>
+                <td className="hidden sm:table-cell"><ScoreBadge score={job.score.fitScore} tier={job.score.fitTier} /></td>
+                <td className="hidden sm:table-cell"><PriorityBadge priority={job.priorityFlag} /></td>
                 <td><StatusBadge status={job.status} /></td>
-                <td>{job.dateFound}</td>
-                <td>{job.nextFollowUp || '—'}</td>
+                <td className="hidden md:table-cell">{job.dateFound}</td>
+                <td className="hidden lg:table-cell">{job.nextFollowUp || '—'}</td>
               </tr>
             ))}
           </tbody>

@@ -418,9 +418,9 @@ export function DemoSlideshow() {
   const a = accentStyles(active.accent);
 
   return (
-    <div className="relative min-h-[100svh] overflow-x-hidden overflow-y-auto lg:h-screen lg:overflow-hidden">
+    <div className="relative min-h-[100svh] overflow-x-hidden overscroll-none lg:h-screen lg:overflow-hidden">
       {/* background */}
-      <div className="pointer-events-none absolute inset-0" aria-hidden>
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
         <div className="absolute inset-0 bg-[#040812]" />
         <div className="absolute -inset-[40%] hero-beam-pan bg-[conic-gradient(from_140deg,rgba(34,211,238,0.0),rgba(34,211,238,0.16),rgba(59,130,246,0.14),rgba(34,211,238,0.0),rgba(99,102,241,0.18),rgba(34,211,238,0.0))] blur-[86px] opacity-[0.55]" />
         <div className="absolute left-[8%] top-[12%] h-64 w-64 rounded-full bg-cyan-400/10 blur-[110px] animate-pulse" />

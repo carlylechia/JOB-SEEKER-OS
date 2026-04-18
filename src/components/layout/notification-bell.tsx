@@ -119,7 +119,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border border-line bg-background shadow-2xl">
+        <div className="absolute right-0 top-full z-50 mt-2 w-[min(20rem,92vw)] rounded-xl border border-line bg-background shadow-2xl">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             {selectedNotification ? (
