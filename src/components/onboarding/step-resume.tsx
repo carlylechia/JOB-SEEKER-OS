@@ -127,7 +127,7 @@ export function StepResume({ resumeUrl: initialResumeUrl, onExtracted }: Props) 
             'flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-6 py-12 transition-all',
             isDragging
               ? 'border-accent bg-accent/10'
-              : 'border-white/15 bg-white/3 hover:border-white/30 hover:bg-white/5',
+              : 'border-[#DFE3E9] bg-black/[0.03] hover:border-[#D0D5DD] hover:bg-black/[0.04]',
           ].join(' ')}
         >
           <Upload size={32} className="text-muted" />
@@ -140,8 +140,8 @@ export function StepResume({ resumeUrl: initialResumeUrl, onExtracted }: Props) 
 
       {/* Uploading state */}
       {uploadState === 'uploading' && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-line bg-white/5 px-6 py-10">
-          <Loader size={32} className="animate-spin text-accent" />
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-line bg-black/[0.03] px-6 py-10">
+          <Loader size={32} className="animate-spin text-[#8A6D1F]" />
           <p className="text-sm text-muted">Parsing {file?.name}…</p>
         </div>
       )}
@@ -151,7 +151,7 @@ export function StepResume({ resumeUrl: initialResumeUrl, onExtracted }: Props) 
         <div className="flex items-start gap-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4">
           <CheckCircle size={22} className="mt-0.5 shrink-0 text-emerald-400" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-emerald-300">Resume uploaded &amp; parsed!</p>
+            <p className="text-sm font-medium text-emerald-700">Resume uploaded &amp; parsed!</p>
             <p className="mt-0.5 text-xs text-emerald-400/70">
               Skills, job titles, and profile fields have been pre-filled. Your resume is saved to your profile.
             </p>
@@ -167,7 +167,7 @@ export function StepResume({ resumeUrl: initialResumeUrl, onExtracted }: Props) 
                   href={storedResumeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs text-accent underline underline-offset-2 hover:text-accent/80"
+                  className="flex items-center gap-1 text-xs text-[#8A6D1F] underline underline-offset-2 hover:text-[#8A6D1F]/80"
                 >
                   <ExternalLink size={12} />
                   View resume
@@ -187,7 +187,7 @@ export function StepResume({ resumeUrl: initialResumeUrl, onExtracted }: Props) 
           <div className="flex items-start gap-3">
             <AlertCircle size={20} className="mt-0.5 shrink-0 text-red-400" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-red-300">{errorMsg || 'Something went wrong.'}</p>
+              <p className="text-sm font-medium text-red-700">{errorMsg || 'Something went wrong.'}</p>
             </div>
             <button type="button" onClick={reset} className="shrink-0 text-muted hover:text-ink">
               <X size={16} />
@@ -196,7 +196,7 @@ export function StepResume({ resumeUrl: initialResumeUrl, onExtracted }: Props) 
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="mt-3 text-xs text-accent underline underline-offset-2"
+            className="mt-3 text-xs text-[#8A6D1F] underline underline-offset-2"
           >
             Try a different file
           </button>

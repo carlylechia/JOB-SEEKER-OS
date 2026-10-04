@@ -43,7 +43,7 @@ export function JobIngestionForm({
   return (
     <div className="card-pad space-y-4">
       <div>
-        <div className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-300">Capture faster</div>
+        <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8A6D1F]">Capture faster</div>
         <h3 className="mt-2 text-xl font-semibold">Paste a job link or description to prefill the form</h3>
         <p className="muted mt-2 text-sm leading-7">
           This parser extracts likely fields like role title, company, location, remote signals, stack clues, salary hints,
@@ -60,7 +60,7 @@ export function JobIngestionForm({
           <label className="mb-2 block text-sm text-muted">Or paste the job description</label>
           <textarea className="input min-h-40" placeholder="Paste the job description here..." value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} />
         </div>
-        {error ? <div className="rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</div> : null}
+        {error ? <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">{error}</div> : null}
         <div className="flex flex-wrap gap-3">
           <button className="btn-primary" disabled={isSubmitting} type="submit">
             {isSubmitting ? 'Parsing...' : 'Parse and prefill'}
@@ -81,15 +81,15 @@ export function JobIngestionForm({
       </form>
 
       {result ? (
-        <div className="rounded-2xl border border-line bg-white/5 p-4">
+        <div className="rounded-2xl border border-line bg-black/[0.03] p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="badge bg-sky-500/10 text-sky-200">Prefill ready</span>
+            <span className="badge bg-[#D4AF37]/10 text-[#8A6D1F]">Prefill ready</span>
             <span className="text-xs text-muted">Source: {result.sourceMode}</span>
           </div>
           {result.signals.length ? (
             <div className="mt-3 flex flex-wrap gap-2">
               {result.signals.map((signal) => (
-                <span key={signal} className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-muted">
+                <span key={signal} className="inline-flex rounded-full border border-[#DFE3E9] bg-black/[0.03] px-3 py-1 text-xs text-muted">
                   {signal}
                 </span>
               ))}

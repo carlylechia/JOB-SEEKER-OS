@@ -14,16 +14,16 @@ export function StepBasicInfo({ name, email, isLinkedinUser, onNameChange }: Pro
     <div className="space-y-6">
       <div className="text-center">
         <div className="mb-3 text-5xl">👋</div>
-        <h2 className="text-2xl font-bold tracking-tight text-ink">Welcome to Job Seeker OS</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-ink">Welcome to teChia Jobs</h2>
         <p className="mt-2 text-sm text-muted">
           Let&apos;s set up your profile so we can personalise your job search experience.
         </p>
       </div>
 
       {isLinkedinUser && (
-        <div className="flex items-center gap-2 rounded-xl border border-[#0077b5]/40 bg-[#0077b5]/10 px-4 py-3">
-          <Linkedin size={16} className="shrink-0 text-[#0077b5]" />
-          <p className="text-xs text-[#7ec8e3]">
+        <div className="flex items-center gap-2 rounded-xl border border-[#0A66C2]/40 bg-[#0A66C2]/[0.06] px-4 py-3">
+          <Linkedin size={16} className="shrink-0 text-[#0A66C2]" />
+          <p className="text-xs text-[#0A5C8A]">
             Signed in with LinkedIn — your name and email are pre-filled.
           </p>
         </div>

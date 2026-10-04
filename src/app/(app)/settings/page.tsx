@@ -83,7 +83,7 @@ export default function SettingsPage() {
       </div>
       <div className="flex items-center gap-3">
         <button className="btn-primary" onClick={() => void handleSave()}>Save preferences</button>
-        {saved ? <span className="text-sm text-emerald-300">Preferences saved. Job scoring will use these settings immediately.</span> : null}
+        {saved ? <span className="text-sm text-emerald-700">Preferences saved. Job scoring will use these settings immediately.</span> : null}
       </div>
     </div>
   );

@@ -30,7 +30,7 @@ function UserAvatar({ user }: { user: TopbarUser }) {
   }
 
   return (
-    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold text-accent ring-2 ring-accent/20">
+    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold text-[#8A6D1F] ring-2 ring-accent/20">
       {initials}
     </span>
   );
@@ -54,7 +54,7 @@ export function Topbar({ user }: { user: TopbarUser }) {
         </div>
 
         <div className="hidden items-center gap-3 lg:flex">
-          <Link href="/profile" className="flex items-center gap-2 rounded-xl border border-line bg-white/5 px-3 py-1.5 text-sm text-muted transition-colors hover:bg-white/10 hover:text-ink">
+          <Link href="/profile" className="flex items-center gap-2 rounded-xl border border-line bg-black/[0.03] px-3 py-1.5 text-sm text-muted transition-colors hover:bg-black/[0.06] hover:text-ink">
             <UserAvatar user={user} />
             <span>{label}</span>
           </Link>

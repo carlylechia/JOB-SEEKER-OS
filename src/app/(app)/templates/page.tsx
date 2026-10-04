@@ -95,7 +95,7 @@ export default function TemplatesPage() {
           />
         </div>
         <p className="text-xs text-muted mt-2">
-          These replace <code className="bg-white/10 px-1 rounded">{'{{company}}'}</code> and <code className="bg-white/10 px-1 rounded">{'{{role}}'}</code> placeholders when you copy.
+          These replace <code className="bg-black/[0.05] px-1 rounded">{'{{company}}'}</code> and <code className="bg-black/[0.05] px-1 rounded">{'{{role}}'}</code> placeholders when you copy.
         </p>
       </div>
 
@@ -107,7 +107,7 @@ export default function TemplatesPage() {
               <button
                 key={c.key}
                 type="button"
-                className={`btn-secondary text-sm py-1 ${category === c.key ? 'border-accent text-white' : ''}`}
+                className={`btn-secondary text-sm py-1 ${category === c.key ? 'border-accent text-[#17191E]' : ''}`}
                 onClick={() => handleCategoryChange(c.key)}
               >
                 {c.label}
@@ -120,7 +120,7 @@ export default function TemplatesPage() {
                 key={t.id}
                 type="button"
                 onClick={() => { setCurrent(t); setCopied(false); }}
-                className={`w-full text-left rounded-xl border p-3 transition-colors ${displayed?.id === t.id ? 'border-accent bg-accent/10' : 'border-line hover:border-white/20'}`}
+                className={`w-full text-left rounded-xl border p-3 transition-colors ${displayed?.id === t.id ? 'border-accent bg-accent/10' : 'border-line hover:border-[#D5DAE1]'}`}
               >
                 <div className="font-medium text-sm">{t.name}</div>
                 <div className="text-xs text-muted mt-0.5 capitalize">{t.type.replace('_', ' ')}</div>
@@ -154,7 +154,7 @@ export default function TemplatesPage() {
               {displayed.subject && (
                 <div>
                   <div className="text-xs text-muted uppercase tracking-wide mb-1">Subject</div>
-                  <div className="rounded-xl border border-line bg-white/5 p-3 text-sm">
+                  <div className="rounded-xl border border-line bg-black/[0.03] p-3 text-sm">
                     {applyVariables(displayed.subject, { company, role })}
                   </div>
                 </div>
@@ -162,7 +162,7 @@ export default function TemplatesPage() {
 
               <div>
                 <div className="text-xs text-muted uppercase tracking-wide mb-1">Body</div>
-                <pre className="whitespace-pre-wrap font-sans text-sm text-ink rounded-xl border border-line bg-white/5 p-4 leading-relaxed overflow-auto max-h-96">
+                <pre className="whitespace-pre-wrap font-sans text-sm text-ink rounded-xl border border-line bg-black/[0.03] p-4 leading-relaxed overflow-auto max-h-96">
                   {applyVariables(displayed.body, { company, role })}
                 </pre>
               </div>

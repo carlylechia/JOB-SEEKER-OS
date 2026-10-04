@@ -38,7 +38,7 @@ export function StreakWidget({ streakCount }: Props) {
         {/* Big emoji / day count */}
         <div className="flex-shrink-0 text-center">
           <div className="text-3xl leading-none">{emoji}</div>
-          <div className="mt-1 text-2xl font-bold text-white leading-none">{streakCount}</div>
+          <div className="mt-1 text-2xl font-bold text-[#17191E] leading-none">{streakCount}</div>
           <div className="text-[10px] text-orange-300/70 uppercase tracking-wide">days</div>
         </div>
 
@@ -52,7 +52,7 @@ export function StreakWidget({ streakCount }: Props) {
           </div>
 
           {/* Progress bar */}
-          <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-black/[0.05]">
             <div
               className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-700"
               style={{ width: `${progress}%` }}
@@ -67,7 +67,7 @@ export function StreakWidget({ streakCount }: Props) {
                 className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold
                   ${streakCount >= m
                     ? 'bg-orange-500/25 text-orange-200'
-                    : 'bg-white/5 text-slate-600'}`}
+                    : 'bg-black/[0.03] text-[#8A919C]'}`}
               >
                 {m}d
               </span>

@@ -61,7 +61,7 @@ export function StepProfilePhoto({ profilePictureUrl, isLinkedinUser, linkedinPh
 
       {/* LinkedIn photo suggestion */}
       {hasLinkedinPhoto && !profilePictureUrl && (
-        <div className="flex items-center gap-3 rounded-xl border border-[#0077b5]/40 bg-[#0077b5]/10 px-4 py-3">
+        <div className="flex items-center gap-3 rounded-xl border border-[#0A66C2]/40 bg-[#0A66C2]/[0.06] px-4 py-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={linkedinPhotoUrl}
@@ -69,13 +69,13 @@ export function StepProfilePhoto({ profilePictureUrl, isLinkedinUser, linkedinPh
             className="h-10 w-10 shrink-0 rounded-full object-cover"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-[#7ec8e3]">Use your LinkedIn profile photo?</p>
+            <p className="text-xs font-medium text-[#0A5C8A]">Use your LinkedIn profile photo?</p>
             <p className="truncate text-[11px] text-muted">We found a photo from your LinkedIn account.</p>
           </div>
           <button
             type="button"
             onClick={() => onUrlChange(linkedinPhotoUrl)}
-            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[#0077b5]/40 px-3 py-1.5 text-xs font-semibold text-[#7ec8e3] transition hover:bg-[#0077b5]/60"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[#0A66C2] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#0A66C2]/90"
           >
             <Check size={13} />
             Use it
@@ -85,9 +85,9 @@ export function StepProfilePhoto({ profilePictureUrl, isLinkedinUser, linkedinPh
 
       {/* Currently using LinkedIn photo banner */}
       {isUsingLinkedinPhoto && (
-        <div className="flex items-center gap-2 rounded-xl border border-[#0077b5]/40 bg-[#0077b5]/10 px-4 py-2.5">
-          <Linkedin size={14} className="shrink-0 text-[#0077b5]" />
-          <p className="flex-1 text-xs text-[#7ec8e3]">Using your LinkedIn profile photo</p>
+        <div className="flex items-center gap-2 rounded-xl border border-[#0A66C2]/40 bg-[#0A66C2]/[0.06] px-4 py-2.5">
+          <Linkedin size={14} className="shrink-0 text-[#0A66C2]" />
+          <p className="flex-1 text-xs text-[#0A5C8A]">Using your LinkedIn profile photo</p>
           <button
             type="button"
             onClick={() => onUrlChange('')}
@@ -113,14 +113,14 @@ export function StepProfilePhoto({ profilePictureUrl, isLinkedinUser, linkedinPh
                 <button
                   type="button"
                   onClick={() => onUrlChange('')}
-                  className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500/80 text-white hover:bg-red-500"
+                  className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500/80 text-[#17191E] hover:bg-red-500"
                 >
                   <X size={12} />
                 </button>
               )}
             </div>
           ) : (
-            <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-dashed border-white/20 bg-white/5 text-2xl font-bold text-muted">
+            <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-dashed border-[#D5DAE1] bg-black/[0.03] text-2xl font-bold text-muted">
               {name ? getInitials(name) : '?'}
             </div>
           )}

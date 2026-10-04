@@ -13,13 +13,13 @@ export function WeeklyTrendChart({ data }: { data: { week: string; leads: number
       </div>
       <ResponsiveContainer width="100%" height="85%">
         <BarChart data={data}>
-          <CartesianGrid stroke="#22314d" vertical={false} />
-          <XAxis dataKey="week" stroke="#98a7c4" />
-          <YAxis stroke="#98a7c4" />
+          <CartesianGrid stroke="#D9DDE3" vertical={false} />
+          <XAxis dataKey="week" stroke="#686F7B" />
+          <YAxis stroke="#686F7B" />
           <Tooltip />
-          <Bar dataKey="leads" fill="#4f8cff" radius={[6, 6, 0, 0]} />
-          <Bar dataKey="applied" fill="#22c55e" radius={[6, 6, 0, 0]} />
-          <Bar dataKey="interviews" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+          <Bar dataKey="leads" fill="#D4AF37" radius={[6, 6, 0, 0]} />
+          <Bar dataKey="applied" fill="#1F9D68" radius={[6, 6, 0, 0]} />
+          <Bar dataKey="interviews" fill="#D98E04" radius={[6, 6, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -11,7 +11,7 @@ export function UpcomingList({
   title,
   items,
   icon: Icon = Calendar,
-  accentColor = 'text-cyan-400',
+  accentColor = 'text-[#8A6D1F]',
   emptyText = 'Nothing due yet.',
 }: {
   title: string;
@@ -42,11 +42,11 @@ export function UpcomingList({
                 className={`rounded-xl border px-3 py-2.5 ${
                   urgent
                     ? 'border-amber-500/25 bg-amber-500/[0.07]'
-                    : 'border-white/[0.07] bg-white/[0.03]'
+                    : 'border-[#E2E5EA] bg-black/[0.03]'
                 }`}
               >
                 <p className="text-sm font-medium text-ink leading-tight">{item.label}</p>
-                <p className={`mt-0.5 text-xs ${urgent ? 'text-amber-300' : 'text-muted'}`}>{item.meta}</p>
+                <p className={`mt-0.5 text-xs ${urgent ? 'text-amber-800' : 'text-muted'}`}>{item.meta}</p>
               </div>
             );
           })}

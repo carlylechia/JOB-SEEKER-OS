@@ -30,11 +30,11 @@ type Column = {
 };
 
 const COLUMNS: Column[] = [
-  { key: 'saved',     label: 'Saved',     statuses: ['LEAD', 'SAVED'],           color: 'border-sky-500/40 bg-sky-500/5',      dropStatus: 'SAVED' },
+  { key: 'saved',     label: 'Saved',     statuses: ['LEAD', 'SAVED'],           color: 'border-[#D4AF37]/40 bg-[#D4AF37]/[0.05]',      dropStatus: 'SAVED' },
   { key: 'applied',   label: 'Applied',   statuses: ['APPLYING', 'APPLIED'],     color: 'border-amber-500/40 bg-amber-500/5',  dropStatus: 'APPLIED' },
-  { key: 'interview', label: 'Interview', statuses: ['INTERVIEWING'],            color: 'border-violet-500/40 bg-violet-500/5', dropStatus: 'INTERVIEWING' },
+  { key: 'interview', label: 'Interview', statuses: ['INTERVIEWING'],            color: 'border-[#C9CED6] bg-[#C9CED6]/15', dropStatus: 'INTERVIEWING' },
   { key: 'offer',     label: 'Offer',     statuses: ['OFFER'],                   color: 'border-emerald-500/40 bg-emerald-500/5', dropStatus: 'OFFER' },
-  { key: 'rejected',  label: 'Rejected',  statuses: ['REJECTED', 'ARCHIVED'],   color: 'border-white/10 bg-white/5',          dropStatus: 'REJECTED' },
+  { key: 'rejected',  label: 'Rejected',  statuses: ['REJECTED', 'ARCHIVED'],   color: 'border-[#DFE3E9] bg-black/[0.03]',          dropStatus: 'REJECTED' },
 ];
 
 const ALL_STATUSES: JobStatus[] = ['LEAD', 'SAVED', 'APPLYING', 'APPLIED', 'INTERVIEWING', 'OFFER', 'REJECTED', 'ARCHIVED'];
@@ -74,12 +74,12 @@ function JobCard({
       style={isDragOverlay ? { cursor: 'grabbing' } : style}
       {...listeners}
       {...attributes}
-      className={`rounded-xl border border-line bg-white/5 p-3 space-y-2 select-none touch-none
-        ${isDragOverlay ? 'shadow-soft ring-1 ring-accent/40 rotate-1 scale-[1.02]' : 'hover:border-white/20 transition-colors'}`}
+      className={`rounded-xl border border-line bg-black/[0.03] p-3 space-y-2 select-none touch-none
+        ${isDragOverlay ? 'shadow-soft ring-1 ring-accent/40 rotate-1 scale-[1.02]' : 'hover:border-[#D5DAE1] transition-colors'}`}
     >
       <Link
         href={`/jobs/${job.id}`}
-        className="block hover:text-accent"
+        className="block hover:text-[#8A6D1F]"
         onClick={(e) => e.stopPropagation()}
         // prevent drag from navigating
         onPointerDown={(e) => e.stopPropagation()}
@@ -135,7 +135,7 @@ function KanbanColumn({
     >
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-sm">{col.label}</h3>
-        <span className="text-xs text-muted bg-white/10 rounded-full px-2 py-0.5">{jobs.length}</span>
+        <span className="text-xs text-muted bg-black/[0.05] rounded-full px-2 py-0.5">{jobs.length}</span>
       </div>
       <div className="space-y-3">
         {jobs.length ? (
@@ -144,7 +144,7 @@ function KanbanColumn({
           ))
         ) : (
           <div className={`text-xs text-muted py-8 text-center rounded-xl border border-dashed
-            ${isOver ? 'border-accent/40 text-accent/60' : 'border-white/10'}`}>
+            ${isOver ? 'border-accent/40 text-[#8A6D1F]/60' : 'border-[#DFE3E9]'}`}>
             {isOver ? 'Drop here' : 'Empty'}
           </div>
         )}

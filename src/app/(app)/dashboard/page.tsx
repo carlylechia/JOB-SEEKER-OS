@@ -34,11 +34,11 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="space-y-4 animate-pulse">
-        <div className="h-24 rounded-2xl bg-white/[0.04]" />
+        <div className="h-24 rounded-2xl bg-black/[0.035]" />
         <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-24 rounded-2xl bg-white/[0.04]" />)}
+          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-24 rounded-2xl bg-black/[0.035]" />)}
         </div>
-        <div className="h-64 rounded-2xl bg-white/[0.04]" />
+        <div className="h-64 rounded-2xl bg-black/[0.035]" />
       </div>
     );
   }
@@ -77,19 +77,19 @@ export default function DashboardPage() {
     <div className="space-y-6 pb-8">
 
       {/* ── Hero header ─────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-r from-[#0d1e36] to-[#08111f] px-6 py-6">
+      <div className="relative overflow-hidden rounded-2xl border border-[#E2E5EA] bg-gradient-to-r from-[#F1F2F5] via-[#FAFAF7] to-[#FFFFFF] px-6 py-6">
         {/* Ambient glow */}
         <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-accent/[0.08] blur-3xl" aria-hidden />
-        <div className="pointer-events-none absolute bottom-0 left-1/3 h-32 w-64 rounded-full bg-cyan-500/[0.05] blur-2xl" aria-hidden />
+        <div className="pointer-events-none absolute bottom-0 left-1/3 h-32 w-64 rounded-full bg-[#D4AF37]/[0.05] blur-2xl" aria-hidden />
 
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">{getGreeting(profile?.fullName)}</h1>
-            <p className="mt-1 text-sm text-slate-400">{getFormattedDate()}</p>
+            <h1 className="text-2xl font-bold tracking-tight text-[#17191E]">{getGreeting(profile?.fullName)}</h1>
+            <p className="mt-1 text-sm text-[#686F7B]">{getFormattedDate()}</p>
             {hasJobs && preferences && (
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-[#686F7B]">
                 Targeting{' '}
-                <span className="text-slate-300">
+                <span className="text-[#4A505A]">
                   {preferences.targetRoles.slice(0, 2).join(' / ') || 'all roles'}
                 </span>
                 {preferences.remoteOnly && ' · remote only'}
@@ -115,19 +115,19 @@ export default function DashboardPage() {
       {setupItems > 0 && (
         <div className="space-y-3">
           {(!onboardingCompleted || onboardingSkipped) && (
-            <div className="flex flex-col gap-4 rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.07] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.07] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
-                <Settings className="mt-0.5 h-4 w-4 flex-shrink-0 text-cyan-400" />
+                <Settings className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#8A6D1F]" />
                 <div>
                   {onboardingSkipped ? (
                     <>
-                      <p className="text-sm font-semibold text-cyan-200">Your onboarding is incomplete</p>
-                      <p className="mt-1 text-xs leading-5 text-slate-300/70">You skipped setup earlier. Resume onboarding to improve your fit scores and personalise your job search experience.</p>
+                      <p className="text-sm font-semibold text-[#8A6D1F]">Your onboarding is incomplete</p>
+                      <p className="mt-1 text-xs leading-5 text-[#4A505A]/70">You skipped setup earlier. Resume onboarding to improve your fit scores and personalise your job search experience.</p>
                     </>
                   ) : (
                     <>
-                      <p className="text-sm font-semibold text-cyan-200">Complete onboarding to improve scoring quality</p>
-                      <p className="mt-1 text-xs leading-5 text-slate-300/70">Set your level, job titles, preferred regions, and work-hour overlap so rankings reflect what you actually want.</p>
+                      <p className="text-sm font-semibold text-[#8A6D1F]">Complete onboarding to improve scoring quality</p>
+                      <p className="mt-1 text-xs leading-5 text-[#4A505A]/70">Set your level, job titles, preferred regions, and work-hour overlap so rankings reflect what you actually want.</p>
                     </>
                   )}
                 </div>
@@ -143,8 +143,8 @@ export default function DashboardPage() {
               <div className="flex items-start gap-3">
                 <UserCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-400" />
                 <div>
-                  <p className="text-sm font-semibold text-amber-200">Your profile is incomplete</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-300/70">Add your name, headline, and portfolio or resume links so your materials are easier to manage.</p>
+                  <p className="text-sm font-semibold text-amber-800">Your profile is incomplete</p>
+                  <p className="mt-1 text-xs leading-5 text-[#4A505A]/70">Add your name, headline, and portfolio or resume links so your materials are easier to manage.</p>
                 </div>
               </div>
               <Link href="/profile" className="btn-primary flex-shrink-0 text-sm">Update profile</Link>
@@ -158,19 +158,19 @@ export default function DashboardPage() {
 
       {/* ── KPI row ──────────────────────────────────────────────────── */}
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
-        <KpiCard label="Total leads"  value={dashboard.total}         icon={Briefcase}    accent="text-accent" />
+        <KpiCard label="Total leads"  value={dashboard.total}         icon={Briefcase}    accent="text-[#8A6D1F]" />
         <KpiCard label="Applied"      value={dashboard.applied}       icon={CheckSquare}  accent="text-emerald-400" />
-        <KpiCard label="Interviews"   value={dashboard.interviewsCount} icon={Calendar}   accent="text-violet-400" />
+        <KpiCard label="Interviews"   value={dashboard.interviewsCount} icon={Calendar}   accent="text-[#5B6472]" />
         <KpiCard label="Offers"       value={dashboard.offers}        icon={Star}         accent="text-amber-400" />
-        <KpiCard label="Avg fit score" value={dashboard.avgFit}       icon={TrendingUp}   accent="text-cyan-400" />
-        <KpiCard label="Response rate" value={`${dashboard.responseRate}%`} icon={BarChart2} accent="text-indigo-400" />
+        <KpiCard label="Avg fit score" value={dashboard.avgFit}       icon={TrendingUp}   accent="text-[#8A6D1F]" />
+        <KpiCard label="Response rate" value={`${dashboard.responseRate}%`} icon={BarChart2} accent="text-[#686F7B]" />
       </div>
 
       {/* ── Empty state ──────────────────────────────────────────────── */}
       {!hasJobs ? (
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-6 py-12 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
-            <Briefcase className="h-6 w-6 text-accent" />
+        <div className="rounded-2xl border border-[#E2E5EA] bg-black/[0.03] px-6 py-12 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#DFE3E9] bg-black/[0.03]">
+            <Briefcase className="h-6 w-6 text-[#8A6D1F]" />
           </div>
           <h3 className="text-lg font-semibold text-ink">No jobs in your workspace yet</h3>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">
@@ -202,7 +202,7 @@ export default function DashboardPage() {
                 title="Upcoming interviews"
                 items={interviewItems}
                 icon={Calendar}
-                accentColor="text-violet-400"
+                accentColor="text-[#5B6472]"
                 emptyText="No interviews scheduled."
               />
             </div>
@@ -213,9 +213,9 @@ export default function DashboardPage() {
 
           {/* ── Preferences summary ─────────────────────────────────── */}
           {preferences && (
-            <div className="flex flex-col gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 rounded-2xl border border-[#E2E5EA] bg-black/[0.03] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
-                <Settings className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-500" />
+                <Settings className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#686F7B]" />
                 <div>
                   <p className="text-sm font-semibold text-ink">
                     {preferences.targetLevel} · {preferences.targetRoles.join(' / ') || 'All roles'}

@@ -72,7 +72,7 @@ export function StepLocation({
                 'flex flex-col items-center gap-1.5 rounded-2xl border px-3 py-4 text-center transition-all',
                 remotePreference === opt.value
                   ? 'border-accent bg-accent/10 text-ink ring-1 ring-accent/30'
-                  : 'border-line bg-white/5 text-muted hover:border-white/20 hover:bg-white/10',
+                  : 'border-line bg-black/[0.03] text-muted hover:border-[#D5DAE1] hover:bg-black/[0.06]',
               ].join(' ')}
             >
               <span className="text-2xl">{opt.icon}</span>
@@ -98,8 +98,8 @@ export function StepLocation({
                 className={[
                   'rounded-full border px-3 py-1.5 text-xs font-medium transition-all',
                   selected
-                    ? 'border-accent bg-accent/15 text-accent'
-                    : 'border-line bg-white/5 text-muted hover:border-white/20 hover:bg-white/10',
+                    ? 'border-accent bg-accent/15 text-[#8A6D1F]'
+                    : 'border-line bg-black/[0.03] text-muted hover:border-[#D5DAE1] hover:bg-black/[0.06]',
                 ].join(' ')}
               >
                 {tz}

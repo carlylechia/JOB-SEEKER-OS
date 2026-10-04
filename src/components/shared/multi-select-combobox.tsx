@@ -69,14 +69,14 @@ export function MultiSelectCombobox({
   return (
     <div>
       <label className="mb-2 block text-sm text-muted">{label}</label>
-      <div className="rounded-2xl border border-line bg-white/5 p-3">
+      <div className="rounded-2xl border border-line bg-black/[0.03] p-3">
         <div className="flex flex-wrap gap-2">
           {values.map((value) => (
             <button
               key={value}
               type="button"
               onClick={() => onChange(values.filter((item) => item !== value))}
-              className="inline-flex items-center rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-ink"
+              className="inline-flex items-center rounded-full border border-[#DFE3E9] bg-black/[0.05] px-3 py-1 text-xs text-ink"
             >
               {value} <span className="ml-2 text-muted">×</span>
             </button>

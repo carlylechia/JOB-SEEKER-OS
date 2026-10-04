@@ -145,17 +145,17 @@ export function JobForm({
 
         <div className="space-y-6">
           <div className="card-pad">
-            <div className="flex items-start justify-between gap-4"><div><h3 className="text-lg font-semibold">Scoring controls</h3><p className="muted mt-1">Use the 0–5 rubric to score fit before or after saving.</p></div><div className="rounded-xl border border-line bg-white/5 px-3 py-2 text-sm text-muted">Avg signal: <span className="text-white">{averageSignal}/5</span></div></div>
+            <div className="flex items-start justify-between gap-4"><div><h3 className="text-lg font-semibold">Scoring controls</h3><p className="muted mt-1">Use the 0–5 rubric to score fit before or after saving.</p></div><div className="rounded-xl border border-line bg-black/[0.03] px-3 py-2 text-sm text-muted">Avg signal: <span className="text-[#17191E]">{averageSignal}/5</span></div></div>
             <div className="mt-4 space-y-3">{scoreFields.map((field) => <div key={field.key} className="rounded-xl border border-line p-3"><div className="flex items-center justify-between gap-4"><label className="text-sm text-ink">{field.label}</label><select className="select w-24" value={values[field.key] as number} onChange={(e) => update(field.key, Number(e.target.value) as any)}>{[0,1,2,3,4,5].map((n)=><option key={n} value={n}>{n}</option>)}</select></div></div>)}</div>
           </div>
 
           <div className="card-pad space-y-3">
             <h3 className="text-lg font-semibold">Save changes</h3>
             <p className="muted">This release saves the job, recalculates fit and priority, and keeps the detail workspace up to date.</p>
-            {error ? <div className="rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</div> : null}
+            {error ? <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">{error}</div> : null}
             <div className="flex flex-wrap gap-3">
               <button type="submit" className="btn-primary" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : mode === 'create' ? 'Create job lead' : 'Save changes'}</button>
-              {mode === 'edit' && onDelete ? <button type="button" className="btn-secondary border-red-400/20 text-red-200" disabled={isDeleting} onClick={() => void handleDelete()}>{isDeleting ? 'Deleting...' : 'Delete lead'}</button> : null}
+              {mode === 'edit' && onDelete ? <button type="button" className="btn-secondary border-red-400/20 text-red-700" disabled={isDeleting} onClick={() => void handleDelete()}>{isDeleting ? 'Deleting...' : 'Delete lead'}</button> : null}
             </div>
           </div>
         </div>

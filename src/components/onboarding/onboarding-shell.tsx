@@ -290,9 +290,9 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
   const isLoading = isSaving || isPending;
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#08111f]">
+    <div className="flex min-h-screen flex-col bg-[#FAFAF7]">
       {/* ── Top bar ── */}
-      <header className="flex items-center justify-between border-b border-white/6 px-6 py-4">
+      <header className="flex items-center justify-between border-b border-[#E4E7EC] px-6 py-4">
         <div className="flex items-center gap-2">
           <Logo compact href="/" />
         </div>
@@ -316,7 +316,7 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
           </div>
 
           {/* Step content with slide animation */}
-          <div className="relative overflow-hidden rounded-3xl border border-white/8 bg-white/[0.03] p-5 shadow-2xl backdrop-blur-sm sm:p-8">
+          <div className="relative overflow-hidden rounded-3xl border border-[#E2E5EA] bg-black/[0.03] p-5 shadow-2xl backdrop-blur-sm sm:p-8">
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={step}
@@ -395,7 +395,7 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
             <motion.div
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+              className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700"
             >
               {error}
             </motion.div>
@@ -408,7 +408,7 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
               type="button"
               onClick={goBack}
               disabled={step === 1 || isLoading}
-              className="flex items-center gap-1.5 rounded-xl border border-line bg-white/5 px-4 py-2.5 text-sm font-medium text-ink transition-all hover:bg-white/10 disabled:pointer-events-none disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded-xl border border-line bg-black/[0.03] px-4 py-2.5 text-sm font-medium text-ink transition-all hover:bg-black/[0.06] disabled:pointer-events-none disabled:opacity-40"
             >
               <ChevronLeft size={16} />
               Back
@@ -420,7 +420,7 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
                 type="button"
                 onClick={() => void goNext()}
                 disabled={isLoading}
-                className="flex items-center gap-2 rounded-xl bg-accent px-6 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:pointer-events-none disabled:opacity-60"
+                className="flex items-center gap-2 rounded-xl bg-accent px-6 py-2.5 text-sm font-semibold text-[#17191E] transition-all hover:opacity-90 disabled:pointer-events-none disabled:opacity-60"
               >
                 {isLoading ? <Loader size={15} className="animate-spin" /> : null}
                 Continue
@@ -431,7 +431,7 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
                 type="button"
                 onClick={() => void handleComplete()}
                 disabled={isLoading}
-                className="flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:pointer-events-none disabled:opacity-60"
+                className="flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-[#17191E] transition-all hover:opacity-90 disabled:pointer-events-none disabled:opacity-60"
               >
                 {isLoading ? (
                   <Loader size={15} className="animate-spin" />

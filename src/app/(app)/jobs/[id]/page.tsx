@@ -311,7 +311,7 @@ export default function JobDetailsPage() {
                         </div>
                         <button
                           type="button"
-                          className="text-xs text-red-400 hover:text-red-300"
+                          className="text-xs text-red-400 hover:text-red-700"
                           onClick={() => removeContact(job.id, contact.id)}
                         >
                           Remove
@@ -346,7 +346,7 @@ export default function JobDetailsPage() {
                   <div className="rounded-xl border border-line p-3">
                     <div className="muted">titleMatch</div>
                     <div className="mt-1">
-                      <span className={`badge ${job.score.titleMatch ? "bg-emerald-500/15 text-emerald-300" : "bg-white/10 text-white"}`}>
+                      <span className={`badge ${job.score.titleMatch ? "bg-emerald-500/15 text-emerald-800" : "bg-black/[0.05] text-[#17191E]"}`}>
                         {job.score.titleMatch ? "Match" : "No match"}
                       </span>
                     </div>
@@ -374,7 +374,7 @@ export default function JobDetailsPage() {
 
                     {/* Progress bar */}
                     <div className="mt-2 flex items-center gap-3">
-                      <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                      <div className="flex-1 h-2 rounded-full bg-black/[0.05] overflow-hidden">
                         <div
                           className={`h-2 rounded-full transition-all duration-500 ${allDone ? 'bg-emerald-500' : 'bg-accent'}`}
                           style={{ width: `${pct}%` }}
@@ -387,7 +387,7 @@ export default function JobDetailsPage() {
 
                     {/* Auto-complete banner */}
                     {isAutoCompleted && (
-                      <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-3 py-2 text-xs text-emerald-300">
+                      <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-3 py-2 text-xs text-emerald-800">
                         ✓ Status is <strong>{job.status.charAt(0) + job.status.slice(1).toLowerCase()}</strong> — all items are marked complete automatically. Move the job back to <em>Applying</em> or earlier to edit individually.
                       </div>
                     )}
@@ -406,13 +406,13 @@ export default function JobDetailsPage() {
                             className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors
                               ${checked
                                 ? 'border-emerald-500/30 bg-emerald-500/8 hover:bg-emerald-500/12'
-                                : 'border-line bg-white/3 hover:bg-white/6'}
+                                : 'border-line bg-black/[0.03] hover:bg-black/[0.05]'}
                               ${isAutoCompleted ? 'cursor-default' : 'cursor-pointer'}
                               disabled:opacity-75`}
                           >
                             {/* Custom checkbox */}
                             <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors
-                              ${checked ? 'border-emerald-500 bg-emerald-500' : 'border-white/30 bg-transparent'}`}
+                              ${checked ? 'border-emerald-500 bg-emerald-500' : 'border-[#D0D5DD] bg-transparent'}`}
                             >
                               {checked && (
                                 <svg className="h-3 w-3 text-white" viewBox="0 0 12 10" fill="none">
@@ -459,7 +459,7 @@ export default function JobDetailsPage() {
                 </div>
                 <div>
                   <span className="text-muted">Prep status: </span>
-                  <span className="badge bg-white/10 text-white ml-1">{job.prepPack.prepStatus}</span>
+                  <span className="badge bg-black/[0.05] text-[#17191E] ml-1">{job.prepPack.prepStatus}</span>
                 </div>
               </div>
             </div>

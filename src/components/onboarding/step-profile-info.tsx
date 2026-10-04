@@ -30,7 +30,7 @@ export function StepProfileInfo({
         <p className="mt-1 text-sm text-muted">
           Add your headline and links — these are used in templates, prep packs, and to personalise your workspace.
           {headline && (
-            <span className="ml-1 inline-flex items-center gap-1 text-accent">
+            <span className="ml-1 inline-flex items-center gap-1 text-[#8A6D1F]">
               <Sparkles className="h-3.5 w-3.5" />
               Autofilled from your resume
             </span>

@@ -20,8 +20,8 @@ const items = [
 export function SidebarNav() {
   const pathname = usePathname();
   return (
-    <aside className="hidden w-72 flex-col border-r border-line bg-[#09111f] p-4 lg:flex">
-      <div className="mb-6 rounded-2xl border border-line bg-white/5 p-4">
+    <aside className="hidden w-72 flex-col border-r border-line bg-[#FFFFFF] p-4 lg:flex">
+      <div className="mb-6 rounded-2xl border border-line bg-black/[0.03] p-4">
         <Logo href="/dashboard" />
       </div>
       <nav className="space-y-1">
@@ -29,7 +29,7 @@ export function SidebarNav() {
           const active = pathname.startsWith(item.href);
           const Icon = item.icon;
           return (
-            <Link key={item.href} href={item.href} className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${active ? 'bg-accent text-white' : 'text-muted hover:bg-white/5 hover:text-ink'}`}>
+            <Link key={item.href} href={item.href} className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${active ? 'bg-accent text-[#17191E]' : 'text-muted hover:bg-black/[0.04] hover:text-ink'}`}>
               <Icon className="h-4 w-4" />
               {item.label}
             </Link>

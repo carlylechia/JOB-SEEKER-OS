@@ -19,9 +19,9 @@ const TYPE_CONFIG: Record<
   { icon: string; color: string; label: string }
 > = {
   follow_up: { icon: '📬', color: 'border-amber-500/40 bg-amber-500/5',  label: 'Follow-up' },
-  prep:      { icon: '📋', color: 'border-violet-500/40 bg-violet-500/5', label: 'Prep'      },
-  apply:     { icon: '📤', color: 'border-sky-500/40 bg-sky-500/5',       label: 'Apply'     },
-  stale:     { icon: '🕰️',  color: 'border-white/10 bg-white/5',           label: 'Stale'     },
+  prep:      { icon: '📋', color: 'border-[#C9CED6] bg-[#C9CED6]/15', label: 'Prep'      },
+  apply:     { icon: '📤', color: 'border-[#D4AF37]/40 bg-[#D4AF37]/[0.05]',       label: 'Apply'     },
+  stale:     { icon: '🕰️',  color: 'border-[#DFE3E9] bg-black/[0.03]',           label: 'Stale'     },
   review:    { icon: '🔍', color: 'border-orange-500/40 bg-orange-500/5', label: 'Review'    },
 };
 
@@ -54,9 +54,9 @@ export function DailyQueue() {
   if (isLoading) {
     return (
       <div className="card-pad space-y-3 animate-pulse">
-        <div className="h-4 w-40 rounded bg-white/10" />
+        <div className="h-4 w-40 rounded bg-black/[0.05]" />
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-16 rounded-xl bg-white/5" />
+          <div key={i} className="h-16 rounded-xl bg-black/[0.03]" />
         ))}
       </div>
     );
@@ -64,7 +64,7 @@ export function DailyQueue() {
 
   if (error) {
     return (
-      <div className="card-pad border border-red-500/20 bg-red-500/5 text-sm text-red-300">
+      <div className="card-pad border border-red-500/20 bg-red-500/5 text-sm text-red-700">
         Could not load your daily queue. Try refreshing the page.
       </div>
     );
@@ -78,7 +78,7 @@ export function DailyQueue() {
         <h2 className="text-lg font-semibold">Your Daily Queue</h2>
         <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-6 text-center">
           <div className="text-2xl">🎉</div>
-          <p className="mt-2 font-medium text-emerald-300">All caught up!</p>
+          <p className="mt-2 font-medium text-emerald-800">All caught up!</p>
           <p className="mt-1 text-sm text-muted">No urgent actions right now. Add more jobs or check back later.</p>
           <div className="mt-4 flex justify-center gap-3">
             <Link href="/jobs/new" className="btn-primary text-sm">Add a job</Link>
@@ -110,11 +110,11 @@ export function DailyQueue() {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium leading-tight">{item.title}</span>
                     {item.isHighPriority && (
-                      <span className="shrink-0 rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-semibold text-red-300">
+                      <span className="shrink-0 rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-semibold text-red-700">
                         🔥 High priority
                       </span>
                     )}
-                    <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-xs text-muted capitalize">
+                    <span className="shrink-0 rounded-full bg-black/[0.05] px-2 py-0.5 text-xs text-muted capitalize">
                       {cfg.label}
                     </span>
                   </div>

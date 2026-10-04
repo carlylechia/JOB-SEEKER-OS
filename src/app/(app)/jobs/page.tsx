@@ -35,7 +35,7 @@ export default function JobsPage() {
         <div className="flex-1"><input className="input" placeholder="Search company, role, or notes..." value={query} onChange={(e) => setQuery(e.target.value)} /></div>
         <div className="flex gap-2">
           {(['ALL', 'ACTIVE', 'ARCHIVED'] as const).map((value) => (
-            <button key={value} type="button" className={`btn-secondary ${statusFilter === value ? 'border-accent text-white' : ''}`} onClick={() => setStatusFilter(value)}>{value}</button>
+            <button key={value} type="button" className={`btn-secondary ${statusFilter === value ? 'border-accent text-[#17191E]' : ''}`} onClick={() => setStatusFilter(value)}>{value}</button>
           ))}
         </div>
       </div>
@@ -56,7 +56,7 @@ export default function JobsPage() {
             {filteredJobs.map((job) => (
               <tr key={job.id}>
                 <td className="font-medium">{job.company}</td>
-                <td><Link className="hover:text-accent" href={`/jobs/${job.id}`}>{job.title}</Link></td>
+                <td><Link className="hover:text-[#8A6D1F]" href={`/jobs/${job.id}`}>{job.title}</Link></td>
                 <td className="hidden sm:table-cell"><ScoreBadge score={job.score.fitScore} tier={job.score.fitTier} /></td>
                 <td className="hidden sm:table-cell"><PriorityBadge priority={job.priorityFlag} /></td>
                 <td><StatusBadge status={job.status} /></td>

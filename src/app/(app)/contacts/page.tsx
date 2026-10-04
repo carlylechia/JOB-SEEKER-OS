@@ -182,12 +182,12 @@ export default function ContactsPage() {
                   <td className="font-medium">{contact.name}</td>
                   <td>{contact.title || '—'}</td>
                   <td>
-                    <span className="badge bg-white/10 text-white text-xs">
+                    <span className="badge bg-black/[0.05] text-[#17191E] text-xs">
                       {contact.relationshipType.replace('_', ' ')}
                     </span>
                   </td>
                   <td>
-                    <Link href={`/jobs/${contact.jobId}`} className="hover:text-accent text-sm">
+                    <Link href={`/jobs/${contact.jobId}`} className="hover:text-[#8A6D1F] text-sm">
                       {contact.jobCompany} — {contact.jobTitle}
                     </Link>
                   </td>

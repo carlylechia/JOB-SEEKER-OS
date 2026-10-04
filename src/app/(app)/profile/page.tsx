@@ -72,13 +72,13 @@ function ProfilePictureSection({
         {currentUrl ? (
           <img src={currentUrl} alt={name} className="h-20 w-20 rounded-2xl object-cover ring-2 ring-white/10" />
         ) : (
-          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/20 text-2xl font-bold text-accent ring-2 ring-accent/20">
+          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/20 text-2xl font-bold text-[#8A6D1F] ring-2 ring-accent/20">
             {getInitials(name)}
           </div>
         )}
         {uploading && (
           <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/50">
-            <Loader className="h-5 w-5 animate-spin text-white" />
+            <Loader className="h-5 w-5 animate-spin text-[#17191E]" />
           </div>
         )}
       </div>
@@ -90,7 +90,7 @@ function ProfilePictureSection({
             type="button"
             disabled={uploading}
             onClick={() => fileRef.current?.click()}
-            className="flex items-center gap-1.5 rounded-xl border border-line bg-white/5 px-3 py-2 text-sm text-muted transition-colors hover:bg-white/10 hover:text-ink disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-xl border border-line bg-black/[0.03] px-3 py-2 text-sm text-muted transition-colors hover:bg-black/[0.06] hover:text-ink disabled:opacity-50"
           >
             <Camera className="h-3.5 w-3.5" />
             {currentUrl ? 'Change photo' : 'Upload photo'}
@@ -160,16 +160,16 @@ function ResumeSection({
 
   if (resumeUrl && !replacing) {
     return (
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-white/5 px-4 py-3">
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-black/[0.03] px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
-          <FileText className="h-4 w-4 shrink-0 text-accent" />
+          <FileText className="h-4 w-4 shrink-0 text-[#8A6D1F]" />
           <span className="truncate text-sm text-ink">{fileName}</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <a href={resumeUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-muted hover:text-ink">
             <ExternalLink className="h-3.5 w-3.5" /> View
           </a>
-          <button type="button" onClick={() => setReplacing(true)} className="rounded-lg border border-line bg-white/5 px-2.5 py-1 text-xs text-muted hover:text-ink">
+          <button type="button" onClick={() => setReplacing(true)} className="rounded-lg border border-line bg-black/[0.03] px-2.5 py-1 text-xs text-muted hover:text-ink">
             Replace
           </button>
           <button type="button" onClick={() => onChange('')} className="text-muted hover:text-red-400" title="Remove">
@@ -186,7 +186,7 @@ function ResumeSection({
         type="button"
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line bg-white/5 px-4 py-4 text-sm text-muted transition-colors hover:border-accent/50 hover:bg-white/[0.07] hover:text-ink disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line bg-black/[0.03] px-4 py-4 text-sm text-muted transition-colors hover:border-accent/50 hover:bg-black/[0.04] hover:text-ink disabled:opacity-60"
       >
         {uploading ? <Loader className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
         {uploading ? 'Uploading…' : resumeUrl ? 'Choose replacement file' : 'Upload resume (PDF, DOCX, TXT)'}
@@ -279,8 +279,8 @@ export default function ProfilePage() {
 
       <div className="flex items-center gap-3">
         <button className="btn-primary" onClick={() => void handleSave()}>Save profile</button>
-        {saved ? <span className="text-sm text-emerald-300">Profile saved.</span> : null}
-        {error ? <span className="text-sm text-red-300">{error}</span> : null}
+        {saved ? <span className="text-sm text-emerald-700">Profile saved.</span> : null}
+        {error ? <span className="text-sm text-red-700">{error}</span> : null}
       </div>
     </div>
   );

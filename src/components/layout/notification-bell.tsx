@@ -124,7 +124,7 @@ export function NotificationBell() {
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             {selectedNotification ? (
               <button
-                className="inline-flex items-center gap-2 text-sm font-semibold text-foreground hover:text-accent"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-foreground hover:text-[#8A6D1F]"
                 onClick={() => setSelectedNotification(null)}
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -139,7 +139,7 @@ export function NotificationBell() {
               </button>
             ) : unread > 0 ? (
               <button
-                className="text-xs text-accent hover:underline disabled:opacity-50"
+                className="text-xs text-[#8A6D1F] hover:underline disabled:opacity-50"
                 onClick={markAllRead}
                 disabled={loading}
               >
@@ -150,7 +150,7 @@ export function NotificationBell() {
 
           {selectedNotification ? (
             <div className="max-h-96 overflow-y-auto px-4 py-4">
-              <div className="rounded-xl border border-line bg-white/5 p-4">
+              <div className="rounded-xl border border-line bg-black/[0.03] p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-foreground">{selectedNotification.title}</p>
@@ -175,7 +175,7 @@ export function NotificationBell() {
                 notifications.map((n) => (
                   <button
                     key={n.id}
-                    className={`w-full cursor-pointer px-4 py-3 text-left transition hover:bg-white/5 ${!n.read ? 'bg-accent/5' : ''}`}
+                    className={`w-full cursor-pointer px-4 py-3 text-left transition hover:bg-black/[0.04] ${!n.read ? 'bg-accent/5' : ''}`}
                     onClick={() => void openNotification(n)}
                   >
                     <div className="flex items-start justify-between gap-2">
