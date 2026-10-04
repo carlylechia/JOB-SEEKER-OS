@@ -5,7 +5,7 @@ import { ChevronDown } from 'lucide-react';
 
 const faqs = [
   {
-    q: 'What makes Job Seeker OS different from a spreadsheet or generic tracker?',
+    q: 'What makes teChia Jobs different from a spreadsheet or generic tracker?',
     a: 'It combines prioritization, workflow management, recruiter tracking, and preparation into one system instead of leaving those steps scattered across tools. The AI scoring engine gives every lead a fit score based on your personal preferences — something no spreadsheet can do.',
   },
   {
@@ -56,7 +56,7 @@ function FaqItem({ item, index }: { item: typeof faqs[number]; index: number }) 
   return (
     <div
       ref={ref}
-      className={`reveal-hidden overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] transition-all duration-200 hover:border-white/[0.14] ${open ? 'border-cyan-500/20 bg-white/[0.05]' : ''} ${visible ? 'reveal-visible' : ''}`}
+      className={`reveal-hidden overflow-hidden rounded-2xl border border-[#E2E5EA] bg-black/[0.03] transition-all duration-200 hover:border-[#DFE3E9] ${open ? 'border-[#D4AF37]/20 bg-black/[0.04]' : ''} ${visible ? 'reveal-visible' : ''}`}
       style={{ transitionDelay: visible ? `${index * 60}ms` : '0ms' }}
     >
       <button
@@ -65,9 +65,9 @@ function FaqItem({ item, index }: { item: typeof faqs[number]; index: number }) 
         className="flex w-full items-start justify-between gap-4 px-6 py-5 text-left"
         aria-expanded={open}
       >
-        <span className="text-sm font-semibold leading-6 text-white sm:text-base">{item.q}</span>
+        <span className="text-sm font-semibold leading-6 text-[#17191E] sm:text-base">{item.q}</span>
         <ChevronDown
-          className={`mt-0.5 h-5 w-5 flex-shrink-0 text-slate-400 transition-transform duration-300 ${open ? 'rotate-180 text-cyan-400' : ''}`}
+          className={`mt-0.5 h-5 w-5 flex-shrink-0 text-[#686F7B] transition-transform duration-300 ${open ? 'rotate-180 text-[#8A6D1F]' : ''}`}
         />
       </button>
 
@@ -79,7 +79,7 @@ function FaqItem({ item, index }: { item: typeof faqs[number]; index: number }) 
           opacity: open ? 1 : 0,
         }}
       >
-        <p className="px-6 pb-5 text-sm leading-7 text-slate-400">{item.a}</p>
+        <p className="px-6 pb-5 text-sm leading-7 text-[#686F7B]">{item.a}</p>
       </div>
     </div>
   );
@@ -94,10 +94,10 @@ export function LandingFaq() {
         ref={headRef}
         className={`reveal-hidden mb-12 max-w-2xl ${headVisible ? 'reveal-visible' : ''}`}
       >
-        <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-slate-300">
+        <span className="inline-flex items-center rounded-full border border-[#DFE3E9] bg-black/[0.04] px-3 py-1.5 text-xs font-semibold text-[#4A505A]">
           FAQ
         </span>
-        <h2 className="mt-5 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+        <h2 className="mt-5 text-3xl font-bold tracking-tight text-[#17191E] sm:text-4xl">
           Built to make the search more strategic, not just more organized.
         </h2>
       </div>

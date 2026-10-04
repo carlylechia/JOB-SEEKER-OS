@@ -3,7 +3,7 @@ export function FutureIntelligenceSection() {
     <section className="py-24" id="future">
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="card-pad lg:col-span-2">
-          <span className="badge bg-accent/15 text-sky-200">Where the product is headed</span>
+          <span className="badge bg-accent/15 text-[#8A6D1F]">Where the product is headed</span>
           <h2 className="mt-4 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
             The long-term direction is job-search intelligence, not just task tracking.
           </h2>

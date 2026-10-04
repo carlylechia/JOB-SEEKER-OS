@@ -12,7 +12,7 @@ export function LandingMobileMenu() {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-white/5 text-ink transition hover:bg-white/10"
+        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-black/[0.03] text-ink transition hover:bg-black/[0.06]"
         aria-label={open ? 'Close menu' : 'Open menu'}
         aria-expanded={open}
       >
@@ -20,12 +20,12 @@ export function LandingMobileMenu() {
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-14 z-30 w-[min(88vw,22rem)] rounded-2xl border border-line bg-[#09111f]/95 p-3 shadow-soft backdrop-blur">
+        <div className="absolute right-0 top-14 z-30 w-[min(88vw,22rem)] rounded-2xl border border-line bg-[#FFFFFF]/95 p-3 shadow-soft backdrop-blur">
           <div className="grid gap-2">
             <Link
               href="#features"
               onClick={() => setOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-line bg-white/5 px-4 py-3 text-sm text-ink transition hover:bg-white/10"
+              className="inline-flex items-center justify-center rounded-xl border border-line bg-black/[0.03] px-4 py-3 text-sm text-ink transition hover:bg-black/[0.06]"
             >
               Features
             </Link>
@@ -33,7 +33,7 @@ export function LandingMobileMenu() {
             <Link
               href="#workflow"
               onClick={() => setOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-line bg-white/5 px-4 py-3 text-sm text-ink transition hover:bg-white/10"
+              className="inline-flex items-center justify-center rounded-xl border border-line bg-black/[0.03] px-4 py-3 text-sm text-ink transition hover:bg-black/[0.06]"
             >
               Workflow
             </Link>
@@ -41,7 +41,7 @@ export function LandingMobileMenu() {
             <Link
               href="#public-jobs"
               onClick={() => setOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-line bg-white/5 px-4 py-3 text-sm text-ink transition hover:bg-white/10"
+              className="inline-flex items-center justify-center rounded-xl border border-line bg-black/[0.03] px-4 py-3 text-sm text-ink transition hover:bg-black/[0.06]"
             >
               Public Jobs
             </Link>
@@ -49,17 +49,17 @@ export function LandingMobileMenu() {
             <Link
               href="#faq"
               onClick={() => setOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-line bg-white/5 px-4 py-3 text-sm text-ink transition hover:bg-white/10"
+              className="inline-flex items-center justify-center rounded-xl border border-line bg-black/[0.03] px-4 py-3 text-sm text-ink transition hover:bg-black/[0.06]"
             >
               FAQ
             </Link>
 
-            <div className="my-1 h-px bg-white/10" />
+            <div className="my-1 h-px bg-black/[0.05]" />
 
             <Link
               href="/jobs-public"
               onClick={() => setOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-line bg-white/5 px-4 py-3 text-sm text-ink transition hover:bg-white/10"
+              className="inline-flex items-center justify-center rounded-xl border border-line bg-black/[0.03] px-4 py-3 text-sm text-ink transition hover:bg-black/[0.06]"
             >
               Public Jobs Page
             </Link>
@@ -67,7 +67,7 @@ export function LandingMobileMenu() {
             <Link
               href="/demo"
               onClick={() => setOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-line bg-white/5 px-4 py-3 text-sm text-ink transition hover:bg-white/10"
+              className="inline-flex items-center justify-center rounded-xl border border-line bg-black/[0.03] px-4 py-3 text-sm text-ink transition hover:bg-black/[0.06]"
             >
               Live Demo
             </Link>
@@ -75,7 +75,7 @@ export function LandingMobileMenu() {
             <Link
               href="/login"
               onClick={() => setOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl border border-line bg-white/5 px-4 py-3 text-sm text-ink transition hover:bg-white/10"
+              className="inline-flex items-center justify-center rounded-xl border border-line bg-black/[0.03] px-4 py-3 text-sm text-ink transition hover:bg-black/[0.06]"
             >
               Sign In
             </Link>
@@ -83,7 +83,7 @@ export function LandingMobileMenu() {
             <Link
               href="/register"
               onClick={() => setOpen(false)}
-              className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 px-4 py-3 text-sm font-medium text-white shadow-soft transition hover:opacity-95"
+              className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B8962E] px-4 py-3 text-sm font-medium text-[#17191E] shadow-soft transition hover:opacity-95"
             >
               Create Account
             </Link>

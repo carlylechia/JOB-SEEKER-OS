@@ -1,12 +1,16 @@
-# Job Seeker OS
+# teChia Jobs
 
-Job Seeker OS is a full-stack job search operating system for candidates who want more structure than a spreadsheet and more clarity than a generic tracker.
+**teChia Jobs** — *The AI-powered operating system for your job search.*
+
+A teChia Digital Solutions product.
+
+teChia Jobs is a full-stack job search operating system for candidates who want more structure than a spreadsheet and more clarity than a generic tracker.
 
 It combines AI-assisted fit scoring, a daily action queue, pipeline tracking, recruiter CRM, onboarding, public job discovery, and auth/account workflows into one application.
 
 ## What It Does
 
-Job Seeker OS gives users one place to:
+teChia Jobs gives users one place to:
 
 - capture and manage job leads
 - score roles against personal preferences
@@ -140,7 +144,7 @@ If you want email flows locally, also set:
 
 ```env
 RESEND_API_KEY="re_xxxxxxxxx"
-EMAIL_FROM="Job Seeker OS <noreply@yourdomain.com>"
+EMAIL_FROM="teChia Jobs <noreply@yourdomain.com>"
 EMAIL_REPLY_TO="support@yourdomain.com"
 ```
 
@@ -261,6 +265,30 @@ The demo route highlights the current product surface:
 - streaks, notifications, and ingestion flows
 - auth and onboarding improvements
 
+## Branding
+
+- product name: **teChia Jobs**
+- parent company: **teChia Digital Solutions**
+- tagline: *The AI-powered operating system for your job search.*
+
+Public branding uses "teChia Jobs". Internal identifiers are intentionally unchanged to avoid migration and data risk:
+
+- repository / package name: `job-seeker-os`
+- Prisma models, migrations, and table names
+- localStorage keys (`job-seeker-os.*`) so existing browser data keeps working
+- the demo seed account (`demo@jobseekeros.dev`) and the example Postgres identifiers in the setup docs
+
+## External Configuration Required After a Domain Change
+
+Rebranding does not change external accounts. If the production domain changes, update these outside the repo:
+
+- `NEXT_PUBLIC_APP_URL`, `AUTH_URL`, `AUTH_TRUST_HOST` (Vercel env)
+- Auth.js / LinkedIn OAuth authorized redirect URL
+- `EMAIL_FROM` / Resend verified sending domain
+- Vercel Blob access (no change required unless the domain is used in signed URLs)
+- Google Search Console + Bing Webmaster canonical property
+- social preview images and profile links
+
 ## Status
 
 This repository is actively evolving. Recent branch work expanded:
@@ -275,6 +303,6 @@ This repository is actively evolving. Recent branch work expanded:
 The next releases are expected to be much more AI-intensive, including:
 
 - smart resume building
-- AI job fetching and ranking
+- AI job fetching and ranking // crawl as many top job boards as possible and display matching jobs to signed in users who are on the right pricing plan.
 - AI-assisted auto-apply workflows
 - smarter suggestions across queue, scoring, and execution

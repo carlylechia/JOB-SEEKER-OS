@@ -155,7 +155,7 @@ function SpinnerHero({ className }: SpinnerHeroProps) {
               className="pointer-events-none absolute -inset-10 rounded-full"
               style={{
                 background:
-                  'radial-gradient(circle at 50% 45%, rgba(34,211,238,0.14), transparent 58%), radial-gradient(circle at 60% 55%, rgba(99,102,241,0.16), transparent 62%)',
+                  'radial-gradient(circle at 50% 45%, rgba(212,175,55,0.10), transparent 58%), radial-gradient(circle at 60% 55%, rgba(201,206,214,0.14), transparent 62%)',
                 filter: 'blur(22px)',
                 transform: 'translateZ(0)',
                 willChange: 'transform, opacity',
@@ -249,9 +249,9 @@ function SpinnerSvg() {
     >
       <defs>
         <radialGradient id="sp-body" cx="30%" cy="18%" r="85%">
-          <stop offset="0%" stopColor="#f0f4ff" stopOpacity="0.16" />
-          <stop offset="38%" stopColor="#2a3a55" stopOpacity="0.92" />
-          <stop offset="100%" stopColor="#0a1120" stopOpacity="1" />
+          <stop offset="0%" stopColor="#E8EBF0" stopOpacity="0.20" />
+          <stop offset="38%" stopColor="#242831" stopOpacity="0.94" />
+          <stop offset="100%" stopColor="#111318" stopOpacity="1" />
         </radialGradient>
 
         <linearGradient id="sp-edge" x1="0%" y1="100%" x2="100%" y2="0%">
@@ -261,19 +261,19 @@ function SpinnerSvg() {
         </linearGradient>
 
         <radialGradient id="sp-bearing" cx="42%" cy="36%" r="75%">
-          <stop offset="0%" stopColor="#0c1628" />
-          <stop offset="62%" stopColor="#050b16" />
-          <stop offset="100%" stopColor="#02050f" />
+          <stop offset="0%" stopColor="#3A4048" />
+          <stop offset="62%" stopColor="#242831" />
+          <stop offset="100%" stopColor="#111318" />
         </radialGradient>
 
         <radialGradient id="sp-hub" cx="45%" cy="35%" r="75%">
-          <stop offset="0%" stopColor="#0e1a30" />
-          <stop offset="58%" stopColor="#050c18" />
-          <stop offset="100%" stopColor="#020611" />
+          <stop offset="0%" stopColor="#F1D78A" />
+          <stop offset="58%" stopColor="#D4AF37" />
+          <stop offset="100%" stopColor="#B8962E" />
         </radialGradient>
 
         <filter id="sp-shadow" filterUnits="userSpaceOnUse" x="-40" y="-40" width="280" height="280">
-          <feDropShadow dx="0" dy="10" stdDeviation="9" floodColor="rgba(0,0,0,0.65)" />
+          <feDropShadow dx="0" dy="10" stdDeviation="9" floodColor="rgba(17,19,24,0.28)" />
         </filter>
 
         <filter id="sp-trail" filterUnits="userSpaceOnUse" x="-40" y="-40" width="280" height="280">

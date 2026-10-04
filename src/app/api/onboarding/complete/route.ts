@@ -98,7 +98,7 @@ export async function POST(request: Request) {
       const firstName = user?.name?.split(' ')[0] ?? 'there';
       await createNotification(session.user.id, {
         type: 'system',
-        title: '🎉 Welcome to Job Seeker OS!',
+        title: '🎉 Welcome to teChia Jobs!',
         message: `You're all set, ${firstName}! Your workspace is personalised and ready. Start by adding your first job lead or browsing public listings.`,
       });
     } catch {

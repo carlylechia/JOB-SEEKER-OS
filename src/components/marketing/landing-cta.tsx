@@ -29,12 +29,12 @@ export function LandingCta() {
     <section className="py-24">
       <div
         ref={ref}
-        className={`reveal-hidden relative overflow-hidden rounded-3xl border border-white/[0.1] bg-gradient-to-br from-[#0f1f3d] via-[#0a1828] to-[#08111f] p-10 text-center shadow-[0_32px_80px_rgba(0,0,0,0.4)] sm:p-16 ${visible ? 'reveal-visible' : ''}`}
+        className={`reveal-hidden relative overflow-hidden rounded-3xl border border-[#DFE3E9] bg-gradient-to-br from-[#F1F2F5] via-[#FAFAF7] to-[#FFFFFF] p-10 text-center shadow-[0_32px_80px_rgba(17,19,24,0.1)] sm:p-16 ${visible ? 'reveal-visible' : ''}`}
       >
         {/* Background orbs */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-          <div className="orb-drift-1 absolute -top-20 -right-20 h-[320px] w-[320px] rounded-full bg-cyan-500/[0.12] blur-[80px]" />
-          <div className="orb-drift-2 absolute -bottom-20 -left-20 h-[280px] w-[280px] rounded-full bg-indigo-500/[0.1] blur-[70px]" />
+          <div className="orb-drift-1 absolute -top-20 -right-20 h-[320px] w-[320px] rounded-full bg-[#D4AF37]/[0.1] blur-[80px]" />
+          <div className="orb-drift-2 absolute -bottom-20 -left-20 h-[280px] w-[280px] rounded-full bg-[#C9CED6]/30 blur-[70px]" />
         </div>
 
         {/* Subtle grid */}
@@ -48,17 +48,17 @@ export function LandingCta() {
         />
 
         <div className="relative">
-          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-300">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1.5 text-xs font-semibold text-[#8A6D1F]">
             <Sparkles className="h-3 w-3" />
             Start today — it&apos;s free
           </span>
 
-          <h2 className="mx-auto mt-6 max-w-2xl text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-[2.75rem]">
+          <h2 className="mx-auto mt-6 max-w-2xl text-3xl font-bold tracking-tight text-[#17191E] sm:text-4xl lg:text-[2.75rem]">
             Stop running your search in scattered notes.{' '}
             <span className="shimmer-text">Start running it like a system.</span>
           </h2>
 
-          <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-slate-300/80 sm:text-lg">
+          <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-[#4A505A]/80 sm:text-lg">
             Create your free workspace, configure your fit preferences, and have your first AI-scored job
             queue ready in under 10 minutes.
           </p>
@@ -76,7 +76,7 @@ export function LandingCta() {
             </Link>
           </div>
 
-          <p className="mt-6 text-xs text-slate-500">
+          <p className="mt-6 text-xs text-[#686F7B]">
             No credit card required · Takes under 2 minutes · Cancel anytime
           </p>
         </div>

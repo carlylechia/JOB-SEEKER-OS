@@ -12,7 +12,7 @@ export function JobSeekerHeroVideo() {
           <linearGradient id="hero-bg" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="#120f1d" />
             <stop offset="52%" stopColor="#151a2a" />
-            <stop offset="100%" stopColor="#08111f" />
+            <stop offset="100%" stopColor="#0D0F12" />
           </linearGradient>
           <radialGradient id="hero-glow-a" cx="24%" cy="22%" r="42%">
             <stop offset="0%" stopColor="rgba(251,191,36,0.82)" />
@@ -27,8 +27,8 @@ export function JobSeekerHeroVideo() {
             <stop offset="100%" stopColor="rgba(255,228,163,0)" />
           </radialGradient>
           <linearGradient id="screen-glow" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#9ee8ff" />
-            <stop offset="100%" stopColor="#2dd4bf" />
+            <stop offset="0%" stopColor="#E8EBF0" />
+            <stop offset="100%" stopColor="#C9CED6" />
           </linearGradient>
           <filter id="soft-blur">
             <feGaussianBlur stdDeviation="24" />
@@ -54,7 +54,7 @@ export function JobSeekerHeroVideo() {
               y1="0"
               x2={120 + index * 100}
               y2="900"
-              stroke="#99dfff"
+              stroke="#F1D78A"
               strokeWidth="1"
             />
           ))}
@@ -65,7 +65,7 @@ export function JobSeekerHeroVideo() {
               y1={120 + index * 90}
               x2="1600"
               y2={120 + index * 90}
-              stroke="#99dfff"
+              stroke="#F1D78A"
               strokeWidth="1"
             />
           ))}
@@ -111,7 +111,7 @@ export function JobSeekerHeroVideo() {
           <rect x="290" y="0" width="420" height="74" rx="24" fill="rgba(15,23,42,0.95)" />
           <rect x="314" y="16" width="372" height="42" rx="18" fill="#0b1324" stroke="rgba(255,255,255,0.08)" />
           <rect x="326" y="22" width="220" height="30" rx="14" fill="url(#screen-glow)" opacity="0.18" />
-          <rect x="582" y="26" width="86" height="22" rx="11" fill="rgba(34,211,238,0.18)" />
+          <rect x="582" y="26" width="86" height="22" rx="11" fill="rgba(212,175,55,0.18)" />
 
           <g transform="translate(430 112)">
             <rect x="0" y="0" width="178" height="110" rx="16" fill="url(#screen-glow)" opacity="0.14" />

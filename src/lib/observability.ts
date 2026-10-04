@@ -31,7 +31,7 @@ function truncate(value: string, max = 1800) {
 function formatDiscordContent(payload: AlertPayload) {
   const level = payload.level ?? 'error';
   const lines = [
-    `**[Job Seeker OS] ${payload.title}**`,
+    `**[teChia Jobs] ${payload.title}**`,
     '',
     payload.message,
     '',

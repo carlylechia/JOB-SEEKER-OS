@@ -42,7 +42,7 @@ export async function ingestJobInput(input: { jobUrl?: string; jobDescription?: 
       const response = await fetch(input.jobUrl, {
         signal: controller.signal,
         headers: {
-          'User-Agent': 'JobSeekerOS/1.0 (+https://job-seeker-os.vercel.app)',
+          'User-Agent': 'teChiaJobs/1.0',
           Accept: 'text/html,application/xhtml+xml',
         },
         cache: 'no-store',

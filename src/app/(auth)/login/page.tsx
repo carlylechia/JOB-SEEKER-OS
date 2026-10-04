@@ -78,7 +78,7 @@ function LoginForm() {
             />
             <button
               type="button"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
               onClick={() => setShowPassword((v) => !v)}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
@@ -87,12 +87,12 @@ function LoginForm() {
           </div>
 
           {error === 'EMAIL_NOT_VERIFIED' ? (
-            <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-200">
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-3 text-sm text-amber-800">
               Please verify your email before signing in.{' '}
               <strong>Check your inbox</strong> for the verification link.
             </div>
           ) : error ? (
-            <div className="rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
               {error}
             </div>
           ) : null}
@@ -128,13 +128,13 @@ function LoginForm() {
 
         <p className="mt-4 text-sm text-muted">
           No account yet?{' '}
-          <Link href={callbackUrl && callbackUrl !== '/dashboard' ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/register'} className="text-accent">
+          <Link href={callbackUrl && callbackUrl !== '/dashboard' ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/register'} className="text-[#8A6D1F]">
             Create one
           </Link>
         </p>
 
         <p className="mt-2 text-sm text-muted">
-          <Link href="/forgot-password" className="text-accent">
+          <Link href="/forgot-password" className="text-[#8A6D1F]">
             Forgot your password?
           </Link>
         </p>

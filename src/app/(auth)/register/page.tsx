@@ -52,9 +52,9 @@ function RegisterForm() {
           </div>
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-8">
             <div className="text-3xl">📧</div>
-            <h2 className="mt-3 text-lg font-semibold text-emerald-300">Check your inbox!</h2>
+            <h2 className="mt-3 text-lg font-semibold text-emerald-700">Check your inbox!</h2>
             <p className="mt-2 text-sm text-muted">
-              We sent a verification link to <strong className="text-foreground">{email}</strong>.
+              We sent a verification link to <strong className="text-ink">{email}</strong>.
               Click it to activate your account.
             </p>
             <Link href="/login" className="btn-primary mt-5 inline-block">
@@ -108,7 +108,7 @@ function RegisterForm() {
             />
             <button
               type="button"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
               onClick={() => setShowPassword((v) => !v)}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
@@ -127,7 +127,7 @@ function RegisterForm() {
           />
 
           {error ? (
-            <div className="rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
               {error}
             </div>
           ) : null}
@@ -163,7 +163,7 @@ function RegisterForm() {
 
         <p className="mt-4 text-sm text-muted">
           Already have an account?{' '}
-          <Link href={callbackUrl && callbackUrl !== '/onboarding' ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/login'} className="text-accent">
+          <Link href={callbackUrl && callbackUrl !== '/onboarding' ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/login'} className="text-[#8A6D1F]">
             Sign in
           </Link>
         </p>

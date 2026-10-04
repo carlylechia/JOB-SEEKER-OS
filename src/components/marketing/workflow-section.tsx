@@ -26,7 +26,7 @@ export function WorkflowSection() {
     <section className="py-24" id="workflow">
       <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
         <div>
-          <span className="badge bg-white/5 text-sky-200">A calmer workflow</span>
+          <span className="badge bg-black/[0.03] text-[#8A6D1F]">A calmer workflow</span>
           <h2 className="mt-4 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
             Replace scattered applications with one coherent system.
           </h2>
@@ -39,17 +39,17 @@ export function WorkflowSection() {
         <div className="grid gap-4">
           {steps.map((item, index) => (
             <div key={item.step} className="card-pad relative overflow-hidden">
-              <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-sky-400 to-indigo-500" />
+              <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-[#D4AF37] to-[#C9CED6]" />
               <div className="pl-4">
                 <div className="flex items-center gap-4">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-sm font-semibold text-sky-200">
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#DFE3E9] bg-black/[0.03] text-sm font-semibold text-[#8A6D1F]">
                     {item.step}
                   </span>
                   <h3 className="text-lg font-semibold text-ink">{item.title}</h3>
                 </div>
                 <p className="mt-3 text-sm leading-7 text-muted">{item.text}</p>
               </div>
-              {index < steps.length - 1 ? <div className="mt-4 h-px bg-white/5" /> : null}
+              {index < steps.length - 1 ? <div className="mt-4 h-px bg-black/[0.03]" /> : null}
             </div>
           ))}
         </div>

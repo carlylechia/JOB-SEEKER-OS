@@ -20,7 +20,7 @@ const slides: Slide[] = [
     description:
       'Track best-fit roles, follow-ups, interviews, and momentum in one calm operating view instead of scattered tabs and guesswork.',
     image: '/marketing/hero-dashboard.png',
-    alt: 'Job Seeker OS dashboard preview with fit metrics and queue prioritization',
+    alt: 'teChia Jobs dashboard preview with fit metrics and queue prioritization',
     accent: 'From scattered to structured',
   },
   {
@@ -29,7 +29,7 @@ const slides: Slide[] = [
     description:
       'Save context, update status, keep notes, prep for conversations, and move through the search with much less friction.',
     image: '/marketing/workspace-preview.png',
-    alt: 'Job Seeker OS workspace preview for managing a single role',
+    alt: 'teChia Jobs workspace preview for managing a single role',
     accent: 'Role-by-role execution',
   },
   {
@@ -38,7 +38,7 @@ const slides: Slide[] = [
     description:
       'Queue higher-quality opportunities first, avoid blind applications, and create a more disciplined search rhythm around real fit.',
     image: '/marketing/queue-preview.png',
-    alt: 'Job Seeker OS priority queue preview showing ranked opportunities',
+    alt: 'teChia Jobs priority queue preview showing ranked opportunities',
     accent: 'Personalized ranking',
   },
 ];
@@ -68,21 +68,21 @@ export function HeroCarousel() {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(8,17,31,0.92),rgba(10,20,39,0.96))] p-4 shadow-soft sm:p-5">
-      <div className="pointer-events-none absolute inset-x-10 top-0 h-32 rounded-full bg-sky-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute -right-12 bottom-8 h-40 w-40 rounded-full bg-indigo-500/15 blur-3xl" />
+    <div className="relative overflow-hidden rounded-[2rem] border border-[#DFE3E9] bg-[linear-gradient(180deg,rgba(8,17,31,0.92),rgba(10,20,39,0.96))] p-4 shadow-soft sm:p-5">
+      <div className="pointer-events-none absolute inset-x-10 top-0 h-32 rounded-full bg-[#D4AF37]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-12 bottom-8 h-40 w-40 rounded-full bg-[#C9CED6]/40 blur-3xl" />
 
-      <div className="relative rounded-[1.5rem] border border-white/10 bg-white/5 p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0d1628] px-4 py-3">
+      <div className="relative rounded-[1.5rem] border border-[#DFE3E9] bg-black/[0.03] p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#DFE3E9] bg-[#F4F5F7] px-4 py-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-300">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8A6D1F]">
               {activeSlide.eyebrow}
             </p>
             <h3 className="mt-2 max-w-2xl text-xl font-semibold tracking-tight text-ink sm:text-2xl">
               {activeSlide.title}
             </h3>
           </div>
-          <span className="inline-flex rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-100">
+          <span className="inline-flex rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-3 py-1.5 text-xs font-medium text-[#8A6D1F]">
             {activeSlide.accent}
           </span>
         </div>
@@ -91,7 +91,7 @@ export function HeroCarousel() {
           {activeSlide.description}
         </p>
 
-        <div className="mt-5 overflow-hidden rounded-[1.4rem] border border-white/10 bg-[#09111f]">
+        <div className="mt-5 overflow-hidden rounded-[1.4rem] border border-[#DFE3E9] bg-[#FFFFFF]">
           <Image
             src={activeSlide.image}
             alt={activeSlide.alt}
@@ -113,7 +113,7 @@ export function HeroCarousel() {
                 aria-label={`Go to slide ${index + 1}`}
                 aria-pressed={activeIndex === index}
                 className={`h-2.5 rounded-full transition-all ${
-                  activeIndex === index ? 'w-8 bg-sky-300' : 'w-2.5 bg-white/25 hover:bg-white/40'
+                  activeIndex === index ? 'w-8 bg-[#E8C85C]' : 'w-2.5 bg-black/[0.1] hover:bg-black/[0.12]'
                 }`}
               />
             ))}
@@ -123,7 +123,7 @@ export function HeroCarousel() {
             <button
               type="button"
               onClick={goPrev}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-ink transition hover:bg-white/10"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#DFE3E9] bg-black/[0.03] text-ink transition hover:bg-black/[0.06]"
               aria-label="Previous slide"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -131,7 +131,7 @@ export function HeroCarousel() {
             <button
               type="button"
               onClick={goNext}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-ink transition hover:bg-white/10"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#DFE3E9] bg-black/[0.03] text-ink transition hover:bg-black/[0.06]"
               aria-label="Next slide"
             >
               <ChevronRight className="h-4 w-4" />

@@ -4,13 +4,13 @@
  *
  * Required env vars:
  *   RESEND_API_KEY  — get from resend.com
- *   EMAIL_FROM     — verified sender address, e.g. "Job Seeker OS <noreply@yourapp.com>"
+ *   EMAIL_FROM     — verified sender address, e.g. "teChia Jobs <noreply@yourapp.com>"
  *   NEXT_PUBLIC_APP_URL — e.g. https://yourapp.com
  */
 
 import { Resend } from 'resend';
 
-const FROM = process.env.EMAIL_FROM ?? 'Job Seeker OS <noreply@jobseekeros.com>';
+const FROM = process.env.EMAIL_FROM ?? 'teChia Jobs <noreply@example.com>';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 export async function sendVerificationEmail(email: string, token: string): Promise<void> {
@@ -23,24 +23,26 @@ export async function sendVerificationEmail(email: string, token: string): Promi
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Verify your email — Job Seeker OS</title>
+  <title>Verify your email — teChia Jobs</title>
   <style>
-    body { margin: 0; padding: 0; background: #08111f; color: #e7edf7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { margin: 0; padding: 0; background: #FAFAF7; color: #17191E; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     .wrapper { max-width: 560px; margin: 40px auto; padding: 0 16px; }
-    .card { background: #0f1a2e; border: 1px solid #22314d; border-radius: 16px; padding: 40px; }
-    .logo { font-size: 20px; font-weight: 700; color: #4f8cff; margin-bottom: 28px; }
+    .card { background: #FFFFFF; border: 1px solid #D9DDE3; border-radius: 16px; padding: 40px; }
+    .logo { font-size: 20px; font-weight: 700; color: #17191E; margin-bottom: 2px; }
+    .brand-sub { font-size: 12px; color: #8A919C; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 26px; }
     h1 { margin: 0 0 12px; font-size: 22px; font-weight: 600; }
-    p { margin: 0 0 20px; font-size: 15px; line-height: 1.6; color: #98a7c4; }
-    .btn { display: inline-block; background: #4f8cff; color: #ffffff !important; text-decoration: none; font-weight: 600; font-size: 15px; padding: 14px 28px; border-radius: 10px; }
-    .small { font-size: 13px; color: #98a7c4; margin-top: 24px; }
-    .small a { color: #4f8cff; word-break: break-all; }
-    .footer { margin-top: 24px; font-size: 12px; color: #4a5e7a; text-align: center; }
+    p { margin: 0 0 20px; font-size: 15px; line-height: 1.6; color: #686F7B; }
+    .btn { display: inline-block; background: #D4AF37; color: #17191E !important; text-decoration: none; font-weight: 600; font-size: 15px; padding: 14px 28px; border-radius: 10px; }
+    .small { font-size: 13px; color: #686F7B; margin-top: 24px; }
+    .small a { color: #8A6D1F; word-break: break-all; }
+    .footer { margin-top: 24px; font-size: 12px; color: #8A919C; text-align: center; }
   </style>
 </head>
 <body>
   <div class="wrapper">
     <div class="card">
-      <div class="logo">Job Seeker OS</div>
+      <div class="logo">teChia Jobs</div>
+      <div class="brand-sub">A teChia Digital Solutions product</div>
       <h1>Verify your email address</h1>
       <p>
         Thanks for signing up! Click the button below to confirm your email address and
@@ -52,17 +54,17 @@ export async function sendVerificationEmail(email: string, token: string): Promi
         <a href="${verifyUrl}">${verifyUrl}</a>
       </p>
       <p class="small" style="margin-bottom:0;">
-        If you didn't create a Job Seeker OS account, you can safely ignore this email.
+        If you didn't create a teChia Jobs account, you can safely ignore this email.
       </p>
     </div>
-    <div class="footer">© ${new Date().getFullYear()} Job Seeker OS</div>
+    <div class="footer">© ${new Date().getFullYear()} teChia Jobs · A teChia Digital Solutions product</div>
   </div>
 </body>
 </html>
   `.trim();
 
   const text = [
-    'Welcome to Job Seeker OS!',
+    'Welcome to teChia Jobs!',
     '',
     'Please verify your email address by visiting the link below.',
     'This link expires in 24 hours.',
@@ -75,7 +77,7 @@ export async function sendVerificationEmail(email: string, token: string): Promi
   const { error } = await resend.emails.send({
     from: FROM,
     to: email,
-    subject: 'Verify your email — Job Seeker OS',
+    subject: 'Verify your email — teChia Jobs',
     html,
     text,
   });
@@ -98,24 +100,26 @@ export async function sendPasswordResetEmail(email: string, token: string): Prom
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Reset your password — Job Seeker OS</title>
+  <title>Reset your password — teChia Jobs</title>
   <style>
-    body { margin: 0; padding: 0; background: #08111f; color: #e7edf7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { margin: 0; padding: 0; background: #FAFAF7; color: #17191E; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     .wrapper { max-width: 560px; margin: 40px auto; padding: 0 16px; }
-    .card { background: #0f1a2e; border: 1px solid #22314d; border-radius: 16px; padding: 40px; }
-    .logo { font-size: 20px; font-weight: 700; color: #4f8cff; margin-bottom: 28px; }
+    .card { background: #FFFFFF; border: 1px solid #D9DDE3; border-radius: 16px; padding: 40px; }
+    .logo { font-size: 20px; font-weight: 700; color: #17191E; margin-bottom: 2px; }
+    .brand-sub { font-size: 12px; color: #8A919C; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 26px; }
     h1 { margin: 0 0 12px; font-size: 22px; font-weight: 600; }
-    p { margin: 0 0 20px; font-size: 15px; line-height: 1.6; color: #98a7c4; }
-    .btn { display: inline-block; background: #4f8cff; color: #ffffff !important; text-decoration: none; font-weight: 600; font-size: 15px; padding: 14px 28px; border-radius: 10px; }
-    .small { font-size: 13px; color: #98a7c4; margin-top: 24px; }
-    .small a { color: #4f8cff; word-break: break-all; }
-    .footer { margin-top: 24px; font-size: 12px; color: #4a5e7a; text-align: center; }
+    p { margin: 0 0 20px; font-size: 15px; line-height: 1.6; color: #686F7B; }
+    .btn { display: inline-block; background: #D4AF37; color: #17191E !important; text-decoration: none; font-weight: 600; font-size: 15px; padding: 14px 28px; border-radius: 10px; }
+    .small { font-size: 13px; color: #686F7B; margin-top: 24px; }
+    .small a { color: #8A6D1F; word-break: break-all; }
+    .footer { margin-top: 24px; font-size: 12px; color: #8A919C; text-align: center; }
   </style>
 </head>
 <body>
   <div class="wrapper">
     <div class="card">
-      <div class="logo">Job Seeker OS</div>
+      <div class="logo">teChia Jobs</div>
+      <div class="brand-sub">A teChia Digital Solutions product</div>
       <h1>Reset your password</h1>
       <p>We received a request to reset the password for your account. Click the button below to set a new password. This link expires in <strong>1 hour</strong>.</p>
       <a class="btn" href="${resetUrl}">Reset my password</a>
@@ -127,13 +131,13 @@ export async function sendPasswordResetEmail(email: string, token: string): Prom
         If you didn't request a password reset, you can safely ignore this email. Your password won't change.
       </p>
     </div>
-    <div class="footer">© ${new Date().getFullYear()} Job Seeker OS</div>
+    <div class="footer">© ${new Date().getFullYear()} teChia Jobs · A teChia Digital Solutions product</div>
   </div>
 </body>
 </html>`.trim();
 
   const text = [
-    'Reset your Job Seeker OS password',
+    'Reset your teChia Jobs password',
     '',
     'Click the link below to set a new password (expires in 1 hour):',
     '',
@@ -145,7 +149,7 @@ export async function sendPasswordResetEmail(email: string, token: string): Prom
   const { error } = await resend.emails.send({
     from: FROM,
     to: email,
-    subject: 'Reset your password — Job Seeker OS',
+    subject: 'Reset your password — teChia Jobs',
     html,
     text,
   });
@@ -173,27 +177,29 @@ export async function sendNotificationEmail(
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>${escaped(title)} — Job Seeker OS</title>
+  <title>${escaped(title)} — teChia Jobs</title>
   <style>
-    body { margin: 0; padding: 0; background: #08111f; color: #e7edf7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { margin: 0; padding: 0; background: #FAFAF7; color: #17191E; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     .wrapper { max-width: 560px; margin: 40px auto; padding: 0 16px; }
-    .card { background: #0f1a2e; border: 1px solid #22314d; border-radius: 16px; padding: 40px; }
-    .logo { font-size: 20px; font-weight: 700; color: #4f8cff; margin-bottom: 28px; }
+    .card { background: #FFFFFF; border: 1px solid #D9DDE3; border-radius: 16px; padding: 40px; }
+    .logo { font-size: 20px; font-weight: 700; color: #17191E; margin-bottom: 2px; }
+    .brand-sub { font-size: 12px; color: #8A919C; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 26px; }
     h1 { margin: 0 0 12px; font-size: 20px; font-weight: 600; }
-    p { margin: 0 0 20px; font-size: 15px; line-height: 1.6; color: #98a7c4; }
-    .btn { display: inline-block; background: #4f8cff; color: #ffffff !important; text-decoration: none; font-weight: 600; font-size: 15px; padding: 14px 28px; border-radius: 10px; }
-    .footer { margin-top: 24px; font-size: 12px; color: #4a5e7a; text-align: center; }
+    p { margin: 0 0 20px; font-size: 15px; line-height: 1.6; color: #686F7B; }
+    .btn { display: inline-block; background: #D4AF37; color: #17191E !important; text-decoration: none; font-weight: 600; font-size: 15px; padding: 14px 28px; border-radius: 10px; }
+    .footer { margin-top: 24px; font-size: 12px; color: #8A919C; text-align: center; }
   </style>
 </head>
 <body>
   <div class="wrapper">
     <div class="card">
-      <div class="logo">Job Seeker OS</div>
+      <div class="logo">teChia Jobs</div>
+      <div class="brand-sub">A teChia Digital Solutions product</div>
       <h1>${escaped(title)}</h1>
       <p>${escaped(message)}</p>
       <a class="btn" href="${APP_URL}/dashboard">Open dashboard</a>
     </div>
-    <div class="footer">© ${new Date().getFullYear()} Job Seeker OS</div>
+    <div class="footer">© ${new Date().getFullYear()} teChia Jobs · A teChia Digital Solutions product</div>
   </div>
 </body>
 </html>`.trim();
@@ -201,7 +207,7 @@ export async function sendNotificationEmail(
   const { error } = await resend.emails.send({
     from: FROM,
     to: email,
-    subject: `${title} — Job Seeker OS`,
+    subject: `${title} — teChia Jobs`,
     html,
     text: `${title}\n\n${message}\n\nOpen your dashboard: ${APP_URL}/dashboard`,
   });

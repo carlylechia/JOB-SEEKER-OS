@@ -10,7 +10,7 @@ const SpinnerHero = dynamic(() => import('@/components/marketing/spinner-hero').
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center min-h-[300px]" aria-hidden>
-      <div className="h-[300px] w-[300px] rounded-full border border-white/10 bg-white/[0.03]" />
+      <div className="h-[300px] w-[300px] rounded-full border border-[#DFE3E9] bg-black/[0.03]" />
     </div>
   ),
 });

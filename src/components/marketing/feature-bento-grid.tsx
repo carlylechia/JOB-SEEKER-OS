@@ -6,7 +6,7 @@ const cards = [
     title: 'Job workspace',
     text: 'Turn a raw opportunity into a focused action plan with context, fit, follow-up timing, and next steps in one place.',
     image: '/marketing/workspace-preview.png',
-    alt: 'Job Seeker OS workspace preview showing role details, fit score, and checklist status',
+    alt: 'teChia Jobs workspace preview showing role details, fit score, and checklist status',
     eyebrow: 'Operate from context',
     wide: true,
   },
@@ -37,7 +37,7 @@ const cards = [
   },
   {
     title: 'Built for serious applicants',
-    text: 'Job Seeker OS is designed for people who want disciplined progress, clearer decisions, and less application chaos.',
+    text: 'teChia Jobs is designed for people who want disciplined progress, clearer decisions, and less application chaos.',
     icon: BriefcaseBusiness,
     eyebrow: 'From messy search to system',
   },
@@ -47,12 +47,12 @@ export function FeatureBentoGrid() {
   return (
     <section className="py-24" id="features">
       <div className="max-w-3xl">
-        <span className="badge bg-white/5 text-sky-200">Why it feels different</span>
+        <span className="badge bg-black/[0.03] text-[#8A6D1F]">Why it feels different</span>
         <h2 className="mt-4 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
           More than a tracker. This is a job-search operating system.
         </h2>
         <p className="mt-4 text-base leading-7 text-muted sm:text-lg">
-          Most job tools stop at storing links and statuses. Job Seeker OS helps users decide what to apply to, why it fits,
+          Most job tools stop at storing links and statuses. teChia Jobs helps users decide what to apply to, why it fits,
           and what to do next.
         </p>
       </div>
@@ -67,17 +67,17 @@ export function FeatureBentoGrid() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300">{card.eyebrow}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8A6D1F]">{card.eyebrow}</p>
                   <h3 className="mt-3 text-xl font-semibold text-ink">{card.title}</h3>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">{card.text}</p>
                 </div>
-                <span className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-300">
+                <span className="rounded-full border border-[#DFE3E9] bg-black/[0.03] p-2 text-[#4A505A]">
                   {Icon ? <Icon className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
                 </span>
               </div>
 
               {card.image ? (
-                <div className="relative mt-6 overflow-hidden rounded-[1.25rem] border border-white/10 bg-[#09111f]">
+                <div className="relative mt-6 overflow-hidden rounded-[1.25rem] border border-[#DFE3E9] bg-[#FFFFFF]">
                   <Image
                     src={card.image}
                     alt={card.alt ?? ''}

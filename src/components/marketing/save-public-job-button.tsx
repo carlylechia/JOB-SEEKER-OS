@@ -50,7 +50,7 @@ export function SavePublicJobButton({
 
   if (saved) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-300">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-700">
         ✓ Saved
       </span>
     );
