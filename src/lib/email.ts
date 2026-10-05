@@ -9,9 +9,10 @@
  */
 
 import { Resend } from 'resend';
+import { getAppUrl } from './site-url';
 
 const FROM = process.env.EMAIL_FROM ?? 'teChia Jobs <noreply@example.com>';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+const APP_URL = getAppUrl();
 
 export async function sendVerificationEmail(email: string, token: string): Promise<void> {
   const resend = new Resend(process.env.RESEND_API_KEY);
