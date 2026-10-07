@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Briefcase, LayoutDashboard, Users, KanbanSquare, Target, FileText, Settings, UserCircle2 } from 'lucide-react';
+import { Briefcase, LayoutDashboard, Users, KanbanSquare, Target, FileText, Settings, UserCircle2, CreditCard, Shield } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
 
 const items = [
@@ -15,9 +15,12 @@ const items = [
   { href: '/templates', label: 'Templates', icon: FileText },
   { href: '/profile', label: 'Profile', icon: UserCircle2 },
   { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/settings/billing', label: 'Plan & Billing', icon: CreditCard },
 ];
 
-export function SidebarNav() {
+/** Only rendered for admins. The server still enforces access independently —
+ *  hiding the link is presentation, not authorization. */
+export function SidebarNav({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   return (
     <aside className="hidden w-72 flex-col border-r border-line bg-[#FFFFFF] p-4 lg:flex">
@@ -35,6 +38,19 @@ export function SidebarNav() {
             </Link>
           );
         })}
+        {isAdmin ? (
+          <Link
+            href="/admin"
+            className={`mt-2 flex items-center gap-3 rounded-xl border border-line px-3 py-2 text-sm ${
+              pathname.startsWith('/admin')
+                ? 'bg-accent text-[#17191E]'
+                : 'text-muted hover:bg-black/[0.04] hover:text-ink'
+            }`}
+          >
+            <Shield className="h-4 w-4" />
+            Admin
+          </Link>
+        ) : null}
       </nav>
     </aside>
   );
