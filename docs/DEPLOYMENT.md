@@ -33,6 +33,17 @@ Preview build needs to boot the app).
 
 ---
 
+## Runtime baseline
+
+| Component | Version | Note |
+|---|---|---|
+| Next.js | 15.5.27 | Latest patched Maintenance-LTS. Next 16 is **not** usable yet: `next-auth@5.0.0-beta.25` peer-depends on `next: ^14 \|\| ^15` |
+| Prisma | 6.x | Supported. Prisma 8 is still an RC — do not force it into a schema migration |
+| Node | 24.x (production) | `engines` allows `>=22` so the local toolchain is not blocked |
+| PostgreSQL | Current supported major | No major upgrade required for this release |
+
+Verify these stay current before each release; see `docs/ARCHITECTURE.md`.
+
 ## Deployment sequence
 
 ### 1. Prepare
