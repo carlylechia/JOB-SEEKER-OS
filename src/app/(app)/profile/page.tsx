@@ -166,7 +166,7 @@ function ResumeSection({
           <span className="truncate text-sm text-ink">{fileName}</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <a href={resumeUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-muted hover:text-ink">
+          <a href="/api/resume/file" target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-muted hover:text-ink">
             <ExternalLink className="h-3.5 w-3.5" /> View
           </a>
           <button type="button" onClick={() => setReplacing(true)} className="rounded-lg border border-line bg-black/[0.03] px-2.5 py-1 text-xs text-muted hover:text-ink">

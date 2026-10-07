@@ -7,12 +7,15 @@ type UserLike = {
   email?: string | null;
   name?: string | null;
   image?: string | null;
+  role?: string;
 };
 
 export function AppShell({ children, user }: { children: React.ReactNode; user: UserLike }) {
   return (
     <div className="flex min-h-screen">
-      <SidebarNav />
+      {/* Presentation only — /admin is independently server-protected, so a
+          hidden link is never the authorization boundary. */}
+      <SidebarNav isAdmin={user.role === 'ADMIN'} />
       <div className="flex min-h-screen flex-1 flex-col">
         <Topbar user={user} />
         <main className="flex-1 p-4 lg:p-8">{children}</main>

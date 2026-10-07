@@ -164,7 +164,7 @@ export function StepResume({ resumeUrl: initialResumeUrl, onExtracted }: Props) 
               )}
               {storedResumeUrl && (
                 <a
-                  href={storedResumeUrl}
+                  href="/api/resume/file"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-xs text-[#8A6D1F] underline underline-offset-2 hover:text-[#8A6D1F]/80"
