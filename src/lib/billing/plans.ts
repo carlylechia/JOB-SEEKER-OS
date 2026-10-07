@@ -30,6 +30,15 @@ export function isPaidPlan(code: PlanCode): boolean {
 }
 
 /**
+ * Sentinel for "no limit". `null` rather than `Infinity`, because `Infinity`
+ * serialises to `null` over JSON and would silently become an ambiguous value
+ * in an API response.
+ */
+export const UNLIMITED = null;
+
+export type PlanLimitValue = number | null;
+
+/**
  * Provisional business configuration.
  *
  * NOTE: these limits are intentionally generous and marked provisional. They
@@ -38,14 +47,19 @@ export function isPaidPlan(code: PlanCode): boolean {
  */
 export const PLAN_LIMITS: Record<
   PlanCode,
-  { jobs: number; resumes: number; aiCredits: number | null }
+  { jobs: PlanLimitValue; resumes: PlanLimitValue; aiCredits: PlanLimitValue }
 > = {
   // Provisional — Free is a genuine tier, not a lockout.
   FREE: { jobs: 25, resumes: 1, aiCredits: 25 },
-  // Provisional — Paid tiers are currently unlimited until pricing is set.
-  PRO: { jobs: Number.POSITIVE_INFINITY, resumes: 5, aiCredits: null },
-  PREMIUM: { jobs: Number.POSITIVE_INFINITY, resumes: 10, aiCredits: null },
+  // Provisional — paid tiers are unlimited until pricing is set.
+  PRO: { jobs: UNLIMITED, resumes: 5, aiCredits: UNLIMITED },
+  PREMIUM: { jobs: UNLIMITED, resumes: 10, aiCredits: UNLIMITED },
 };
+
+/** Human-readable limit: "Unlimited" or a number. */
+export function formatLimit(limit: PlanLimitValue): string {
+  return limit === null ? 'Unlimited' : String(limit);
+}
 
 /**
  * Stable capability identifiers. These describe WHAT a user can do, never

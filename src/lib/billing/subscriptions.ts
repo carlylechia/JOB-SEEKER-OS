@@ -20,6 +20,7 @@ import {
   type FeatureKey,
   FEATURE_ENTITLEMENTS,
   PLAN_LIMITS,
+  type PlanLimitValue,
   getFeatureMeta,
   isFeatureKey,
 } from './plans';
@@ -445,7 +446,7 @@ export type Entitlement = {
   isAdmin: boolean;
   isTrialing: boolean;
   features: Record<FeatureKey, boolean>;
-  limits: { jobs: number; resumes: number; aiCredits: number | null };
+  limits: { jobs: PlanLimitValue; resumes: PlanLimitValue; aiCredits: PlanLimitValue };
 };
 
 /** Compute entitlements from an already-resolved subscription (no extra query). */
