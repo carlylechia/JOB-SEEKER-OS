@@ -9,7 +9,7 @@
  * like a test database, so it can never wipe production data.
  */
 
-import { beforeAll, afterAll } from 'vitest';
+import { before, after } from './harness';
 
 const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL ?? '';
 
@@ -35,16 +35,17 @@ function assertSafeTestDatabase() {
   }
 }
 
-beforeAll(() => {
+before(() => {
   assertSafeTestDatabase();
   // Long random secret: cron auth fails closed below 16 characters.
   process.env.CRON_SECRET = process.env.CRON_SECRET ?? 'test-cron-secret-value-0123456789';
   // Never attempt real delivery during tests.
   process.env.RESEND_API_KEY = process.env.RESEND_API_KEY ?? '';
-  process.env.NODE_ENV = process.env.NODE_ENV ?? 'test';
+  (process.env as Record<string, string | undefined>).NODE_ENV =
+    process.env.NODE_ENV ?? 'test';
 });
 
-afterAll(async () => {
+after(async () => {
   const { prisma } = await import('@/lib/prisma');
   await prisma.$disconnect();
 });

@@ -5,7 +5,7 @@
  * admins acting on the same request cannot double-apply it.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach } from './harness';
 import { prisma } from '@/lib/prisma';
 import {
   adminChangePlan,
@@ -32,8 +32,6 @@ async function track<T extends { id: string }>(p: Promise<T>): Promise<T> {
 afterEach(async () => {
   resetClock();
   for (const id of created.splice(0)) await destroyUser(id).catch(() => undefined);
-  // Clear any queued notification rows with no owner.
-  await prisma.notification.deleteMany({ where: { user: null } }).catch(() => undefined);
 });
 
 describe('admin plan changes', () => {
@@ -142,7 +140,7 @@ describe('admin plan changes', () => {
       },
     });
 
-    await adminChangePlan({ userId: user.id, planCode: 'PREMIUM', reason: 'Up', adminId: admin.id });
+    await adminChangePlan({ userId: user.id, planCode: 'PREMIUM', reason: 'Upgraded per support request', adminId: admin.id });
     await adminChangePlan({
       userId: user.id,
       planCode: 'FREE',
@@ -220,7 +218,7 @@ describe('admin plan changes', () => {
     const admin = await track(createUser({ role: 'ADMIN' }));
     const user = await track(createUser());
 
-    await adminChangePlan({ userId: user.id, planCode: 'PRO', reason: 'Up', adminId: admin.id });
+    await adminChangePlan({ userId: user.id, planCode: 'PRO', reason: 'Upgraded per support request', adminId: admin.id });
     await adminSuspendPlan({ userId: user.id, reason: 'Chargeback', adminId: admin.id });
 
     const effective = await getEffectiveSubscription(user.id);

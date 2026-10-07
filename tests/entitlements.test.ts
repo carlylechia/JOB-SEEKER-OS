@@ -5,7 +5,7 @@
  * gate. These tests verify the SERVER-side resolver independently of any UI.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from './harness';
 import { prisma } from '@/lib/prisma';
 import {
   getEntitlements,
@@ -41,6 +41,7 @@ async function seedSubscription(params: {
   status: 'TRIALING' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'SUSPENDED';
   startsAt: Date;
   endsAt?: Date | null;
+  trialStartsAt?: Date | null;
   trialEndsAt?: Date | null;
 }) {
   const plan = await prisma.plan.findUniqueOrThrow({ where: { code: params.planCode } });
@@ -51,6 +52,7 @@ async function seedSubscription(params: {
       status: params.status,
       startsAt: params.startsAt,
       endsAt: params.endsAt ?? null,
+      trialStartsAt: params.trialStartsAt ?? null,
       trialEndsAt: params.trialEndsAt ?? null,
       source: 'ADMIN_MANUAL',
     },
@@ -60,6 +62,7 @@ async function seedSubscription(params: {
       status: params.status,
       startsAt: params.startsAt,
       endsAt: params.endsAt ?? null,
+      trialStartsAt: params.trialStartsAt ?? null,
       trialEndsAt: params.trialEndsAt ?? null,
       source: 'ADMIN_MANUAL',
     },
@@ -152,6 +155,7 @@ describe('feature entitlements', () => {
       planCode: 'PRO',
       status: 'TRIALING',
       startsAt: start,
+      trialStartsAt: start,
       trialEndsAt: end,
     });
 
@@ -199,7 +203,7 @@ describe('requireEntitlement server gate', () => {
 
   it('lets an admin through without any subscription', async () => {
     const admin = await track(createUser({ role: 'ADMIN' }));
-    await expect(requireEntitlement(admin.id, 'AI_CAREER_COACH' as never)).resolves.toBeTruthy();
+    await expect(requireEntitlement(admin.id, 'ADVANCED_PREPARATION')).resolves.toBeTruthy();
   });
 
   it('exposes a stable required-plan for UI copy', () => {

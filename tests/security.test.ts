@@ -6,7 +6,7 @@
  * subscription, cannot change any plan, and cannot self-escalate to admin.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach } from './harness';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser, getCurrentAdmin, isAdmin } from '@/lib/authz';
 import { isCronAuthorized, isCronConfigured } from '@/lib/cron-auth';

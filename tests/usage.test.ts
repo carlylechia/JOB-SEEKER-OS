@@ -5,7 +5,7 @@
  * because consumeUsage holds a row lock while checking and incrementing.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach } from './harness';
 import { prisma } from '@/lib/prisma';
 import {
   consumeUsage,
@@ -64,18 +64,18 @@ describe('usage accounting', () => {
     setTestNow(T0);
     const user = await track(createUser());
 
-    const first = await consumeUsage(user.id, 'AI_RESUME_OPTIMIZATION', 1, {
+    const first = await consumeUsage(user.id, 'RESUME_OPTIMIZATION', 1, {
       limit: 100,
       idempotencyKey: 'resume-opt:job123',
     });
-    const second = await consumeUsage(user.id, 'AI_RESUME_OPTIMIZATION', 1, {
+    const second = await consumeUsage(user.id, 'RESUME_OPTIMIZATION', 1, {
       limit: 100,
       idempotencyKey: 'resume-opt:job123',
     });
 
     expect(first.consumed).toBe(1);
     expect(second.consumed).toBe(0);
-    expect(await getUsage(user.id, 'AI_RESUME_OPTIMIZATION')).toBe(1);
+    expect(await getUsage(user.id, 'RESUME_OPTIMIZATION')).toBe(1);
   });
 
   it('serialises parallel requests so a burst cannot overshoot the limit', async () => {

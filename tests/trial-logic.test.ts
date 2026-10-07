@@ -12,7 +12,7 @@
  *   - admins are exempt entirely
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from './harness';
 import { prisma } from '@/lib/prisma';
 import { initializeMonetization, isMonetizationEnabled } from '@/lib/billing/monetization';
 import {
@@ -168,8 +168,14 @@ describe('existing-user trial initialization', () => {
 
 describe('new-user trial', () => {
   it('starts a 14-day trial at account creation', async () => {
+    // Initialize FIRST, then create the user. A user that already exists at
+    // activation is an *existing* user and gets the launch-window trial; this
+    // test covers the NEW-user path.
+    await initializeMonetization({
+      launchAt: new Date('2026-03-01T12:00:00.000Z'),
+      activate: true,
+    });
     const user = await track(createUser());
-    await initializeMonetization({ launchAt: new Date('2026-03-01T12:00:00.000Z'), activate: true });
 
     const createdAt = new Date('2026-04-01T10:00:00.000Z');
     setTestNow(createdAt);

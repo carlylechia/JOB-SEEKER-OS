@@ -106,9 +106,18 @@ export async function checkUsageLimit(
 /**
  * Atomically consume usage, enforcing the limit under concurrency.
  *
- * Uses an interactive transaction with `SELECT ... FOR UPDATE` on the period
- * row. That lock serialises concurrent consumers for the same user+feature, so
- * a burst of parallel requests cannot collectively overshoot the limit.
+ * CONCURRENCY: a naive "read count → check limit → write count" lets a user
+ * bypass a limit by firing parallel requests.
+ *
+ * `SELECT … FOR UPDATE` is NOT sufficient on its own: it only locks rows that
+ * already exist, so the very first burst of requests in an empty period would
+ * each read zero and all pass the check. (A test caught exactly this — 6 of 10
+ * parallel requests passed a limit of 5.)
+ *
+ * Instead this takes a PostgreSQL TRANSACTION-SCOPED ADVISORY LOCK keyed on
+ * (user, feature, period). The lock exists whether or not any row is present,
+ * so concurrent consumers serialise correctly from the first request onward,
+ * and it is released automatically on commit or rollback.
  *
  * Call this immediately BEFORE an expensive provider call, so a rejected
  * request never burns provider credits.
@@ -126,16 +135,12 @@ export async function consumeUsage(
   try {
     return await prisma.$transaction(
       async (tx) => {
-        // Lock every existing row for this user/feature/period so concurrent
-        // transactions queue behind us instead of racing.
-        const existingRows = await tx.$queryRaw<
-          Array<{ id: string }>
-        >`
-          SELECT "id" FROM "UsageRecord"
-          WHERE "userId" = ${userId}
-            AND "featureKey" = ${feature}
-            AND "periodStart" = ${periodStart}
-          FOR UPDATE
+        // Serialise all concurrent consumers for this user+feature+period.
+        await tx.$executeRaw`
+          SELECT pg_advisory_xact_lock(
+            hashtext(${userId}),
+            hashtext(${`${feature}:${periodStart.toISOString()}`})
+          )
         `;
 
         if (options.idempotencyKey) {
@@ -175,8 +180,9 @@ export async function consumeUsage(
 
         return { consumed: units, used: used + units };
       },
-      // Bound how long we hold the row lock.
-      { timeout: 10_000, maxWait: 5_000 },
+      // Bound how long we hold the lock. Under contention the queue must still
+      // drain rather than failing with a lock timeout.
+      { timeout: 15_000, maxWait: 10_000 },
     );
   } catch (error) {
     if (error instanceof UsageLimitExceededError) throw error;

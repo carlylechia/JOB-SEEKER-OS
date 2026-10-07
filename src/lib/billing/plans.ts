@@ -73,6 +73,15 @@ export function isFeatureKey(value: unknown): value is FeatureKey {
 }
 
 /**
+ * Metadata for a feature key, or undefined when the key is unknown.
+ * Lets callers fail safely on a typo or an unmapped capability instead of
+ * crashing on an undefined lookup.
+ */
+export function getFeatureMeta(feature: string) {
+  return isFeatureKey(feature) ? FEATURE_ENTITLEMENTS[feature] : undefined;
+}
+
+/**
  * Which plans grant each feature. Admins bypass this table entirely via the
  * entitlement resolver, not via entries here.
  *

@@ -20,6 +20,8 @@ import {
   type FeatureKey,
   FEATURE_ENTITLEMENTS,
   PLAN_LIMITS,
+  getFeatureMeta,
+  isFeatureKey,
 } from './plans';
 import { logImportantError, logImportantInfo } from '@/lib/observability';
 
@@ -511,21 +513,27 @@ export class PlanRequiredError extends Error {
  */
 export async function requireEntitlement(userId: string, feature: FeatureKey): Promise<Entitlement> {
   const entitlements = await getEntitlements(userId);
+  // An unknown feature key must fail closed rather than crash on a lookup.
   if (!entitlements.features[feature]) {
-    const required = FEATURE_ENTITLEMENTS[feature].plans[0] ?? 'PRO';
+    const required = requiredPlanFor(feature);
     await logImportantInfo({
       event: 'billing_access_denied',
       userId,
-      context: { feature, plan: entitlements.plan },
+      context: { feature, plan: entitlements.plan, unknownFeature: !isFeatureKey(feature) },
     });
     throw new PlanRequiredError(feature, required);
   }
   return entitlements;
 }
 
-/** Lowest plan that grants a feature, for "Available with Pro" copy. */
-export function requiredPlanFor(feature: FeatureKey): PlanCode {
-  const plans = FEATURE_ENTITLEMENTS[feature].plans;
+/**
+ * Lowest plan that grants a feature, for "Available with Pro" copy.
+ * Defaults to PRO for an unmapped key so the gate still fails closed.
+ */
+export function requiredPlanFor(feature: string): PlanCode {
+  const meta = getFeatureMeta(feature);
+  if (!meta) return 'PRO';
+  const plans = meta.plans;
   return plans.reduce((lowest, plan) =>
     PLAN_RANK[plan] < PLAN_RANK[lowest] ? plan : lowest,
   );

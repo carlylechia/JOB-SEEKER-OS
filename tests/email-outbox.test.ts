@@ -5,7 +5,7 @@
  * business transaction that queued the message, and retries must not duplicate.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, before } from './harness';
 import { prisma } from '@/lib/prisma';
 import {
   processEmailOutbox,
@@ -22,6 +22,12 @@ async function track<T extends { id: string }>(p: Promise<T>): Promise<T> {
   created.push(v.id);
   return v;
 }
+
+// The outbox worker drains whatever is pending, including rows created by other
+// suites. Start from a clean table so batch assertions are deterministic.
+before(async () => {
+  await prisma.emailOutbox.deleteMany({});
+});
 
 afterEach(async () => {
   resetClock();
@@ -54,6 +60,7 @@ describe('outbox durability', () => {
   it('queues email inside the same transaction as the business change', async () => {
     setTestNow(T0);
     const user = await track(createUser());
+    const pro = await prisma.plan.findUniqueOrThrow({ where: { code: 'PRO' } });
 
     // Simulates the register flow: the business row and the email row commit
     // together, or neither does.
@@ -61,7 +68,7 @@ describe('outbox durability', () => {
       await tx.subscription.create({
         data: {
           userId: user.id,
-          planId: (await0PlanId(tx)),
+          planId: pro.id,
           status: 'TRIALING',
           startsAt: T0,
           trialStartsAt: T0,
@@ -200,7 +207,5 @@ describe('email failure does not roll back business state', () => {
   });
 });
 
-// Helper: resolve the PRO plan id inside a transaction client.
-async function await0PlanId(tx: { plan: { findUniqueOrThrow: (a: unknown) => Promise<{ id: string }> } }) {
-  return tx.plan.findUniqueOrThrow({ where: { code: 'PRO' } });
-}
+// Note: no helper is needed here — plan ids are resolved before the
+// transaction opens, which keeps the test's intent obvious.
