@@ -5,9 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:vercel": "prisma migrate deploy && next build",
+    "build:vercel": "npm run prisma:generate && next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
@@ -15,7 +18,15 @@
     "prisma:push": "prisma db push",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "prisma studio",
+    "monetization:initialize": "tsx scripts/monetization-initialize.ts",
+    "monetization:status": "tsx scripts/monetization-status.ts",
+    "admin:bootstrap": "tsx scripts/bootstrap-admin.ts",
+    "admin:revoke": "tsx scripts/revoke-admin.ts",
+    "maintenance:run": "tsx scripts/run-maintenance.ts",
     "postinstall": "prisma generate"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -28,7 +39,7 @@
     "cli": "^1.0.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "0.511.0",
-    "next": "15.2.8",
+    "next": "15.5.27",
     "next-auth": "5.0.0-beta.25",
     "react": "19.0.0",
     "react-dom": "19.0.0",
