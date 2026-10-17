@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { LandingHero } from '@/components/marketing/landing-hero';
+import { LandingNav } from '@/components/marketing/landing-nav';
 import { LandingFeatures } from '@/components/marketing/landing-features';
 import { LandingHowItWorks } from '@/components/marketing/landing-how-it-works';
 import { LandingDashboardPreview } from '@/components/marketing/landing-dashboard-preview';
@@ -48,27 +49,34 @@ function PlatformJobsPreviewFallback() {
 
 export default function LandingPage() {
   return (
-    <div className="relative overflow-x-hidden">
-      {/* Full-viewport hero with its own nav */}
-      <LandingHero />
+    <>
+      {/* Nav is a sibling of the content, not a child of the hero, so it stays
+          pinned for the whole document instead of unpinning with the hero. */}
+      <LandingNav />
+      {/* `overflow-x: clip` rather than `hidden`: hidden computes the vertical
+          axis to `auto`, which turns this wrapper into a scroll container. */}
+      <div className="relative overflow-x-clip">
+        {/* Full-viewport hero with its own nav */}
+        <LandingHero />
 
       {/* Remaining sections inside centered shell */}
-      <div className="shell">
-        <LandingFeatures />
-        <LandingHowItWorks />
-        <LandingDashboardPreview />
-        <LandingTestimonials />
+        <div className="shell">
+          <LandingFeatures />
+          <LandingHowItWorks />
+          <LandingDashboardPreview />
+          <LandingTestimonials />
 
-        <Suspense fallback={<PlatformJobsPreviewFallback />}>
-          <PlatformJobsPreview />
-        </Suspense>
+          <Suspense fallback={<PlatformJobsPreviewFallback />}>
+            <PlatformJobsPreview />
+          </Suspense>
 
-        <LandingFaq />
-        <LandingCta />
+          <LandingFaq />
+          <LandingCta />
+        </div>
+
+        <QuickJumpNav />
+        <SiteFooter />
       </div>
-
-      <QuickJumpNav />
-      <SiteFooter />
-    </div>
+    </>
   );
 }

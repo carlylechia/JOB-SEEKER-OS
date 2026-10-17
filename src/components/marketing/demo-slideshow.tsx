@@ -19,7 +19,7 @@ import {
   Users,
 } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
-import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { ThemeSwitch } from '@/components/shared/theme-switch';
 
 const AUTO_ADVANCE_MS = 12000;
 
@@ -463,7 +463,7 @@ export function DemoSlideshow() {
               </div>
 
               <div className="flex items-center gap-2">
-                <ThemeToggle />
+                <ThemeSwitch size="sm" />
                 <Link
                   href="/jobs-public"
                   className="hidden md:inline-flex items-center rounded-full border border-line bg-surface-sunken px-4 py-2 text-sm font-medium text-ink-2 transition hover:bg-surface-sunken hover:text-ink"

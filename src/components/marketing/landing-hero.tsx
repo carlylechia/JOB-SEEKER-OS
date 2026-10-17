@@ -1,23 +1,19 @@
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2, Menu, X, LayoutDashboard } from 'lucide-react';
-import { Logo } from '@/components/shared/logo';
-import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { SpinnerHeroClient } from '@/components/marketing/spinner-hero.client';
-import { auth } from '@/auth';
 
-const navLinks = [
-  { href: '#features', label: 'Features' },
-  { href: '#how-it-works', label: 'How It Works' },
-  { href: '#public-jobs', label: 'Public Jobs' },
-  { href: '#faq', label: 'FAQ' },
-];
-
-export async function LandingHero() {
-  const session = await auth();
+/**
+ * Landing hero. Deliberately contains no navigation: `LandingNav` is rendered
+ * by the page so it can stay pinned across the whole document rather than
+ * being bounded by this section.
+ */
+export function LandingHero() {
   return (
-    <section id="top" className="relative flex min-h-screen flex-col overflow-hidden bg-background">
+    <section id="top" className="relative flex min-h-screen flex-col bg-background">
       {/* ── Uniform ominous background ── */}
-      <div className="pointer-events-none absolute inset-0" aria-hidden>
+      {/* The clip belongs on this layer, not on <section>: an `overflow` other
+          than `visible` on any ancestor turns it into a scroll container. */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
         <div
           className="absolute inset-0"
           style={{
@@ -42,127 +38,9 @@ export async function LandingHero() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
       </div>
 
-      {/* ── Sticky nav ── */}
-      <header className="sticky top-0 z-30 pt-4">
-        <div className="shell">
-          <div className="rounded-[28px] border border-line bg-background/70 px-4 py-3 shadow-nav backdrop-blur-2xl sm:px-5">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex min-w-0 items-center gap-4">
-                <Logo compact href="/" />
-              </div>
-
-              <nav className="hidden lg:flex items-center gap-2 rounded-full border border-line bg-surface-sunken p-1.5">
-                {navLinks.map((link) => (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    className="rounded-full px-4 py-2 text-sm font-medium text-ink-2 transition hover:bg-surface-sunken-hover hover:text-ink"
-                  >
-                    {link.label}
-                  </a>
-                ))}
-                <Link
-                  href="/jobs-public"
-                  className="rounded-full bg-surface-sunken px-4 py-2 text-sm font-semibold text-ink transition hover:bg-surface-sunken-hover"
-                >
-                  Browse Public Jobs
-                </Link>
-              </nav>
-
-              <div className="hidden md:flex items-center gap-2.5">
-                <ThemeToggle />
-                {session?.user ? (
-                  <Link
-                    href="/dashboard"
-                    className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-ink shadow-[0_10px_32px_rgb(var(--accent)/0.28)] transition hover:bg-accent-hover"
-                  >
-                    <LayoutDashboard className="h-3.5 w-3.5" />
-                    Go to Dashboard
-                  </Link>
-                ) : (
-                  <>
-                    <Link className="inline-flex items-center rounded-full border border-line bg-surface-sunken px-4 py-2 text-sm font-medium text-ink-2 transition hover:bg-surface-sunken hover:text-ink" href="/login">
-                      Sign In
-                    </Link>
-                    <Link className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-ink shadow-[0_10px_32px_rgb(var(--accent)/0.28)] transition hover:bg-accent-hover" href="/register">
-                      Start free
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </>
-                )}
-              </div>
-
-              {/* Mobile menu (no JS, no client component) */}
-              <div className="flex items-center gap-2 md:hidden">
-                <ThemeToggle />
-                <details className="group relative">
-                  <summary className="inline-flex h-10 w-10 list-none items-center justify-center rounded-xl border border-line bg-surface-sunken text-ink transition hover:bg-surface-sunken-hover [&::-webkit-details-marker]:hidden">
-                    <Menu className="h-5 w-5 group-open:hidden" />
-                    <X className="hidden h-5 w-5 group-open:block" />
-                    <span className="sr-only">Open menu</span>
-                  </summary>
-
-                  <div className="absolute right-0 top-14 z-30 w-[min(88vw,22rem)] rounded-2xl border border-line bg-background/95 p-3 shadow-lift backdrop-blur">
-                    <div className="grid gap-2">
-                      {navLinks.map((link) => (
-                        <a
-                          key={link.href}
-                          href={link.href}
-                          className="inline-flex items-center justify-center rounded-xl border border-line bg-surface-sunken px-4 py-3 text-sm text-ink transition hover:bg-surface-sunken-hover"
-                        >
-                          {link.label}
-                        </a>
-                      ))}
-
-                      <div className="my-1 h-px bg-line" />
-
-                      <Link
-                        href="/jobs-public"
-                        className="inline-flex items-center justify-center rounded-xl border border-line bg-surface-sunken px-4 py-3 text-sm text-ink transition hover:bg-surface-sunken-hover"
-                      >
-                        Public Jobs Page
-                      </Link>
-                      <Link
-                        href="/demo"
-                        className="inline-flex items-center justify-center rounded-xl border border-line bg-surface-sunken px-4 py-3 text-sm text-ink transition hover:bg-surface-sunken-hover"
-                      >
-                        Watch demo
-                      </Link>
-                    {session?.user ? (
-                      <Link
-                        href="/dashboard"
-                        className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-accent-ink shadow-[0_10px_32px_rgb(var(--accent)/0.18)] transition hover:bg-accent-hover"
-                      >
-                        <LayoutDashboard className="h-4 w-4" />
-                        Go to Dashboard
-                      </Link>
-                    ) : (
-                      <>
-                        <Link
-                          href="/login"
-                          className="inline-flex items-center justify-center rounded-xl border border-line bg-surface-sunken px-4 py-3 text-sm text-ink transition hover:bg-surface-sunken-hover"
-                        >
-                          Sign In
-                        </Link>
-                        <Link
-                          href="/register"
-                          className="inline-flex items-center justify-center rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-accent-ink shadow-[0_10px_32px_rgb(var(--accent)/0.18)] transition hover:bg-accent-hover"
-                        >
-                          Start free
-                        </Link>
-                      </>
-                    )}
-                  </div>
-                  </div>
-                </details>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* ── Hero content ── */}
-      <div className="relative flex flex-1 items-center">
+      {/* Extra top padding clears the fixed LandingNav that floats above. */}
+      <div className="relative flex flex-1 items-center pt-24 sm:pt-28">
         <div className="shell py-14 lg:py-20">
           <div className="grid items-center gap-12 lg:grid-cols-2">
             {/* Left column */}

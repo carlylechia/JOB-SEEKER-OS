@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Search } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
-import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { ThemeSwitch } from '@/components/shared/theme-switch';
 import { TopbarMobileMenu } from './topbar-mobile-menu';
 import { SignOutButton } from './sign-out-button';
 import { NotificationBell } from './notification-bell';
@@ -59,7 +59,7 @@ export function Topbar({ user }: { user: TopbarUser }) {
             <UserAvatar user={user} />
             <span>{label}</span>
           </Link>
-          <ThemeToggle />
+          <ThemeSwitch size="sm" />
           <NotificationBell />
           <Link href="/jobs/new" className="btn-primary inline-flex items-center justify-center">Add Job</Link>
           <Link href="/settings" className="btn-secondary inline-flex items-center justify-center">Settings</Link>
@@ -67,7 +67,7 @@ export function Topbar({ user }: { user: TopbarUser }) {
         </div>
 
         <div className="flex items-center gap-2 lg:hidden">
-          <ThemeToggle />
+          <ThemeSwitch size="sm" />
           <TopbarMobileMenu label={label} />
         </div>
       </div>

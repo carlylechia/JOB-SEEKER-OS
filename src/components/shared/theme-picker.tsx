@@ -2,6 +2,7 @@
 
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { useTheme, type Theme } from './theme-provider';
+import { useRadioGroup } from './use-radio-group';
 
 const OPTIONS: { value: Theme; label: string; Icon: typeof Sun; hint: string }[] = [
   { value: 'light', label: 'Light', Icon: Sun, hint: 'Warm white with gold accents' },
@@ -15,6 +16,7 @@ const OPTIONS: { value: Theme; label: string; Icon: typeof Sun; hint: string }[]
  */
 export function ThemePicker() {
   const { theme, setTheme, mounted } = useTheme();
+  const { register, onKeyDown } = useRadioGroup(OPTIONS.length);
 
   return (
     <div>
@@ -23,15 +25,18 @@ export function ThemePicker() {
         aria-label="Colour theme"
         className="grid gap-3 sm:grid-cols-2"
       >
-        {OPTIONS.map(({ value, label, Icon, hint }) => {
+        {OPTIONS.map(({ value, label, Icon, hint }, index) => {
           const selected = mounted && theme === value;
           return (
             <button
               key={value}
+              ref={register(index)}
               type="button"
               role="radio"
               aria-checked={selected}
+              tabIndex={selected ? 0 : -1}
               onClick={() => setTheme(value)}
+              onKeyDown={(event) => onKeyDown(event, index, (i) => setTheme(OPTIONS[i].value))}
               className={`group flex items-start gap-3 rounded-2xl border p-4 text-left transition-colors ${
                 selected
                   ? 'border-accent bg-accent/[0.08]'

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { auth } from '@/auth';
 import { Logo } from '@/components/shared/logo';
-import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { ThemeSwitch } from '@/components/shared/theme-switch';
 import { SavePublicJobButton } from '@/components/marketing/save-public-job-button';
 import {
   formatPublicJobAge,
@@ -75,7 +75,7 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
           <div className="flex items-center justify-between gap-4">
             <Logo href="/" />
             <div className="flex items-center gap-2 sm:gap-3">
-              <ThemeToggle />
+              <ThemeSwitch size="sm" />
               <div className="hidden items-center gap-3 md:flex">
                 <Link className="btn-secondary" href="/">Back to Home</Link>
                 {!session ? (

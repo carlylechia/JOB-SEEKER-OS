@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronRight, ChevronLeft, SkipForward, Loader } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
-import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { ThemeSwitch } from '@/components/shared/theme-switch';
 
 import { OnboardingProgressBar } from './progress-bar';
 import { StepBasicInfo } from './step-basic-info';
@@ -299,7 +299,7 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
             <Logo compact href="/" />
           </div>
           <div className="flex items-center gap-2">
-            <ThemeToggle />
+            <ThemeSwitch size="sm" />
             <button
               type="button"
               onClick={handleSkip}

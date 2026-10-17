@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Shield } from 'lucide-react';
 import { requireAdmin } from '@/lib/authz';
 import { Logo } from '@/components/shared/logo';
-import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { ThemeSwitch } from '@/components/shared/theme-switch';
 import { BackToSiteButton } from '@/components/layout/back-to-site-button';
 
 export const dynamic = 'force-dynamic';
@@ -28,7 +28,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <ThemeToggle />
+            <ThemeSwitch size="sm" />
             <Link href="/dashboard" className="btn-secondary">
               Back to app
             </Link>
