@@ -1,14 +1,14 @@
 import { PriorityFlag } from '@/types';
 
 const map: Record<PriorityFlag, string> = {
-  APPLY_TODAY: 'bg-emerald-500/15 text-emerald-800',
-  APPLY_THIS_WEEK: 'bg-[#C9CED6]/40 text-[#4A505A]',
-  PREPARE_ASSETS: 'bg-[#C9CED6]/30 text-[#5B6472]',
-  FOLLOW_UP_DUE: 'bg-amber-500/15 text-amber-800',
-  INTERVIEW_SOON: 'bg-fuchsia-500/15 text-fuchsia-300',
-  CHECK_DUPLICATE: 'bg-orange-500/15 text-orange-300',
-  MONITOR: 'bg-black/[0.05] text-[#17191E]',
-  SKIP: 'bg-red-500/15 text-red-700'
+  APPLY_TODAY: 'bg-success/15 text-success-text',
+  APPLY_THIS_WEEK: 'bg-accent/15 text-accent-text',
+  PREPARE_ASSETS: 'bg-[rgb(var(--violet-text)/0.15)] text-violet-text',
+  FOLLOW_UP_DUE: 'bg-warn/15 text-warn-text',
+  INTERVIEW_SOON: 'bg-[rgb(var(--magenta-text)/0.15)] text-magenta-text',
+  CHECK_DUPLICATE: 'bg-[rgb(var(--orange-text)/0.15)] text-orange-text',
+  MONITOR: 'bg-surface-sunken text-ink',
+  SKIP: 'bg-danger/15 text-danger-text',
 };
 
 export function PriorityBadge({ priority }: { priority: PriorityFlag }) {

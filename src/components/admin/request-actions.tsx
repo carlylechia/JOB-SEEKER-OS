@@ -151,7 +151,7 @@ export function RequestActions({
           </label>
 
           {confirmApprove ? (
-            <div role="alertdialog" aria-labelledby="approve-confirm" className="mt-4 rounded-xl border border-gold/50 bg-gold/[0.06] p-4">
+            <div role="alertdialog" aria-labelledby="approve-confirm" className="mt-4 rounded-xl border border-accent/50 bg-accent/[0.06] p-4">
               <p id="approve-confirm" className="text-sm font-semibold text-ink">
                 Approve this request{activatePlan ? ` and activate ${requestedPlan} for ${userName}` : ''}?
               </p>
@@ -219,12 +219,12 @@ export function RequestActions({
         </div>
 
         {error ? (
-          <p role="alert" className="rounded-xl border border-danger/30 bg-danger/[0.06] px-4 py-3 text-sm text-[#9B2C2C]">
+          <p role="alert" className="rounded-xl border border-danger/30 bg-danger/[0.06] px-4 py-3 text-sm text-danger-text">
             {error}
           </p>
         ) : null}
         {success ? (
-          <p role="status" className="rounded-xl border border-success/30 bg-success/[0.06] px-4 py-3 text-sm text-[#136B45]">
+          <p role="status" className="rounded-xl border border-success/30 bg-success/[0.06] px-4 py-3 text-sm text-success-text">
             {success}
           </p>
         ) : null}

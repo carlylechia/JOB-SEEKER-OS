@@ -188,7 +188,7 @@ export default async function AdminUpgradeRequestDetailPage({
           {/* User message — visually separated from internal notes */}
           <div className="mt-4">
             <p className="text-xs font-medium uppercase tracking-wide text-muted">User message</p>
-            <p className="mt-1.5 rounded-xl bg-black/[0.03] p-3 text-sm text-ink">
+            <p className="mt-1.5 rounded-xl bg-surface-sunken p-3 text-sm text-ink">
               {request.message || <span className="text-muted">No message provided.</span>}
             </p>
           </div>
@@ -198,7 +198,7 @@ export default async function AdminUpgradeRequestDetailPage({
               <p className="text-xs font-medium uppercase tracking-wide text-muted">
                 Internal admin note
               </p>
-              <p className="mt-1.5 rounded-xl border border-line bg-silverlight/50 p-3 text-sm text-ink">
+              <p className="mt-1.5 rounded-xl border border-line bg-surface/50 p-3 text-sm text-ink">
                 {request.adminNote}
               </p>
             </div>
@@ -242,7 +242,7 @@ export default async function AdminUpgradeRequestDetailPage({
         </h2>
         <ol className="card-pad space-y-3">
           <li className="flex gap-3 text-sm">
-            <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-gold" />
+            <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent" />
             <span className="text-ink">
               Request submitted
               <span className="block text-xs text-muted">{fmt(request.createdAt)}</span>
@@ -250,7 +250,7 @@ export default async function AdminUpgradeRequestDetailPage({
           </li>
           {request.resolvedAt ? (
             <li className="flex gap-3 text-sm">
-              <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-silver" />
+              <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-surface-sunken" />
               <span className="text-ink">
                 Request {request.status.toLowerCase()}
                 <span className="block text-xs text-muted">

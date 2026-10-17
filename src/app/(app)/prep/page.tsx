@@ -44,20 +44,20 @@ function PrepCard({ job, onSave }: { job: JobLead; onSave: (id: string, data: Pr
   }
 
   const statusColor: Record<string, string> = {
-    NOT_STARTED: 'bg-black/[0.05] text-[#17191E]',
-    IN_PROGRESS: 'bg-amber-500/15 text-amber-800',
-    READY: 'bg-emerald-500/15 text-emerald-800',
+    NOT_STARTED: 'bg-surface-sunken text-ink',
+    IN_PROGRESS: 'bg-warn/15 text-warn-text',
+    READY: 'bg-success/15 text-success-text',
   };
 
   return (
     <div className="card-pad space-y-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <Link href={`/jobs/${job.id}`} className="font-semibold hover:text-[#8A6D1F]">{job.company}</Link>
+          <Link href={`/jobs/${job.id}`} className="font-semibold hover:text-accent-text">{job.company}</Link>
           <div className="muted text-sm">{job.title}</div>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`badge ${statusColor[form.prepStatus] || 'bg-black/[0.05] text-[#17191E]'}`}>
+          <span className={`badge ${statusColor[form.prepStatus] || 'bg-surface-sunken text-ink'}`}>
             {STATUS_LABELS[form.prepStatus] ?? form.prepStatus}
           </span>
           <button

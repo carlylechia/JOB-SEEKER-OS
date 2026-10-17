@@ -46,7 +46,7 @@ export default function NewJobPage() {
           type="button"
           className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === 'manual'
-              ? 'bg-black/[0.05] text-ink'
+              ? 'bg-surface-sunken text-ink'
               : 'text-muted hover:text-ink'
           }`}
           onClick={() => setActiveTab('manual')}
@@ -57,7 +57,7 @@ export default function NewJobPage() {
           type="button"
           className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === 'browse'
-              ? 'bg-black/[0.05] text-ink'
+              ? 'bg-surface-sunken text-ink'
               : 'text-muted hover:text-ink'
           }`}
           onClick={() => setActiveTab('browse')}
@@ -79,7 +79,7 @@ export default function NewJobPage() {
           <JobIngestionForm onApply={handleApplyPrefill} />
           {ingestionResult ? (
             <div className="card-pad">
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#8A6D1F]">Extracted preview</div>
+              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-accent-text">Extracted preview</div>
               <p className="mt-3 text-sm leading-7 text-muted">
                 Parser mode: {ingestionResult.sourceMode}. Review and edit the prefilled fields below before saving.
               </p>

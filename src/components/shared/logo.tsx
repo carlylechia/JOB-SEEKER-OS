@@ -26,8 +26,8 @@ export function Logo({
         className={`inline-flex items-center gap-2 ${centered ? 'justify-center' : ''}`}
       >
         <BrandMark size={28} className="shrink-0" />
-        <span className="text-base font-bold tracking-tight text-charcoal">
-          teChia <span className="text-[#A8842C]">Jobs</span>
+        <span className="text-base font-bold tracking-tight text-ink">
+          teChia <span className="text-accent-text">Jobs</span>
         </span>
       </Link>
     );
@@ -41,8 +41,8 @@ export function Logo({
     >
       <span className="inline-flex items-center gap-2.5">
         <BrandMark size={36} className="shrink-0" />
-        <span className="text-xl font-bold tracking-tight text-charcoal">
-          teChia <span className="text-[#A8842C]">Jobs</span>
+        <span className="text-xl font-bold tracking-tight text-ink">
+          teChia <span className="text-accent-text">Jobs</span>
         </span>
       </span>
       {showSubtitle ? (

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronRight, ChevronLeft, SkipForward, Loader } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
+import { ThemeToggle } from '@/components/shared/theme-toggle';
 
 import { OnboardingProgressBar } from './progress-bar';
 import { StepBasicInfo } from './step-basic-info';
@@ -290,21 +291,26 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
   const isLoading = isSaving || isPending;
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#FAFAF7]">
+    <div className="flex min-h-screen flex-col bg-background">
       {/* ── Top bar ── */}
-      <header className="flex items-center justify-between border-b border-[#E4E7EC] px-6 py-4">
-        <div className="flex items-center gap-2">
-          <Logo compact href="/" />
+      <header className="sticky top-0 z-30 border-b border-line bg-[color:var(--nav-scrim)] px-6 py-4 backdrop-blur-xl supports-[backdrop-filter]:bg-[color:var(--nav-scrim)]">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Logo compact href="/" />
+          </div>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              type="button"
+              onClick={handleSkip}
+              disabled={isLoading}
+              className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs text-muted transition-colors hover:bg-surface-sunken hover:text-ink"
+            >
+              <SkipForward size={13} />
+              Skip for now
+            </button>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={handleSkip}
-          disabled={isLoading}
-          className="flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-ink"
-        >
-          <SkipForward size={13} />
-          Skip for now
-        </button>
       </header>
 
       {/* ── Main content ── */}
@@ -316,7 +322,7 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
           </div>
 
           {/* Step content with slide animation */}
-          <div className="relative overflow-hidden rounded-3xl border border-[#E2E5EA] bg-black/[0.03] p-5 shadow-2xl backdrop-blur-sm sm:p-8">
+          <div className="relative overflow-hidden rounded-3xl border border-line bg-surface-sunken p-5 shadow-2xl backdrop-blur-sm sm:p-8">
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={step}
@@ -395,7 +401,7 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
             <motion.div
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700"
+              className="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger-text"
             >
               {error}
             </motion.div>
@@ -408,7 +414,7 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
               type="button"
               onClick={goBack}
               disabled={step === 1 || isLoading}
-              className="flex items-center gap-1.5 rounded-xl border border-line bg-black/[0.03] px-4 py-2.5 text-sm font-medium text-ink transition-all hover:bg-black/[0.06] disabled:pointer-events-none disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded-xl border border-line bg-surface-sunken px-4 py-2.5 text-sm font-medium text-ink transition-all hover:bg-surface-sunken-hover disabled:pointer-events-none disabled:opacity-40"
             >
               <ChevronLeft size={16} />
               Back
@@ -420,7 +426,7 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
                 type="button"
                 onClick={() => void goNext()}
                 disabled={isLoading}
-                className="flex items-center gap-2 rounded-xl bg-accent px-6 py-2.5 text-sm font-semibold text-[#17191E] transition-all hover:opacity-90 disabled:pointer-events-none disabled:opacity-60"
+                className="flex items-center gap-2 rounded-xl bg-accent px-6 py-2.5 text-sm font-semibold text-accent-ink transition-all hover:bg-accent-hover disabled:pointer-events-none disabled:opacity-60"
               >
                 {isLoading ? <Loader size={15} className="animate-spin" /> : null}
                 Continue
@@ -431,7 +437,7 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
                 type="button"
                 onClick={() => void handleComplete()}
                 disabled={isLoading}
-                className="flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-[#17191E] transition-all hover:opacity-90 disabled:pointer-events-none disabled:opacity-60"
+                className="flex items-center gap-2 rounded-xl bg-success-solid px-6 py-2.5 text-sm font-semibold text-success-ink transition-all hover:opacity-90 disabled:pointer-events-none disabled:opacity-60"
               >
                 {isLoading ? (
                   <Loader size={15} className="animate-spin" />

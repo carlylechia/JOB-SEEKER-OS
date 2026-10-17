@@ -182,12 +182,12 @@ export default function ContactsPage() {
                   <td className="font-medium">{contact.name}</td>
                   <td>{contact.title || '—'}</td>
                   <td>
-                    <span className="badge bg-black/[0.05] text-[#17191E] text-xs">
+                    <span className="badge bg-surface-sunken text-ink text-xs">
                       {contact.relationshipType.replace('_', ' ')}
                     </span>
                   </td>
                   <td>
-                    <Link href={`/jobs/${contact.jobId}`} className="hover:text-[#8A6D1F] text-sm">
+                    <Link href={`/jobs/${contact.jobId}`} className="hover:text-accent-text text-sm">
                       {contact.jobCompany} — {contact.jobTitle}
                     </Link>
                   </td>
@@ -204,7 +204,7 @@ export default function ContactsPage() {
                       </button>
                       <button
                         type="button"
-                        className="btn-secondary text-xs py-1 text-red-400 hover:border-red-400/40"
+                        className="btn-secondary text-xs py-1 text-danger-text hover:border-danger/40"
                         onClick={() => handleDelete(contact)}
                       >
                         Remove

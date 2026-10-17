@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { auth } from '@/auth';
 import { Logo } from '@/components/shared/logo';
+import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { SavePublicJobButton } from '@/components/marketing/save-public-job-button';
 import {
   formatPublicJobAge,
@@ -68,28 +69,33 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAF7] text-ink">
-      <div className="shell py-8 sm:py-12">
-        <header className="sticky top-0 z-20 rounded-2xl border border-[#DFE3E9] bg-[#FAFAF7]/70 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-[#FAFAF7]/60 sm:px-5">
+    <div className="min-h-screen bg-background text-ink">
+      <div className="sticky top-0 z-20 border-b border-line bg-[color:var(--nav-scrim)] backdrop-blur-xl supports-[backdrop-filter]:bg-[color:var(--nav-scrim)]">
+        <div className="shell py-3">
           <div className="flex items-center justify-between gap-4">
             <Logo href="/" />
-            <div className="hidden items-center gap-3 md:flex">
-              <Link className="btn-secondary" href="/">Back to Home</Link>
-              {!session ? (
-                <>
-                  <Link className="btn-secondary" href="/login">Sign In</Link>
-                  <Link className="btn-primary" href="/register">Create Account</Link>
-                </>
-              ) : (
-                <Link className="btn-primary" href="/dashboard">Open App</Link>
-              )}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <ThemeToggle />
+              <div className="hidden items-center gap-3 md:flex">
+                <Link className="btn-secondary" href="/">Back to Home</Link>
+                {!session ? (
+                  <>
+                    <Link className="btn-secondary" href="/login">Sign In</Link>
+                    <Link className="btn-primary" href="/register">Create Account</Link>
+                  </>
+                ) : (
+                  <Link className="btn-primary" href="/dashboard">Open App</Link>
+                )}
+              </div>
             </div>
           </div>
-        </header>
+        </div>
+      </div>
 
+      <div className="shell py-8 sm:py-12">
         <section className="py-14 lg:py-18">
           <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8A6D1F]">Public Jobs</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-text">Public Jobs</p>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
               Browse jobs added across the platform.
             </h1>
@@ -131,8 +137,8 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
                   href={filterHref({ days: range.value })}
                   className={`rounded-full border px-3 py-1 text-sm transition-colors ${
                     active
-                      ? 'border-[#D4AF37]/60 bg-[#D4AF37]/15 text-[#8A6D1F]'
-                      : 'border-[#DFE3E9] bg-black/[0.03] text-muted hover:border-[#D5DAE1] hover:text-ink'
+                      ? 'border-accent/60 bg-accent/15 text-accent-text'
+                      : 'border-line bg-surface-sunken text-muted hover:border-line hover:text-ink'
                   }`}
                 >
                   {range.label}
@@ -156,14 +162,14 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
               {jobs.map((job) => (
                 <div
                   key={job.id}
-                  className="rounded-[1.6rem] border border-[#DFE3E9] bg-black/[0.03] p-5 shadow-soft"
+                  className="rounded-[1.6rem] border border-line bg-surface-sunken p-5 shadow-soft"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-lg font-semibold text-ink">{job.title}</p>
-                      <p className="mt-1 text-sm text-[#4A505A]">{job.company}</p>
+                      <p className="mt-1 text-sm text-ink-2">{job.company}</p>
                     </div>
-                    <span className="rounded-full border border-[#DFE3E9] bg-black/[0.03] px-2.5 py-1 text-[11px] text-muted">
+                    <span className="rounded-full border border-line bg-surface-sunken px-2.5 py-1 text-[11px] text-muted">
                       {formatPublicJobAge(job.createdAt)}
                     </span>
                   </div>
@@ -173,7 +179,7 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
                   </div>
 
                   {job.notes ? (
-                    <p className="mt-4 line-clamp-3 text-sm leading-7 text-[#3A4048]/85">{job.notes}</p>
+                    <p className="mt-4 line-clamp-3 text-sm leading-7 text-ink-2/85">{job.notes}</p>
                   ) : null}
 
                   <div className="mt-6 flex flex-wrap gap-3">
@@ -183,7 +189,7 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
               ))}
             </div>
           ) : (
-            <div className="rounded-[1.6rem] border border-dashed border-[#DFE3E9] bg-black/[0.03] p-8 text-center">
+            <div className="rounded-[1.6rem] border border-dashed border-line bg-surface-sunken p-8 text-center">
               <p className="text-lg font-semibold text-ink">No public jobs found</p>
               <p className="mt-3 text-sm leading-7 text-muted">
                 Try a different search or adjust the time range filter.
@@ -216,8 +222,8 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
                     href={filterHref({ page: p })}
                     className={`rounded-xl border px-3 py-1.5 text-sm ${
                       p === page
-                        ? 'border-[#D4AF37]/60 bg-[#D4AF37]/15 text-[#8A6D1F]'
-                        : 'border-[#DFE3E9] bg-black/[0.03] text-muted hover:border-[#D5DAE1] hover:text-ink'
+                        ? 'border-accent/60 bg-accent/15 text-accent-text'
+                        : 'border-line bg-surface-sunken text-muted hover:border-line hover:text-ink'
                     }`}
                   >
                     {p}
@@ -233,11 +239,11 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
         )}
       </div>
 
-      <footer className="border-t border-[#DFE3E9] bg-[#FFFFFF]">
+      <footer className="border-t border-line bg-card">
         <div className="shell py-10">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-sm text-[#4A505A]">© 2026 teChia Digital Solutions. teChia Jobs. All rights reserved.</p>
+              <p className="text-sm text-ink-2">© 2026 teChia Digital Solutions. teChia Jobs. All rights reserved.</p>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-muted">
                 teChia Jobs helps users organise and evaluate job opportunities. Users remain responsible for the accuracy of
                 their applications and compliance with third-party platform terms.

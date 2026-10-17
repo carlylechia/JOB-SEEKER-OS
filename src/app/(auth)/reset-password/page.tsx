@@ -25,9 +25,9 @@ function ResetPasswordForm() {
           <div className="mb-6 flex justify-center">
             <Logo centered />
           </div>
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-8">
+          <div className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-8">
             <div className="text-3xl">❌</div>
-            <h2 className="mt-3 text-lg font-semibold text-red-700">Invalid reset link</h2>
+            <h2 className="mt-3 text-lg font-semibold text-danger-text">Invalid reset link</h2>
             <p className="mt-2 text-sm text-muted">
               This link is missing a reset token. Please request a new one.
             </p>
@@ -71,9 +71,9 @@ function ResetPasswordForm() {
           <div className="mb-6 flex justify-center">
             <Logo centered />
           </div>
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-8">
+          <div className="rounded-xl border border-emerald-500/20 bg-success/8 px-4 py-8">
             <div className="text-3xl">✅</div>
-            <h2 className="mt-3 text-lg font-semibold text-emerald-700">Password updated!</h2>
+            <h2 className="mt-3 text-lg font-semibold text-success-text">Password updated!</h2>
             <p className="mt-2 text-sm text-muted">
               Your password has been changed. Redirecting you to sign in…
             </p>
@@ -128,7 +128,7 @@ function ResetPasswordForm() {
           />
 
           {error ? (
-            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
+            <div className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger-text">
               {error}
             </div>
           ) : null}

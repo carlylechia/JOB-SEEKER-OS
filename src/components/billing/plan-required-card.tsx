@@ -32,14 +32,14 @@ export function PlanRequiredCard({
         <div className="flex items-start gap-3">
           <span
             aria-hidden="true"
-            className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-silverlight text-sm font-semibold text-slate"
+            className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-sm font-semibold text-muted"
           >
             {requiredLabel.charAt(0)}
           </span>
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-ink">{meta.label}</h3>
             <p className="muted mt-1">{meta.description}</p>
-            <p className="mt-2 text-xs font-medium text-[#6B5410]">
+            <p className="mt-2 text-xs font-medium text-warn-text">
               Coming soon with {requiredLabel}.
             </p>
           </div>
@@ -53,14 +53,14 @@ export function PlanRequiredCard({
       <div className="flex items-start gap-3">
         <span
           aria-hidden="true"
-          className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold/20 text-sm font-semibold text-[#6B5410]"
+          className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/20 text-sm font-semibold text-warn-text"
         >
           {requiredLabel.charAt(0)}
         </span>
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-ink">{meta.label}</h3>
           <p className="muted mt-1">{meta.description}</p>
-          <p className="mt-2 text-xs font-medium text-[#6B5410]">
+          <p className="mt-2 text-xs font-medium text-warn-text">
             {isTrialing
               ? `Included in your Pro trial.`
               : `Available with ${requiredLabel}.`}
@@ -116,17 +116,17 @@ export function FeatureComparisonTable({ currentPlan }: { currentPlan: string })
                   const included = meta.plans.includes(plan);
                   const isCurrent = plan === currentPlan;
                   return (
-                    <td key={plan} className={isCurrent ? 'bg-gold/[0.07]' : undefined}>
+                    <td key={plan} className={isCurrent ? 'bg-accent/[0.07]' : undefined}>
                       <span
                         className={
                           included
-                            ? 'text-xs font-semibold text-[#136B45]'
+                            ? 'text-xs font-semibold text-success-text'
                             : 'text-xs text-muted'
                         }
                       >
                         {included ? 'Included' : 'Not included'}
                         {isCurrent ? (
-                          <span className="ml-2 text-[10px] font-medium uppercase tracking-wide text-[#6B5410]">
+                          <span className="ml-2 text-[10px] font-medium uppercase tracking-wide text-warn-text">
                             Current
                           </span>
                         ) : null}

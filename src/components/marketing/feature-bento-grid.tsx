@@ -47,7 +47,7 @@ export function FeatureBentoGrid() {
   return (
     <section className="py-24" id="features">
       <div className="max-w-3xl">
-        <span className="badge bg-black/[0.03] text-[#8A6D1F]">Why it feels different</span>
+        <span className="badge bg-surface-sunken text-accent-text">Why it feels different</span>
         <h2 className="mt-4 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
           More than a tracker. This is a job-search operating system.
         </h2>
@@ -67,17 +67,17 @@ export function FeatureBentoGrid() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8A6D1F]">{card.eyebrow}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-text">{card.eyebrow}</p>
                   <h3 className="mt-3 text-xl font-semibold text-ink">{card.title}</h3>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">{card.text}</p>
                 </div>
-                <span className="rounded-full border border-[#DFE3E9] bg-black/[0.03] p-2 text-[#4A505A]">
+                <span className="rounded-full border border-line bg-surface-sunken p-2 text-ink-2">
                   {Icon ? <Icon className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
                 </span>
               </div>
 
               {card.image ? (
-                <div className="relative mt-6 overflow-hidden rounded-[1.25rem] border border-[#DFE3E9] bg-[#FFFFFF]">
+                <div className="relative mt-6 overflow-hidden rounded-[1.25rem] border border-line bg-card">
                   <Image
                     src={card.image}
                     alt={card.alt ?? ''}

@@ -87,12 +87,12 @@ function LoginForm() {
           </div>
 
           {error === 'EMAIL_NOT_VERIFIED' ? (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-3 text-sm text-amber-800">
+            <div className="rounded-xl border border-amber-500/30 bg-warn/10 px-3 py-3 text-sm text-warn-text">
               Please verify your email before signing in.{' '}
               <strong>Check your inbox</strong> for the verification link.
             </div>
           ) : error ? (
-            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
+            <div className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger-text">
               {error}
             </div>
           ) : null}
@@ -128,13 +128,13 @@ function LoginForm() {
 
         <p className="mt-4 text-sm text-muted">
           No account yet?{' '}
-          <Link href={callbackUrl && callbackUrl !== '/dashboard' ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/register'} className="text-[#8A6D1F]">
+          <Link href={callbackUrl && callbackUrl !== '/dashboard' ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/register'} className="text-accent-text">
             Create one
           </Link>
         </p>
 
         <p className="mt-2 text-sm text-muted">
-          <Link href="/forgot-password" className="text-[#8A6D1F]">
+          <Link href="/forgot-password" className="text-accent-text">
             Forgot your password?
           </Link>
         </p>

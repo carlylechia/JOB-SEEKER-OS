@@ -6,6 +6,7 @@ import { useJobs } from '@/hooks/use-job-data';
 import { defaultPreferences, defaultTimezoneOptions } from '@/lib/preferences';
 import { SeniorityLevel, UserPreferences, WorkRegion } from '@/types';
 import { MultiSelectCombobox } from '@/components/shared/multi-select-combobox';
+import { ThemePicker } from '@/components/shared/theme-picker';
 
 const seniorityOptions: SeniorityLevel[] = ['ENTRY', 'MID', 'SENIOR', 'FLEXIBLE'];
 const regionOptions: WorkRegion[] = ['US', 'EU', 'AFRICA', 'WORLDWIDE', 'FLEXIBLE'];
@@ -35,6 +36,15 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Settings" subtitle="Control what kinds of roles you want to pursue so scoring compares real preferences against the jobs you save." />
+
+      <section className="card-pad" aria-labelledby="appearance-heading">
+        <h2 id="appearance-heading" className="text-base font-semibold text-ink">
+          Appearance
+        </h2>
+        <p className="muted mt-1 mb-5">Switch between the light and dark interface.</p>
+        <ThemePicker />
+      </section>
+
       <div className="card-pad grid gap-4 md:grid-cols-2">
         <div>
           <label className="mb-2 block text-sm text-muted">Current level</label>
@@ -83,7 +93,7 @@ export default function SettingsPage() {
       </div>
       <div className="flex items-center gap-3">
         <button className="btn-primary" onClick={() => void handleSave()}>Save preferences</button>
-        {saved ? <span className="text-sm text-emerald-700">Preferences saved. Job scoring will use these settings immediately.</span> : null}
+        {saved ? <span className="text-sm text-success-text">Preferences saved. Job scoring will use these settings immediately.</span> : null}
       </div>
     </div>
   );

@@ -215,7 +215,7 @@ export default async function AdminUserDetailPage({
                   </div>
                 ) : null}
                 {request.adminNote ? (
-                  <div className="mt-3 rounded-xl bg-black/[0.03] p-3">
+                  <div className="mt-3 rounded-xl bg-surface-sunken p-3">
                     <p className="text-xs font-medium uppercase tracking-wide text-muted">
                       Internal admin note
                     </p>

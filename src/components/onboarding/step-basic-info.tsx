@@ -23,7 +23,7 @@ export function StepBasicInfo({ name, email, isLinkedinUser, onNameChange }: Pro
       {isLinkedinUser && (
         <div className="flex items-center gap-2 rounded-xl border border-[#0A66C2]/40 bg-[#0A66C2]/[0.06] px-4 py-3">
           <Linkedin size={16} className="shrink-0 text-[#0A66C2]" />
-          <p className="text-xs text-[#0A5C8A]">
+          <p className="text-xs text-info-text">
             Signed in with LinkedIn — your name and email are pre-filled.
           </p>
         </div>

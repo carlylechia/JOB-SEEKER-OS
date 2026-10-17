@@ -2,21 +2,158 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* ═══════════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+   Light — teChia gold/silver identity (default)
+   Dark  — the original pre-redesign palette, restored verbatim
+   Tokens are raw "R G B" channel triplets so Tailwind's <alpha-value>
+   syntax (bg-card/60, border-line/20) keeps working in both themes.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root,
+[data-theme='light'] {
   color-scheme: light;
+
+  --bg: 250 250 247;            /* #FAFAF7 warm-white canvas */
+  --card: 255 255 255;
+  --sidebar: 255 255 255;
+  --line: 217 221 227;          /* #D9DDE3 */
+  --line-strong: 201 206 214;   /* #C9CED6 */
+  --ink: 23 25 30;              /* #17191E */
+  --ink-2: 74 80 90;            /* #4A505A */
+  --muted: 104 111 123;         /* #686F7B */
+
+  --accent: 212 175 55;         /* #D4AF37 gold */
+  --accent-hover: 232 200 92;   /* #E8C85C */
+  --accent-ink: 23 25 30;       /* label colour sitting on the accent */
+  --accent-text: 138 109 31;    /* #8A6D1F gold rendered as text (WCAG on light) */
+
+  --success: 31 157 104;        /* #1F9D68 */
+  --success-text: 19 107 69;    /* #136B45 */
+  --success-solid: 31 157 104;
+  --success-ink: 7 20 11;
+  --warn: 217 142 4;            /* #D98E04 */
+  --warn-text: 107 84 16;       /* #6B5410 */
+  --danger: 214 69 69;          /* #D64545 */
+  --danger-text: 155 44 44;     /* #9B2C2C */
+  --danger-solid: 185 28 28;    /* #B91C1C — solid fills only; keeps white labels at 6.5:1 */
+  --info: 91 100 114;           /* #5B6472 */
+  --info-text: 10 92 138;       /* #0A5C8A */
+
+  --sky-text: 7 89 133;
+  --indigo-text: 55 48 163;
+  --violet-text: 109 40 217;
+  --magenta-text: 162 28 175;
+  --orange-text: 154 52 18;
+
+  /* Translucent surfaces */
+  --surface: rgb(255 255 255);
+  --surface-hover: rgb(232 235 240);        /* #E8EBF0 */
+  --surface-sunken: rgb(17 19 24 / 0.035);
+  --surface-sunken-hover: rgb(17 19 24 / 0.065);
+  --field: rgb(255 255 255);
+  --field-select: rgb(244 245 247);         /* #F4F5F7 */
+
+  --page-bg: #FAFAF7;
+  --shadow-soft: 0 12px 30px rgba(17, 19, 24, 0.08);
+  --shadow-lift: 0 18px 44px rgba(17, 19, 24, 0.12);
+  --shadow-nav: 0 10px 34px rgba(17, 19, 24, 0.1);
+  --focus-ring: #8A6D1F;
+  --nav-scrim: rgba(250, 250, 247, 0.82);
+
+  --shimmer-from: #b8962e;
+  --shimmer-via: #f1d78a;
+
+  /* Ambient hero field */
+  --hero-orb-1: rgba(201, 206, 214, 0.14);
+  --hero-orb-2: rgba(212, 175, 55, 0.1);
+  --hero-beam: rgba(212, 175, 55, 0.12);
+  --hero-vignette: rgba(17, 19, 24, 0.1);
+  --hero-shadow: 0 18px 60px rgba(17, 19, 24, 0.12);
+  --hero-card-shadow: 0 32px 80px rgba(17, 19, 24, 0.1);
+  --dot-grid: rgba(99, 179, 237, 0.08);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: 8 17 31;               /* #08111f */
+  --card: 15 26 46;            /* #0f1a2e */
+  --sidebar: 9 17 31;          /* #09111f */
+  --line: 34 49 77;            /* #22314d */
+  --line-strong: 46 63 96;
+  --ink: 231 237 247;          /* #e7edf7 */
+  --ink-2: 180 191 212;
+  --muted: 152 167 196;        /* #98a7c4 */
+
+  --accent: 79 140 255;        /* #4f8cff */
+  --accent-hover: 107 160 255;
+  /* Dark label on the restored blue: 5.9:1. White on #4f8cff is only 3.2:1. */
+  --accent-ink: 8 17 31;
+  --accent-text: 125 176 255;
+
+  --success: 34 197 94;        /* #22c55e */
+  --success-text: 110 231 183; /* emerald-300 */
+  --success-solid: 34 197 94;
+  --success-ink: 8 17 31;
+  --warn: 245 158 11;          /* #f59e0b */
+  --warn-text: 252 211 77;     /* amber-300 */
+  --danger: 239 68 68;         /* #ef4444 */
+  --danger-text: 252 165 165;  /* red-300 */
+  --danger-solid: 220 38 38;   /* #dc2626 — solid fills only */
+  --info: 148 163 184;
+  --info-text: 147 197 253;
+
+  --sky-text: 125 211 252;
+  --indigo-text: 165 180 252;
+  --violet-text: 221 214 254;
+  --magenta-text: 240 171 252;
+  --orange-text: 253 186 116;
+
+  --surface: rgb(255 255 255 / 0.05);
+  --surface-hover: rgb(255 255 255 / 0.1);
+  --surface-sunken: rgb(255 255 255 / 0.05);
+  --surface-sunken-hover: rgb(255 255 255 / 0.1);
+  --field: rgb(255 255 255 / 0.05);
+  --field-select: #0d1628;
+
+  --page-bg: linear-gradient(180deg, #08111f 0%, #0b1528 100%);
+  --shadow-soft: 0 12px 30px rgba(2, 10, 27, 0.25);
+  --shadow-lift: 0 18px 44px rgba(1, 8, 20, 0.42);
+  --shadow-nav: 0 10px 34px rgba(1, 8, 20, 0.36);
+  --focus-ring: #7db0ff;
+  --nav-scrim: rgba(8, 17, 31, 0.82);
+
+  --shimmer-from: #22d3ee;
+  --shimmer-via: #a5f3fc;
+
+  /* Ambient hero field */
+  --hero-orb-1: rgba(99, 102, 241, 0.14);
+  --hero-orb-2: rgba(34, 211, 238, 0.1);
+  --hero-beam: rgba(34, 211, 238, 0.12);
+  --hero-vignette: rgba(0, 0, 0, 0.78);
+  --hero-shadow: 0 18px 60px rgba(1, 8, 20, 0.34);
+  --hero-card-shadow: 0 32px 80px rgba(1, 8, 20, 0.4);
+  --dot-grid: rgba(125, 211, 252, 0.1);
 }
 
 * { box-sizing: border-box; }
 html, body {
   min-height: 100vh; padding: 0; margin: 0; min-height: 100%;
   max-width: 100%;
+  /* Suppress horizontal scrollbars without turning these elements into a
+     scroll container. `overflow-x: hidden` computes the other axis to `auto`,
+     which makes <body> a scrollport and silently breaks every `position:
+     sticky` descendant (the navbar and sidebar). `clip` clips without
+     scrolling, so stickiness is preserved. */
   overflow-x: hidden;
+  overflow-x: clip;
 }
 html { scroll-behavior: smooth; scroll-padding-top: 104px; }
 body {
   min-height: 100vh;
-  background: #FAFAF7;
-  color: #17191E;
+  background: var(--page-bg);
+  color: rgb(var(--ink));
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -24,15 +161,39 @@ body {
 
 a { color: inherit; text-decoration: none; }
 
+/* Theme-aware native surfaces: scrollbars, form controls, date pickers. */
+* {
+  scrollbar-color: rgb(var(--line-strong)) transparent;
+}
+::selection {
+  background: rgb(var(--accent) / 0.28);
+}
+
+/* Smooth cross-theme colour swap, opted into only while toggling so that
+   hover/active transitions elsewhere are unaffected. */
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease,
+    fill 220ms ease,
+    stroke 220ms ease,
+    box-shadow 220ms ease !important;
+  transition-delay: 0ms !important;
+}
+
 /* ── Accessibility: always-visible keyboard focus ──────────────────── */
 :focus-visible {
-  outline: 2px solid #8A6D1F;
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: 6px;
 }
 .input:focus-visible,
 .select:focus-visible {
-  outline: 2px solid #8A6D1F;
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 
@@ -151,6 +312,15 @@ a { color: inherit; text-decoration: none; }
     animation-iteration-count: 1 !important;
   }
   html { scroll-behavior: auto; }
+
+  /* Theme swaps are decorative; apply them instantly for users who ask for
+     reduced motion. */
+  .theme-transition,
+  .theme-transition *,
+  .theme-transition *::before,
+  .theme-transition *::after {
+    transition: none !important;
+  }
 }
 
 @keyframes hero-slide-up {
@@ -177,7 +347,7 @@ a { color: inherit; text-decoration: none; }
   to   { background-position: -200% center; }
 }
 .shimmer-text {
-  background: linear-gradient(90deg, #B8962E 0%, #F1D78A 40%, #B8962E 80%);
+  background: linear-gradient(90deg, var(--shimmer-from) 0%, var(--shimmer-via) 40%, var(--shimmer-from) 80%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
@@ -196,16 +366,16 @@ a { color: inherit; text-decoration: none; }
   .card { @apply min-w-0 rounded-2xl border border-line bg-card shadow-soft; }
   .card-pad { @apply min-w-0 rounded-2xl border border-line bg-card p-5 shadow-soft; }
   .muted { @apply text-sm text-muted; }
-  .title { @apply text-2xl font-semibold tracking-tight; }
+  .title { @apply text-2xl font-semibold tracking-tight text-ink; }
   .btn { @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition; }
-  .btn-primary { @apply btn bg-gold text-charcoal hover:bg-champagne; }
-  .btn-secondary { @apply btn border border-line bg-white hover:bg-silverlight; }
-  .input { @apply w-full rounded-xl border border-line bg-white px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-gold; }
-  .select { @apply w-full rounded-xl border border-line bg-[#F4F5F7] px-3 py-2 text-sm text-ink outline-none focus:border-gold; }
+  .btn-primary { @apply btn bg-accent text-accent-ink hover:bg-accent-hover; }
+  .btn-secondary { @apply btn border border-line bg-surface text-ink hover:bg-surface-hover; }
+  .input { @apply w-full rounded-xl border border-line bg-field px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-accent; }
+  .select { @apply w-full rounded-xl border border-line bg-field-select px-3 py-2 text-sm text-ink outline-none focus:border-accent; }
   .badge { @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold; }
   .table-wrap { @apply overflow-x-auto rounded-2xl border border-line bg-card shadow-soft; }
   .table { @apply min-w-full divide-y divide-line; }
-  .table th { @apply bg-black/[0.03] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted; }
+  .table th { @apply bg-surface-sunken px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted; }
   .table td { @apply px-4 py-3 text-sm text-ink; }
   .table tr { @apply border-t border-line; }
 }

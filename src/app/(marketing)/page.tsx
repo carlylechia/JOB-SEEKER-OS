@@ -15,13 +15,13 @@ import { QuickJumpNav } from '@/components/marketing/quick-jump-nav';
 function PlatformJobsPreviewFallback() {
   return (
     <section id="public-jobs" className="py-20">
-      <div className="grid gap-8 rounded-3xl border border-[#E2E5EA] bg-black/[0.03] p-5 lg:grid-cols-[0.88fr_1.12fr] lg:p-7">
+      <div className="grid gap-8 rounded-3xl border border-line bg-surface-sunken p-5 lg:grid-cols-[0.88fr_1.12fr] lg:p-7">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8A6D1F]">Platform Jobs</p>
-          <h2 className="mt-4 text-2xl font-semibold tracking-tight text-[#17191E] sm:text-3xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-text">Platform Jobs</p>
+          <h2 className="mt-4 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
             Explore jobs that platform users are actively capturing and working through.
           </h2>
-          <p className="mt-4 max-w-xl text-sm leading-7 text-[#686F7B] sm:text-base">
+          <p className="mt-4 max-w-xl text-sm leading-7 text-muted sm:text-base">
             A few recent opportunities already being tracked across the platform. Browse more, save what fits, and move it
             into your own workflow.
           </p>
@@ -33,11 +33,11 @@ function PlatformJobsPreviewFallback() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="rounded-2xl border border-[#E2E5EA] bg-black/[0.03] p-4">
-              <div className="h-4 w-2/3 rounded bg-black/[0.05] animate-pulse" />
-              <div className="mt-3 h-3 w-1/2 rounded bg-black/[0.05] animate-pulse" />
-              <div className="mt-6 h-3 w-3/4 rounded bg-black/[0.05] animate-pulse" />
-              <div className="mt-2 h-3 w-1/3 rounded bg-black/[0.05] animate-pulse" />
+            <div key={i} className="rounded-2xl border border-line bg-surface-sunken p-4">
+              <div className="h-4 w-2/3 rounded bg-surface-sunken animate-pulse" />
+              <div className="mt-3 h-3 w-1/2 rounded bg-surface-sunken animate-pulse" />
+              <div className="mt-6 h-3 w-3/4 rounded bg-surface-sunken animate-pulse" />
+              <div className="mt-2 h-3 w-1/3 rounded bg-surface-sunken animate-pulse" />
             </div>
           ))}
         </div>

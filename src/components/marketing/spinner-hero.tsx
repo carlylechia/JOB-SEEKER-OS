@@ -155,7 +155,7 @@ function SpinnerHero({ className }: SpinnerHeroProps) {
               className="pointer-events-none absolute -inset-10 rounded-full"
               style={{
                 background:
-                  'radial-gradient(circle at 50% 45%, rgba(212,175,55,0.10), transparent 58%), radial-gradient(circle at 60% 55%, rgba(201,206,214,0.14), transparent 62%)',
+                  'radial-gradient(circle at 50% 45%, var(--hero-orb-2), transparent 58%), radial-gradient(circle at 60% 55%, var(--hero-orb-1), transparent 62%)',
                 filter: 'blur(22px)',
                 transform: 'translateZ(0)',
                 willChange: 'transform, opacity',

@@ -86,7 +86,7 @@ export default async function BillingPage() {
       {summary.openRequest ? (
         <section
           aria-labelledby="request-status-heading"
-          className="card-pad border-gold/40 bg-gold/[0.06]"
+          className="card-pad border-accent/40 bg-accent/[0.06]"
         >
           <h2 id="request-status-heading" className="text-sm font-semibold text-ink">
             Upgrade request pending
@@ -139,7 +139,7 @@ export default async function BillingPage() {
                 key={plan.code}
                 aria-current={isCurrent ? 'true' : undefined}
                 className={`card-pad flex flex-col ${
-                  isCurrent ? 'border-gold ring-1 ring-gold/30' : ''
+                  isCurrent ? 'border-accent ring-1 ring-accent/30' : ''
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -159,7 +159,7 @@ export default async function BillingPage() {
                 <ul className="mt-4 flex-1 space-y-2">
                   {marketing.highlights.map((item) => (
                     <li key={item} className="flex items-start gap-2 text-sm text-ink">
-                      <span aria-hidden="true" className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gold" />
+                      <span aria-hidden="true" className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
                       <span>{item}</span>
                     </li>
                   ))}

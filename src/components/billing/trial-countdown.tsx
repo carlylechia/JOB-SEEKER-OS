@@ -54,7 +54,7 @@ export function TrialCountdown({ trialEndsAt, isTrialing, trialExpired }: Props)
 
   return (
     <p
-      className={`text-sm ${urgent ? 'text-[#6B5410]' : 'text-muted'}`}
+      className={`text-sm ${urgent ? 'text-warn-text' : 'text-muted'}`}
       // Announce politely so screen-reader users hear updates once per minute
       // rather than on every tick.
       aria-live="polite"
@@ -92,7 +92,7 @@ export function TrialBanner({
     return (
       <div
         role="status"
-        className="border-b border-line bg-silverlight/70 px-4 py-2.5 text-center text-sm text-ink"
+        className="border-b border-line bg-surface/70 px-4 py-2.5 text-center text-sm text-ink"
       >
         Your Pro trial has ended and your account is now on the Free plan. All of
         your data is safe.{' '}
@@ -108,7 +108,7 @@ export function TrialBanner({
   return (
     <div
       role="status"
-      className="border-b border-gold/30 bg-gold/10 px-4 py-2.5 text-center text-sm text-ink"
+      className="border-b border-accent/30 bg-accent/10 px-4 py-2.5 text-center text-sm text-ink"
     >
       {message(resolvedDays, false)}.{' '}
       <a href="/settings/billing" className="font-semibold underline">

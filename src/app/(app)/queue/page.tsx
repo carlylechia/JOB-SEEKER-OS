@@ -8,10 +8,10 @@ import { useJobs } from '@/hooks/use-job-data';
 import { QueueTask } from '@/types';
 
 const TASK_META: Record<QueueTask['type'], { icon: string; accent: string; badge: string }> = {
-  FOLLOW_UP_NOW: { icon: '🔔', accent: 'border-red-500/30 bg-red-500/8', badge: 'bg-red-500/15 text-red-700' },
-  PREPARE: { icon: '📋', accent: 'border-[#C9CED6] bg-[#C9CED6]/20', badge: 'bg-[#C9CED6]/30 text-[#5B6472]' },
-  APPLY: { icon: '📤', accent: 'border-[#D4AF37]/30 bg-[#D4AF37]/10', badge: 'bg-[#D4AF37]/15 text-[#8A6D1F]' },
-  FOLLOW_UP: { icon: '📬', accent: 'border-amber-400/30 bg-amber-500/8', badge: 'bg-amber-500/15 text-amber-800' },
+  FOLLOW_UP_NOW: { icon: '🔔', accent: 'border-danger/30 bg-danger/10', badge: 'bg-danger/15 text-danger-text' },
+  PREPARE: { icon: '📋', accent: 'border-line-strong bg-line-strong/20', badge: 'bg-line-strong/30 text-muted' },
+  APPLY: { icon: '📤', accent: 'border-accent/30 bg-accent/10', badge: 'bg-accent/15 text-accent-text' },
+  FOLLOW_UP: { icon: '📬', accent: 'border-warn/30 bg-warn/8', badge: 'bg-warn/15 text-warn-text' },
 };
 
 const TASK_LABEL: Record<QueueTask['type'], string> = {
@@ -56,10 +56,10 @@ export default function QueuePage() {
                           {TASK_LABEL[task.type]}
                         </span>
                         {task.dueDate && (
-                          <span className="text-xs text-red-400">Due {task.dueDate}</span>
+                          <span className="text-xs text-danger-text">Due {task.dueDate}</span>
                         )}
                       </div>
-                      <Link href={`/jobs/${task.jobId}`} className="mt-1 block font-semibold hover:text-[#8A6D1F]">
+                      <Link href={`/jobs/${task.jobId}`} className="mt-1 block font-semibold hover:text-accent-text">
                         {task.title}
                       </Link>
                       <div className="text-sm text-muted">{task.description}</div>

@@ -45,7 +45,7 @@ export default function VerifyEmailClient() {
         {state === 'loading' && (
           <>
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
-              <svg className="h-6 w-6 animate-spin text-[#8A6D1F]" fill="none" viewBox="0 0 24 24">
+              <svg className="h-6 w-6 animate-spin text-accent-text" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
@@ -57,10 +57,10 @@ export default function VerifyEmailClient() {
 
         {state === 'success' && (
           <>
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15 text-2xl">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-success/15 text-2xl">
               ✅
             </div>
-            <h1 className="text-xl font-semibold text-emerald-700">Email verified!</h1>
+            <h1 className="text-xl font-semibold text-success-text">Email verified!</h1>
             <p className="mt-2 text-sm text-muted">
               Your account is now active. You can sign in and start using teChia Jobs.
             </p>
@@ -72,7 +72,7 @@ export default function VerifyEmailClient() {
 
         {state === 'already' && (
           <>
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#D4AF37]/15 text-2xl">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent/15 text-2xl">
               ✔️
             </div>
             <h1 className="text-xl font-semibold">Already verified</h1>
@@ -90,7 +90,7 @@ export default function VerifyEmailClient() {
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/15 text-2xl">
               ✗
             </div>
-            <h1 className="text-xl font-semibold text-red-700">Verification failed</h1>
+            <h1 className="text-xl font-semibold text-danger-text">Verification failed</h1>
             <p className="mt-2 text-sm text-muted">{errorMessage}</p>
             <div className="mt-6 flex justify-center gap-3">
               <Link href="/register" className="btn-primary">

@@ -120,7 +120,7 @@ export function PlanChangePanel({
       </h2>
 
       {success ? (
-        <p role="status" className="mt-3 rounded-xl border border-success/30 bg-success/[0.06] px-4 py-3 text-sm text-[#136B45]">
+        <p role="status" className="mt-3 rounded-xl border border-success/30 bg-success/[0.06] px-4 py-3 text-sm text-success-text">
           {success}
         </p>
       ) : null}
@@ -138,7 +138,7 @@ export function PlanChangePanel({
                 key={option.value}
                 className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm ${
                   action === option.value
-                    ? 'border-gold bg-gold/[0.08] font-medium'
+                    ? 'border-accent bg-accent/[0.08] font-medium'
                     : 'border-line bg-white'
                 }`}
               >
@@ -287,7 +287,7 @@ export function PlanChangePanel({
         </div>
 
         {error ? (
-          <p role="alert" className="rounded-xl border border-danger/30 bg-danger/[0.06] px-4 py-3 text-sm text-[#9B2C2C]">
+          <p role="alert" className="rounded-xl border border-danger/30 bg-danger/[0.06] px-4 py-3 text-sm text-danger-text">
             {error}
           </p>
         ) : null}
@@ -297,7 +297,7 @@ export function PlanChangePanel({
           <div
             role="alertdialog"
             aria-labelledby="confirm-heading"
-            className="rounded-xl border border-gold/50 bg-gold/[0.06] p-4"
+            className="rounded-xl border border-accent/50 bg-accent/[0.06] p-4"
           >
             <p id="confirm-heading" className="text-sm font-semibold text-ink">
               {action === 'suspend'

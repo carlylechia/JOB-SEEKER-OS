@@ -90,7 +90,7 @@ export function StepJobPreferences({
             {jobTitles.map((title) => (
               <span
                 key={title}
-                className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/15 px-3 py-1 text-xs font-medium text-[#8A6D1F]"
+                className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/15 px-3 py-1 text-xs font-medium text-accent-text"
               >
                 {title}
                 <button type="button" onClick={() => removeTitle(title)} className="hover:text-ink">
@@ -115,13 +115,13 @@ export function StepJobPreferences({
             placeholder="Search or type a job title…"
           />
           {titleSuggestions.length > 0 && (
-            <div className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-line bg-[#F4F5F7] shadow-lg">
+            <div className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-line bg-surface-sunken shadow-lg">
               {titleSuggestions.map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => addTitle(t)}
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-ink hover:bg-black/[0.04]"
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-ink hover:bg-surface-sunken"
                 >
                   <Plus size={13} className="text-muted" />
                   {t}
@@ -131,7 +131,7 @@ export function StepJobPreferences({
                 <button
                   type="button"
                   onClick={() => addTitle(titleInput)}
-                  className="flex w-full items-center gap-2 border-t border-line px-4 py-2.5 text-left text-sm text-[#8A6D1F] hover:bg-black/[0.04]"
+                  className="flex w-full items-center gap-2 border-t border-line px-4 py-2.5 text-left text-sm text-accent-text hover:bg-surface-sunken"
                 >
                   <Plus size={13} />
                   Create &ldquo;{titleInput}&rdquo;
@@ -155,8 +155,8 @@ export function StepJobPreferences({
                 className={[
                   'rounded-xl border px-3 py-1.5 text-xs font-medium transition-all',
                   currentLevel === lvl
-                    ? 'border-accent bg-accent/15 text-[#8A6D1F]'
-                    : 'border-line bg-black/[0.03] text-muted hover:border-[#D5DAE1] hover:bg-black/[0.06]',
+                    ? 'border-accent bg-accent/15 text-accent-text'
+                    : 'border-line bg-surface-sunken text-muted hover:border-line hover:bg-surface-sunken-hover',
                 ].join(' ')}
               >
                 {lvl}
@@ -175,8 +175,8 @@ export function StepJobPreferences({
                 className={[
                   'rounded-xl border px-3 py-1.5 text-xs font-medium transition-all',
                   targetLevel === lvl
-                    ? 'border-accent bg-accent/15 text-[#8A6D1F]'
-                    : 'border-line bg-black/[0.03] text-muted hover:border-[#D5DAE1] hover:bg-black/[0.06]',
+                    ? 'border-accent bg-accent/15 text-accent-text'
+                    : 'border-line bg-surface-sunken text-muted hover:border-line hover:bg-surface-sunken-hover',
                 ].join(' ')}
               >
                 {lvl}
@@ -199,7 +199,7 @@ export function StepJobPreferences({
             {skills.map((skill) => (
               <span
                 key={skill}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#DFE3E9] bg-black/[0.05] px-3 py-1 text-xs text-ink"
+                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-sunken px-3 py-1 text-xs text-ink"
               >
                 {skill}
                 <button type="button" onClick={() => removeSkill(skill)} className="text-muted hover:text-ink">

@@ -53,7 +53,7 @@ export default async function AdminSystemPage() {
           {health.map((item) => (
             <li key={item.label} className="flex items-center justify-between text-sm">
               <span className="text-ink">{item.label}</span>
-              <span className={item.ok ? 'text-[#136B45]' : 'text-[#9B2C2C]'}>
+              <span className={item.ok ? 'text-success-text' : 'text-danger-text'}>
                 {item.ok ? 'OK' : 'Attention needed'}
               </span>
             </li>
@@ -117,7 +117,7 @@ export default async function AdminSystemPage() {
           </div>
           <div>
             <dt className="text-muted">Failed</dt>
-            <dd className={email.failed > 0 ? 'font-semibold text-[#9B2C2C]' : 'text-ink'}>
+            <dd className={email.failed > 0 ? 'font-semibold text-danger-text' : 'text-ink'}>
               {email.failed}
             </dd>
           </div>
@@ -132,7 +132,7 @@ export default async function AdminSystemPage() {
             <h3 className="text-sm font-semibold text-ink">Recent failures</h3>
             <ul className="mt-2 space-y-2">
               {failedEmails.map((item) => (
-                <li key={item.id} className="rounded-xl bg-black/[0.03] p-3 text-xs">
+                <li key={item.id} className="rounded-xl bg-surface-sunken p-3 text-xs">
                   <p className="text-ink">
                     {item.type} · {item.attempts} attempts
                   </p>

@@ -112,7 +112,7 @@ export function UpgradeRequestForm({
               key={plan}
               className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 text-sm ${
                 requestedPlan === plan
-                  ? 'border-gold bg-gold/[0.08] font-medium text-ink'
+                  ? 'border-accent bg-accent/[0.08] font-medium text-ink'
                   : 'border-line bg-white text-ink'
               }`}
             >
@@ -143,7 +143,7 @@ export function UpgradeRequestForm({
               key={option.value}
               className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 text-sm ${
                 contactMethod === option.value
-                  ? 'border-gold bg-gold/[0.08] font-medium text-ink'
+                  ? 'border-accent bg-accent/[0.08] font-medium text-ink'
                   : 'border-line bg-white text-ink'
               }`}
             >
@@ -230,7 +230,7 @@ export function UpgradeRequestForm({
       </div>
 
       {error ? (
-        <p role="alert" className="rounded-xl border border-danger/30 bg-danger/[0.06] px-4 py-3 text-sm text-[#9B2C2C]">
+        <p role="alert" className="rounded-xl border border-danger/30 bg-danger/[0.06] px-4 py-3 text-sm text-danger-text">
           {error}
         </p>
       ) : null}

@@ -104,10 +104,10 @@ export default async function AdminOverviewPage() {
       {/* System warnings */}
       {totalAdmins === 0 ? (
         <div role="alert" className="rounded-2xl border border-danger/30 bg-danger/[0.06] p-4">
-          <p className="text-sm font-semibold text-[#9B2C2C]">No administrators exist</p>
+          <p className="text-sm font-semibold text-danger-text">No administrators exist</p>
           <p className="mt-1 text-sm text-ink">
             Upgrade requests cannot be managed until at least one account is promoted. Run{' '}
-            <code className="rounded bg-black/5 px-1 py-0.5 text-xs">
+            <code className="rounded bg-surface-sunken px-1 py-0.5 text-xs">
               npm run admin:bootstrap -- you@yourdomain.com
             </code>
             .
@@ -119,7 +119,7 @@ export default async function AdminOverviewPage() {
         <div role="alert" className="rounded-2xl border border-warn/40 bg-warn/[0.06] p-4">
           <p className="text-sm font-semibold text-ink">Transactional email is not configured</p>
           <p className="mt-1 text-sm text-ink">
-            <code className="rounded bg-black/5 px-1 py-0.5 text-xs">RESEND_API_KEY</code> is not
+            <code className="rounded bg-surface-sunken px-1 py-0.5 text-xs">RESEND_API_KEY</code> is not
             set, so verification, password reset, and billing emails cannot be delivered.
           </p>
         </div>
@@ -132,11 +132,11 @@ export default async function AdminOverviewPage() {
         </h2>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
           {cards.map((card) => (
-            <Link key={card.label} href={card.href} className="card-pad block transition hover:border-gold/50">
+            <Link key={card.label} href={card.href} className="card-pad block transition hover:border-accent/50">
               <p className="text-xs font-medium uppercase tracking-wide text-muted">{card.label}</p>
               <p
                 className={`mt-1.5 text-2xl font-semibold ${
-                  card.highlight ? 'text-[#6B5410]' : 'text-ink'
+                  card.highlight ? 'text-warn-text' : 'text-ink'
                 }`}
               >
                 {card.value}
@@ -203,7 +203,7 @@ export default async function AdminOverviewPage() {
           </div>
           <div>
             <dt className="text-muted">Failed</dt>
-            <dd className={email.failed > 0 ? 'font-semibold text-[#9B2C2C]' : 'text-ink'}>
+            <dd className={email.failed > 0 ? 'font-semibold text-danger-text' : 'text-ink'}>
               {email.failed}
             </dd>
           </div>
