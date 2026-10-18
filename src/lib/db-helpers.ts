@@ -238,3 +238,17 @@ export function buildStoredJobPayload(values: JobFormValues | any, preferences: 
   const scored = { ...job, score: { ...job.score, fitScore, fitTier } };
   return { ...scored, priorityFlag: calculatePriority(scored) };
 }
+
+/**
+ * True when a Prisma error is a unique-constraint violation.
+ *
+ * Used wherever a unique index doubles as a concurrency lock: the losing
+ * writer catches this and re-reads instead of failing the request.
+ */
+export function hasPrismaUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { code?: unknown }).code === 'P2002'
+  );
+}
