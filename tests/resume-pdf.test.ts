@@ -14,6 +14,7 @@
 import { describe, it, expect, before, afterEach } from './harness';
 import { extractText, getDocumentProxy } from 'unpdf';
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
 import { buildLayout, wrapText, type LayoutDocument } from '@/lib/resume-builder/layout';
 import { getLayoutMetrics, preparePdfEngine, renderPdfLayout, resumeDownloadFileName } from '@/lib/resume-builder/pdf';
@@ -461,6 +462,97 @@ describe('PDF export', () => {
     expect(bytes.byteLength).toBeLessThan(2 * 1024 * 1024);
     // Generous, but a regression that made layout quadratic would trip it.
     expect(duration).toBeLessThan(10_000);
+  });
+});
+
+// ─── Font resolution ────────────────────────────────────────────────────────
+
+describe('font files', () => {
+  /**
+   * Regression guard for a bug that reached production and could not be caught
+   * by any behavioural test above.
+   *
+   * The fonts were once loaded with `createRequire(import.meta.url).resolve()`
+   * and a variable specifier. Under `tsx` that resolves perfectly, so every
+   * test in this file passed — including every assertion about real PDF bytes.
+   * Under webpack the same call was replaced by a stub whose `resolve()` always
+   * throws `MODULE_NOT_FOUND`, so PDF export failed in every built deployment
+   * while the build itself only warned.
+   *
+   * These tests cannot run webpack, but they CAN pin the property the fix rests
+   * on: the fonts are ordinary files in the repository, read through a literal
+   * path, so the bundler and the deployment file tracer can both see them.
+   */
+
+  const raw = readFileSync(
+    new URL('../src/lib/resume-builder/pdf.ts', import.meta.url),
+    'utf8',
+  );
+
+  /**
+   * The module's executable code, with comments removed.
+   *
+   * The comments in this file name every mechanism that used to be used here,
+   * because that record is the point of it — so asserting against the raw text
+   * would match its own explanation of the bug. What must be absent is the code.
+   */
+  const code = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  it('does not resolve fonts through a mechanism the bundler can stub', () => {
+    // Every one of these works under tsx and fails, or breaks the build, under
+    // webpack. Their absence from the executable code is the actual fix.
+    expect(code).not.toContain('createRequire');
+    expect(code).not.toContain('.resolve(');
+    expect(code).not.toContain('require(');
+    expect(code).not.toContain('expo-google-fonts');
+  });
+
+  it('reads the fonts from a literal path inside the repository', () => {
+    expect(code).toContain('readFileSync');
+    // A `process.cwd()` join of literal segments is what the Vercel file tracer
+    // follows; a computed or interpolated path is what it cannot.
+    expect(code).toContain(
+      "path.join(process.cwd(), 'src', 'lib', 'resume-builder', 'fonts')",
+    );
+    // The two filenames must be literals, not looked up by pattern.
+    expect(code).toContain("regular: 'Inter_400Regular.ttf'");
+    expect(code).toContain("semibold: 'Inter_600SemiBold.ttf'");
+  });
+
+  it('ships both weights in the repository', () => {
+    // The vendored files are the ones the export embeds, so a missing or
+    // truncated file is a hard failure rather than a silently broken export.
+    for (const file of ['Inter_400Regular.ttf', 'Inter_600SemiBold.ttf']) {
+      const bytes = readFileSync(
+        new URL(`../src/lib/resume-builder/fonts/${file}`, import.meta.url),
+      );
+      // A partial or Git-LFS pointer file would be tiny; these are ~340 KB.
+      expect(bytes.byteLength).toBeGreaterThan(100_000);
+      // A TTF begins 0x00010000; 'true' and 'OTTO' are the other valid flavours.
+      // A text file here means the binary was committed as text.
+      const magic = bytes.readUInt32BE(0);
+      const valid = magic === 0x00010000 || magic === 0x74727565 || magic === 0x4f54544f;
+      expect(valid).toBe(true);
+    }
+  });
+
+  it('keeps the font licence with the fonts', () => {
+    // The OFL requires the licence to accompany the font files, and the files
+    // are now in this repository rather than inside someone else's package.
+    const licence = readFileSync(
+      new URL('../src/lib/resume-builder/fonts/LICENSE.txt', import.meta.url),
+      'utf8',
+    );
+    expect(licence).toContain('SIL Open Font License');
+  });
+
+  it('reports the directory it searched rather than a bare ENOENT', () => {
+    // The old failure was `Cannot find module '@expo-google-fonts/...'` thrown
+    // from inside the bundler, which named neither the file, the directory, nor
+    // the fact that the file ships with the application. The message must.
+    expect(code).toContain('PDF export could not load its font files');
+    expect(code).toContain('Missing:');
+    expect(code).toContain('the deployment did');
   });
 });
 

@@ -271,6 +271,52 @@ PDF size, the bytes are generated per request and streamed rather than stored,
 and it is the only option measured to both render correctly and stay selectable.
 It is one flag in `renderPdfLayout` if pdf-lib's subsetter is ever fixed.
 
+### Where the fonts come from — and why they are in the repository
+
+The two Inter weights are committed at `src/lib/resume-builder/fonts/`, with
+their OFL licence, and read with a literal `fs.readFileSync`. This is not a
+stylistic preference. It replaced a `createRequire(import.meta.url).resolve()`
+against `@expo-google-fonts/inter` that **worked in tests and failed in every
+built deployment**, so the reasoning is recorded here in full.
+
+The original approach used a *variable* specifier, on the reasoning that a
+request webpack cannot analyse would be left alone at runtime. That is what it
+did — and leaving it alone is not the same as making it work. webpack replaced
+`createRequire` with a stub module whose `resolve()` unconditionally throws
+`MODULE_NOT_FOUND` and whose `keys()` returns `[]`:
+
+```js
+29704: a => { function b(a){ var b=Error("Cannot find module '"+a+"'"); throw b.code="MODULE_NOT_FOUND",b }
+           b.keys=()=>[], b.resolve=b, b.id=29704, a.exports=b }
+```
+
+Every PDF test passed, because the suite runs under `tsx`, which performs real
+Node resolution. The build passed too, emitting only a "Critical dependency"
+warning that the original release notes recorded as cosmetic. **That warning was
+the bug**, and dismissing it is what let it ship.
+
+Making the specifier *literal* is not a fix either — verified, not assumed:
+
+| Approach | Under `tsx` | Under webpack |
+| --- | --- | --- |
+| Variable specifier | resolves | stub throws `MODULE_NOT_FOUND` at runtime |
+| Literal specifier + `serverExternalPackages` | resolves | `Module parse failed: Unexpected character` — webpack parses the `.ttf` as JavaScript |
+| **Literal `fs.readFileSync` of a repo file** | resolves | resolves, and the file appears in the route's deployment trace |
+
+The property the last row has and the others lack is **static analysability**:
+a literal path in the source tree is something both the bundler and the Vercel
+file tracer can see.
+
+Verified end to end: with the old code, a production `next start` build returns
+`Cannot find module '@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf'`
+from the export path; with the fix, the same request renders a 422 KB PDF whose
+bytes contain `/FontFile2` and `/ToUnicode`.
+
+`tests/resume-pdf.test.ts` pins the shape of `pdf.ts` so the stub pattern
+cannot be reintroduced silently. It asserts against the module's code with
+comments stripped — the comments name every mechanism that used to be used here,
+so asserting on raw text would match its own explanation of the bug.
+
 ### Character coverage — stated plainly
 
 The embedded Inter face covers **Latin, Latin Extended-A, Greek and Cyrillic**.
@@ -654,16 +700,18 @@ Then create a resume at `/resumes`.
 | `RESUME_OPTIMIZATION_MODEL` | no | Defaults to `gpt-4.1-mini` |
 | `BLOB_READ_WRITE_TOKEN` | in production | Private resume storage (unchanged by this release) |
 
-**No configuration is needed for PDF export.** Fonts ship with the application
-(`@expo-google-fonts/inter`, SIL Open Font License 1.1) and are embedded at
-export time. Nothing is stored.
+**No configuration is needed for PDF export.** The two Inter weights ship in
+the repository at `src/lib/resume-builder/fonts/` (SIL Open Font License 1.1,
+licence included) and are embedded at export time. Nothing is stored. See
+§12 for why they are vendored rather than resolved from `node_modules` — that
+detail cost a production incident and is not obvious.
 
 ---
 
 ## 17. Tests
 
 ```bash
-npm test          # 563 tests
+npm test          # 580 tests
 npm run typecheck # both tsconfigs
 npm run build
 ```

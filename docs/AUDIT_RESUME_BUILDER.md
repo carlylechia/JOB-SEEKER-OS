@@ -302,7 +302,7 @@ Measured on this machine, Node 22.13:
   `RangeError: Index out of range`, and with subsetting disabled the extracted
   text comes back as `JJJJ JJJJJJ` — i.e. **not selectable**. Rejected.
 - `pdf-lib` + **WOFF2**, subset on: the subsetter crashes outright.
-- `pdf-lib` + **TTF** (`@expo-google-fonts/inter`, OFL-1.1) + `fontkit`, subset
+- `pdf-lib` + **TTF** (Inter, OFL-1.1) + `fontkit`, subset
   on: `unpdf` extracts the text perfectly, **but the embedded font stream has no
   usable glyph outlines** — most renderers draw a sparse, nearly blank page.
   Rejected. This was only caught by rasterising the output and looking at it;
