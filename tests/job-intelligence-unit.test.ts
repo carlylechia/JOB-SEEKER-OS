@@ -86,6 +86,46 @@ describe('title relationship', () => {
     expect(result.relationship).toBe('DIRECT_TARGET_MATCH');
   });
 
+  /**
+   * A level marker changes the seniority, not the role. Demoting "Senior
+   * Backend Engineer" to "adjacent" for a user targeting "Backend Engineer"
+   * would contradict `titleMatchesAny`, which treats the two as a match.
+   */
+  it('treats a level marker as the same role, not an adjacent one', () => {
+    for (const jobTitle of [
+      'Senior Backend Engineer',
+      'Junior Backend Engineer',
+      'Lead Backend Engineer',
+      'Principal Backend Engineer',
+      'Backend Engineer II',
+    ]) {
+      const result = classifyTitleRelationship({
+        jobTitle,
+        targets: ['Backend Engineer'],
+        deterministicTitleMatch: true,
+      });
+      expect(result.relationship).toBe('DIRECT_TARGET_MATCH');
+    }
+  });
+
+  it('matches a bare role against a levelled target', () => {
+    const result = classifyTitleRelationship({
+      jobTitle: 'Backend Engineer',
+      targets: ['Senior Backend Engineer'],
+      deterministicTitleMatch: true,
+    });
+    expect(result.relationship).toBe('DIRECT_TARGET_MATCH');
+  });
+
+  it('still calls a managerial role conflicting despite a level marker', () => {
+    const result = classifyTitleRelationship({
+      jobTitle: 'Senior Software Engineering Manager',
+      targets: ['Software Engineer'],
+      deterministicTitleMatch: true,
+    });
+    expect(result.relationship).toBe('CONFLICTING_ROLE');
+  });
+
   it('calls a role sharing only filler words a weak match', () => {
     const result = classifyTitleRelationship({
       jobTitle: 'Growth Marketing Lead',
@@ -130,9 +170,11 @@ describe('title relationship', () => {
     expect(clampRelationship('CONFLICTING_ROLE', true)).toBe('CONFLICTING_ROLE');
   });
 
-  it('recognises an equivalent title with a roman-numeral suffix', () => {
-    expect(titlesAreEquivalent('Software Engineer II', 'Software Engineer')).toBe(false);
-    expect(titlesAreEquivalent('Backend  Engineer', 'backend engineer')).toBe(true);
+  it('treats roman numerals and level markers as the same role', () => {
+    // "II" and "Senior" change the level, not the role.
+    expect(titlesAreEquivalent('Software Engineer II', 'Software Engineer')).toBe(true);
+    expect(titlesAreEquivalent('Senior Backend Engineer', 'backend  engineer')).toBe(true);
+    expect(titlesAreEquivalent('Backend Engineer', 'Frontend Engineer')).toBe(false);
   });
 
   it('flags a managerial mismatch only when the user targets IC roles', () => {

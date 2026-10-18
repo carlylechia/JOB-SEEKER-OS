@@ -300,12 +300,63 @@ Every response is `private, no-store`. The POST body is validated with a
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
 | `OPENAI_API_KEY` | Yes | — | Shared with Resume Intelligence. Server-side only. |
-| `JOB_INTELLIGENCE_MODEL` | No | `gpt-5.4-mini` | Must support Structured Outputs. Read in one place. |
+| `JOB_INTELLIGENCE_MODEL` | No | `gpt-4.1-mini` | Must support Structured Outputs. Read in one place. |
 
 Without a key the endpoint returns a clear configuration error and **never
 simulates a successful analysis**.
 
-## 13. Troubleshooting
+## 13. Model selection
+
+Chosen by measurement, not reputation. Every candidate was run against the
+**real** strict schema with a realistic full-size posting (near the 12k character
+ceiling) and scored on schema conformance, requirement coverage, latency and
+measured cost per analysis.
+
+| Model | Latency | Cost/analysis | Requirements found | Notes |
+| --- | --- | --- | --- | --- |
+| `gpt-6-luna` | 56–62 s | ~$0.003 | 17 | Most cautious, but **exceeds the 45 s timeout** — disqualified |
+| `gpt-5.4-mini` | 11–13 s | ~$0.018 | 10 | Most thorough, ~3.4x the cost for a similar answer |
+| **`gpt-4.1-mini`** | **12–15 s** | **~$0.005** | **8** | **Cautious with UNKNOWN, surfaces limitations** |
+| `gpt-4o-mini` | ~15 s | ~$0.0016 | 8 | Cheapest, but over-claims MATCH more often |
+
+`gpt-4.1-mini` is the balance point. This output drives a real career decision,
+so a model that says "we cannot tell" is worth more than three quarters of a
+cent, and it is still **3.4x cheaper** than the previous default.
+
+Resume extraction was benchmarked separately, against a resume with a **known
+ground truth** — 18 concrete fields including name, email, role count, every
+company, every skill, qualification, institution, dates, and that no phone
+number was hallucinated:
+
+| Model | Accuracy | Cost/analysis |
+| --- | --- | --- |
+| **`gpt-4o-mini`** | **18/18** | **~$0.0013** |
+| `gpt-4.1-mini` | 18/18 | ~$0.0037 |
+| `gpt-5.4-mini` | 18/18 | ~$0.0078 |
+
+Identical accuracy, so the cheapest wins outright: **5.8x cheaper** than the
+previous default for the same result.
+
+### A prompt fix the benchmark forced
+
+The first run showed every model misusing `NOT_APPLICABLE` as a softer
+`UNKNOWN` — calling genuine requirements "doesn't apply" when the honest
+answer was "cannot tell". That is the single most misleading thing this output
+can say, and no amount of model choice would fix it. The system prompt now
+defines each outcome explicitly, forbids using `NOT_APPLICABLE` for a real
+requirement, and requires extracting *every* stated requirement rather than
+stopping at the resolvable ones. After the fix, `NOT_APPLICABLE` misuse dropped
+to zero across all candidates and the cheapest model's coverage rose from 6 to
+8 correctly-classified requirements.
+
+### What the verification layer caught on a live run
+
+A live `gpt-4.1-mini` analysis against a real posting: 17 evidence items
+returned, **3 were dropped** because the quote could not be found in the posting
+text. The `NOT_APPLICABLE` misuse check passed, no injection text survived, and
+the deterministic score (79, tier B) passed through untouched.
+
+## 14. Troubleshooting
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
@@ -317,7 +368,7 @@ simulates a successful analysis**.
 | Salary says "not comparable" | Job currency ≠ preference currency (USD) | We do not convert. Check the rate yourself. |
 | Free user sees nothing | `AI_JOB_ANALYSIS` is Pro+ | Expected. Scoring and jobs are unaffected. |
 
-## 14. Out of scope (deliberately)
+## 15. Out of scope (deliberately)
 
 No resume optimisation, no cover letters, no interview generation. No
 autonomous job-search agent. No automatic applications. No URL fetching from

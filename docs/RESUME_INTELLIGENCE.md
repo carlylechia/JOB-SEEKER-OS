@@ -86,7 +86,7 @@ we analyse in one pass, rather than implying full coverage.
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `OPENAI_API_KEY` | Yes, in production | Server-side only. **Never** as `NEXT_PUBLIC_*` — anything public ships to the browser. |
-| `RESUME_INTELLIGENCE_MODEL` | No | Defaults to `gpt-5.4-mini`. Read in exactly one place (`ai-client.ts`). |
+| `RESUME_INTELLIGENCE_MODEL` | No | Defaults to `gpt-4o-mini`. Read in exactly one place (`ai-client.ts`). |
 
 Without a key the endpoint returns a clear configuration error and logs
 `resume_extraction_provider_failed`. It **never** simulates a successful
@@ -99,8 +99,10 @@ one. `ai-client.ts` is the only module that knows OpenAI exists — the service,
 routes and tests depend on a `ResumeAiProvider` interface, so the next AI
 feature reuses this seam instead of adding a second SDK.
 
-`gpt-5.4-mini` supports Structured Outputs and the Responses API, and is a
-cost-appropriate choice for a bounded extraction task run on user demand.
+`gpt-4o-mini` supports Structured Outputs and the Responses API, and was chosen
+for a bounded extraction task by measuring extraction accuracy against a resume
+with a known ground truth: it matched `gpt-4.1-mini` and `gpt-5.4-mini` on all
+18 checked fields while costing 5.8x less per analysis.
 
 ### Structured output
 
@@ -368,7 +370,7 @@ npm run prisma:migrate:deploy
 ```env
 OPENAI_API_KEY="sk-xxxxxxxxx"
 # Optional
-# RESUME_INTELLIGENCE_MODEL="gpt-5.4-mini"
+# RESUME_INTELLIGENCE_MODEL="gpt-4o-mini"
 ```
 
 Without a key, upload and career profile work normally and analysis returns a

@@ -33,7 +33,7 @@ import {
   runJobAnalysis,
 } from '@/lib/job-intelligence/service';
 import { ANALYSIS_SCHEMA_VERSION, modelAnalysisSchema, type ModelAnalysis } from '@/lib/job-intelligence/schema';
-import { buildAnalysisPrompt } from '@/lib/job-intelligence/prompt';
+import { ANALYSIS_SYSTEM_PROMPT, buildAnalysisPrompt } from '@/lib/job-intelligence/prompt';
 import {
   INJECTION_JOB_TEXT,
   MINIMAL_JOB_TEXT,
@@ -1164,5 +1164,55 @@ describe('client input cannot escalate privilege', () => {
     const row = await prisma.jobLead.findUniqueOrThrow({ where: { id: job.id } });
     expect(row.status).toBe('LEAD');
     expect(row.dateApplied).toBeNull();
+  });
+});
+
+// ─── Prompt contract ───────────────────────────────────────────────────────
+
+describe('analysis system prompt', () => {
+  const prompt = ANALYSIS_SYSTEM_PROMPT.toLowerCase();
+
+  it('states that the posting is untrusted data', () => {
+    expect(prompt).toContain('untrusted');
+    expect(prompt).toContain('do not follow');
+  });
+
+  it('forbids inventing skills, salaries and eligibility', () => {
+    expect(prompt).toContain('never invent');
+    expect(prompt).toContain('never claim the candidate has a skill');
+    expect(prompt).toContain('never invent years of experience');
+  });
+
+  it('forbids legal determinations and promises', () => {
+    expect(prompt).toContain('never issue a legal');
+    expect(prompt).toContain('never promise');
+  });
+
+  /**
+   * These three rules were added after benchmarking real models against real
+   * postings. Without them, models consistently misused NOT_APPLICABLE as a
+   * softer UNKNOWN, which is the single most misleading thing this output can
+   * say about a requirement.
+   */
+  it('distinguishes UNKNOWN from NOT_APPLICABLE explicitly', () => {
+    expect(prompt).toContain('not_applicable is not a softer way of saying unknown');
+    expect(prompt).toContain('never use not_applicable');
+  });
+
+  it('forbids listing the job title as a requirement', () => {
+    expect(prompt).toContain('never list the job title');
+  });
+
+  it('tells the model to extract every stated requirement', () => {
+    expect(prompt).toContain('every distinct requirement');
+  });
+
+  it('forbids restating the score', () => {
+    expect(prompt).toContain('do not invent, restate, or estimate a numeric score');
+  });
+
+  it('does not ask for hidden reasoning', () => {
+    expect(prompt).toContain('no hidden reasoning');
+    expect(prompt).toContain('no chain of thought');
   });
 });

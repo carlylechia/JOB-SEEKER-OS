@@ -67,12 +67,40 @@ export type TitleClassification = {
   reason: string;
 };
 
+/**
+ * Tokens that change the LEVEL of a role without changing which role it is.
+ *
+ * "Senior Backend Engineer" and "Backend Engineer" are the same role at
+ * different levels. Seniority is analysed separately, so a modifier here must
+ * not demote the title to "adjacent" — doing so contradicts the product's own
+ * `titleMatchesAny`, which treats the two as a match. Roman numerals are
+ * included for the same reason.
+ */
+const SENIORITY_MODIFIERS = new Set([
+  'junior', 'jr', 'senior', 'sr', 'lead', 'principal', 'staff',
+  'entry', 'entrylevel', 'graduate',
+  'i', 'ii', 'iii', 'iv', 'v',
+]);
+
 /** Canonical comparison key. Same shape as `preferences.normalizeTitle`. */
 export function normalizeTitleTokens(value: string): string {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
+}
+
+/**
+ * The role a title names, with level markers removed.
+ *
+ * Used for the equivalence test only. Deliberately NOT used for the leadership
+ * guard: a management role keeps its "manager" token and is still detected.
+ */
+export function stripSeniorityModifiers(value: string): string {
+  return normalizeTitleTokens(value)
+    .split(' ')
+    .filter((token) => token && !SENIORITY_MODIFIERS.has(token))
+    .join(' ');
 }
 
 function hasLeadershipToken(value: string): boolean {
@@ -138,7 +166,7 @@ export function isManagerialMismatch(jobTitle: string, targets: string[]): boole
  * "Engineering Manager" are not.
  */
 export function titlesAreEquivalent(jobTitle: string, target: string): boolean {
-  return normalizeTitleTokens(jobTitle) === normalizeTitleTokens(target);
+  return stripSeniorityModifiers(jobTitle) === stripSeniorityModifiers(target);
 }
 
 /**
@@ -148,12 +176,12 @@ export function titlesAreEquivalent(jobTitle: string, target: string): boolean {
  * a semantic similarity the data does not support.
  */
 function sharedTokenRatio(jobTitle: string, target: string): number {
-  const filler = new Set(['of', 'the', 'and', 'for', 'a', 'an', 'to', 'in', 'at', 'ii', 'iii']);
+  const filler = new Set(['of', 'the', 'and', 'for', 'a', 'an', 'to', 'in', 'at']);
   const jobTokens = new Set(
-    normalizeTitleTokens(jobTitle).split(' ').filter((token) => token && !filler.has(token)),
+    stripSeniorityModifiers(jobTitle).split(' ').filter((token) => token && !filler.has(token)),
   );
   const targetTokens = new Set(
-    normalizeTitleTokens(target).split(' ').filter((token) => token && !filler.has(token)),
+    stripSeniorityModifiers(target).split(' ').filter((token) => token && !filler.has(token)),
   );
   if (jobTokens.size === 0 || targetTokens.size === 0) return 0;
 

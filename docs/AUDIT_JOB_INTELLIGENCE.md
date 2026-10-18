@@ -185,9 +185,10 @@ contract (`extract(resumeText)`), which is the wrong shape and would couple two
 features that are otherwise independent. The SDK, the error mapping approach,
 the timeout and the "no tools" rule are shared.
 
-Model selection is independent: `JOB_INTELLIGENCE_MODEL`, defaulting to the
-same `gpt-5.4-mini` the resume feature already uses, because a structured-output
-model with strict schema adherence is exactly what this contract needs.
+Model selection is independent: `JOB_INTELLIGENCE_MODEL`, defaulted separately
+from the resume model so the two features can be tuned without a code change.
+Both defaults are set by measurement against the real schemas — see
+`docs/JOB_INTELLIGENCE.md` §15.
 
 ## 7. Entitlements, usage and limits — all already built
 

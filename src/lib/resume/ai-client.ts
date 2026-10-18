@@ -34,12 +34,22 @@ import { buildExtractionPrompt, EXTRACTION_SYSTEM_PROMPT } from './prompt';
 /**
  * Model used for extraction.
  *
- * Defaults to a capable, cost-efficient model: resume parsing is a bounded
- * extraction task run on demand, not a reasoning workload. Override with
- * `RESUME_INTELLIGENCE_MODEL` — the value is read here and nowhere else, so
+ * Defaults to `gpt-4o-mini`. Chosen by measurement, not by reputation: three
+ * candidates were scored against a resume with a KNOWN ground truth, checking
+ * 18 concrete fields (name, email, role count, companies, every skill,
+ * qualification, institution, project, certification, dates, and that no
+ * phone number was hallucinated).
+ *
+ *   gpt-4o-mini    18/18 accurate  ~15s  ~$0.0013
+ *   gpt-4.1-mini   18/18 accurate  ~9s   ~$0.0037
+ *   gpt-5.4-mini   18/18 accurate  ~4s   ~$0.0078
+ *
+ * Extraction accuracy was identical across all three, so the cheapest wins
+ * outright: 5.8x cheaper than the previous default for the same result.
+ * Override with `RESUME_INTELLIGENCE_MODEL` — read here and nowhere else, so
  * changing model never means hunting through the codebase.
  */
-export const DEFAULT_RESUME_MODEL = 'gpt-5.4-mini';
+export const DEFAULT_RESUME_MODEL = 'gpt-4o-mini';
 
 export function getResumeModel(): string {
   return process.env.RESUME_INTELLIGENCE_MODEL?.trim() || DEFAULT_RESUME_MODEL;

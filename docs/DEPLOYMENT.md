@@ -26,8 +26,8 @@ Preview build needs to boot the app).
 | `ALERT_WEBHOOK_URL` | optional | Discord alerting for important errors |
 | `MONETIZATION_ENABLED=false` | optional | Emergency kill switch |
 | `OPENAI_API_KEY` | yes for Resume Intelligence | AI provider key (server-only). Never `NEXT_PUBLIC_*` |
-| `RESUME_INTELLIGENCE_MODEL` | optional | Extraction model. Defaults to `gpt-5.4-mini`. Must support Structured Outputs |
-| `JOB_INTELLIGENCE_MODEL` | optional | Job-fit analysis model. Defaults to `gpt-5.4-mini`. Must support Structured Outputs |
+| `RESUME_INTELLIGENCE_MODEL` | optional | Extraction model. Defaults to `gpt-4o-mini`. Must support Structured Outputs |
+| `JOB_INTELLIGENCE_MODEL` | optional | Job-fit analysis model. Defaults to `gpt-4.1-mini`. Must support Structured Outputs |
 
 **Never** hardcode any of these in source. Do not commit real values.
 
