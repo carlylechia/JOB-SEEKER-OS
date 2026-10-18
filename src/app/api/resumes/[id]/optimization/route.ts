@@ -32,6 +32,7 @@ import { resumeBuilderErrorResponse } from '@/lib/resume-builder/route-errors';
 import { RESUME_OPTIMIZATION_FEATURE } from '@/lib/resume-builder/entitlements';
 import { serialiseOptimization } from '@/lib/resume-builder/wire';
 import { runOptimizationRequestSchema } from '@/lib/resume-builder/requests';
+import { getAiCreditsPayload } from '@/lib/billing/ai-credits';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -63,12 +64,14 @@ export async function GET(request: Request, { params }: Params) {
       const requested = url.searchParams.get('optimizationId');
 
       const entitlements = await getEntitlements(userId);
+      // The measured balance, not the plan's ceiling.
+      const aiCredits = await getAiCreditsPayload(userId, entitlements.limits.aiCredits);
       const access = {
         canOptimize: entitlements.features[RESUME_OPTIMIZATION_FEATURE],
         plan: entitlements.plan,
         isAdmin: entitlements.isAdmin,
         isTrialing: entitlements.isTrialing,
-        aiCreditsRemaining: entitlements.limits.aiCredits,
+        aiCredits,
       };
 
       // Resolving the inputs is also the ownership check: a resume belonging to

@@ -20,6 +20,7 @@ import { getEntitlements } from '@/lib/billing/subscriptions';
 import { listTargetableJobs } from '@/lib/resume-builder/documents';
 import { RESUME_OPTIMIZATION_FEATURE } from '@/lib/resume-builder/entitlements';
 import { serialiseTargetableJob } from '@/lib/resume-builder/wire';
+import { getAiCreditsPayload } from '@/lib/billing/ai-credits';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -48,6 +49,9 @@ export async function GET(request: Request) {
         getEntitlements(userId),
       ]);
 
+      // The measured balance, not the plan's ceiling.
+      const aiCredits = await getAiCreditsPayload(userId, entitlements.limits.aiCredits);
+
       return privateNoStore(
         jsonOk(
           {
@@ -57,7 +61,7 @@ export async function GET(request: Request) {
               plan: entitlements.plan,
               isAdmin: entitlements.isAdmin,
               isTrialing: entitlements.isTrialing,
-              aiCreditsRemaining: entitlements.limits.aiCredits,
+              aiCredits,
             },
           },
           request,

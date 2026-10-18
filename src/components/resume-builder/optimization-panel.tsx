@@ -41,6 +41,8 @@ import {
 } from 'lucide-react';
 
 import type { OptimizationResult, ReviewOperation } from '@/lib/resume-builder/optimization/schema';
+import { AiCreditsMeter } from '@/components/billing/ai-credits-meter';
+import type { AiCreditsPayload } from '@/lib/billing/ai-credits';
 
 type Props = {
   resumeId: string;
@@ -73,7 +75,7 @@ type Wire = {
     staleReasons: string[];
     data: OptimizationResult;
   } | null;
-  access: { canOptimize: boolean; plan: string; aiCreditsRemaining: number | null };
+  access: { canOptimize: boolean; plan: string; aiCredits: AiCreditsPayload };
   privacyNotice: string;
 };
 
@@ -289,13 +291,7 @@ export function ResumeOptimizationPanel({
           What gets sent
         </button>
 
-        {state?.access.aiCreditsRemaining !== null && state?.access.aiCreditsRemaining !== undefined ? (
-          <span className="text-xs text-muted">
-            {state.access.aiCreditsRemaining === 0
-              ? 'No AI credits left this month'
-              : `${state.access.aiCreditsRemaining} AI credit${state.access.aiCreditsRemaining === 1 ? '' : 's'} left`}
-          </span>
-        ) : null}
+        {state?.access.aiCredits ? <AiCreditsMeter credits={state.access.aiCredits} /> : null}
       </div>
 
       {showPrivacy ? (

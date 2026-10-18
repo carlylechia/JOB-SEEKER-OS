@@ -31,6 +31,7 @@ import {
   type RunAnalysisResult,
 } from '@/lib/job-intelligence/service';
 import { jobIntelligenceErrorResponse } from '@/lib/job-intelligence/route-errors';
+import { getAiCreditsPayload } from '@/lib/billing/ai-credits';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -60,6 +61,9 @@ export async function GET(request: Request, { params }: Params) {
       const { id } = await params;
 
       const entitlements = await getEntitlements(userId);
+
+      // The measured balance, not the plan's ceiling.
+      const aiCredits = await getAiCreditsPayload(userId, entitlements.limits.aiCredits);
 
       // Resolving the context is also the ownership check: a job belonging to
       // someone else resolves to null here exactly as it does in the POST path.
@@ -110,7 +114,7 @@ export async function GET(request: Request, { params }: Params) {
               plan: entitlements.plan,
               isAdmin: entitlements.isAdmin,
               isTrialing: entitlements.isTrialing,
-              aiCreditsRemaining: entitlements.limits.aiCredits,
+              aiCredits,
             },
             privacyNotice: AI_PRIVACY_NOTICE,
             model: getJobIntelligenceModel(),

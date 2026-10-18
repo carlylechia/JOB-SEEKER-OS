@@ -40,6 +40,8 @@ import {
 } from '@/lib/job-intelligence/categories';
 import { DIMENSION_LABELS, type DimensionMap, type DimensionOutcome } from '@/lib/job-intelligence/schema';
 import type { JobIntelligenceResult, OverallCategory } from '@/lib/job-intelligence/schema';
+import { AiCreditsMeter } from '@/components/billing/ai-credits-meter';
+import type { AiCreditsPayload } from '@/lib/billing/ai-credits';
 
 // ─── Presentation vocabulary ───────────────────────────────────────────────
 
@@ -130,7 +132,7 @@ type State = {
     plan: string;
     isAdmin: boolean;
     isTrialing: boolean;
-    aiCreditsRemaining: number | null;
+    aiCredits: AiCreditsPayload;
   };
   privacyNotice?: string;
 };
@@ -260,11 +262,14 @@ export function JobIntelligencePanel({ jobId }: { jobId: string }) {
           </p>
         </div>
 
-        {!canAnalyze && (
-          <Link href="/settings/billing" className="btn-secondary text-xs">
-            {state.access.isTrialing ? 'View my plan' : 'See Pro'}
-          </Link>
-        )}
+        <div className="flex flex-col items-end gap-2">
+          {!canAnalyze && (
+            <Link href="/settings/billing" className="btn-secondary text-xs">
+              {state.access.isTrialing ? 'View my plan' : 'See Pro'}
+            </Link>
+          )}
+          {state.access.aiCredits ? <AiCreditsMeter credits={state.access.aiCredits} /> : null}
+        </div>
       </div>
 
       {/* The deterministic score is shown first and separately. It is the

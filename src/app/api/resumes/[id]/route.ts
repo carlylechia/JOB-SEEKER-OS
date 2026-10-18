@@ -32,6 +32,7 @@ import { RESUME_BUILDER_FEATURE } from '@/lib/resume-builder/entitlements';
 import { resumeBuilderErrorResponse } from '@/lib/resume-builder/route-errors';
 import { ACCENT_PALETTE, DENSITY_LABELS, TEMPLATE_LIST } from '@/lib/resume-builder/templates';
 import { serialiseLayout, serialiseResume, serialiseResumeDetail } from '@/lib/resume-builder/wire';
+import { getAiCreditsPayload } from '@/lib/billing/ai-credits';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -61,6 +62,9 @@ export async function GET(request: Request, { params }: Params) {
           getResume({ userId, resumeId: id }),
         ]);
 
+        // The measured balance, not the plan's ceiling.
+        const aiCredits = await getAiCreditsPayload(userId, entitlements.limits.aiCredits);
+
         const layout = await buildResumeLayoutFromRecord(resume);
 
         return privateNoStore(
@@ -88,7 +92,7 @@ export async function GET(request: Request, { params }: Params) {
                 isAdmin: entitlements.isAdmin,
                 isTrialing: entitlements.isTrialing,
                 resumeLimit: entitlements.limits.resumes,
-                aiCreditsRemaining: entitlements.limits.aiCredits,
+                aiCredits,
               },
             },
             request,
