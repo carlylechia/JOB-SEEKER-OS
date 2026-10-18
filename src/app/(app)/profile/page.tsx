@@ -3,13 +3,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { FileText, Upload, ExternalLink, Loader, X, Camera, Trash2 } from 'lucide-react';
 import { useJobs } from '@/hooks/use-job-data';
+import { ResumeAnalysisCta } from '@/components/resume/resume-analysis-cta';
+import {
+  RESUME_ACCEPT_ATTRIBUTE,
+  RESUME_MAX_FILE_BYTES,
+  formatAcceptLabel,
+} from '@/lib/resume/limits';
 
 const ALLOWED_RESUME_TYPES = new Set([
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'text/plain',
 ]);
-const MAX_RESUME_SIZE = 5 * 1024 * 1024;
+const MAX_RESUME_SIZE = RESUME_MAX_FILE_BYTES;
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
 
@@ -189,7 +195,7 @@ function ResumeSection({
         className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line bg-surface-sunken px-4 py-4 text-sm text-muted transition-colors hover:border-accent/50 hover:bg-surface-sunken hover:text-ink disabled:opacity-60"
       >
         {uploading ? <Loader className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-        {uploading ? 'Uploading…' : resumeUrl ? 'Choose replacement file' : 'Upload resume (PDF, DOCX, TXT)'}
+        {uploading ? 'Uploading…' : resumeUrl ? 'Choose replacement file' : `Upload resume (${formatAcceptLabel()})`}
       </button>
       {replacing && (
         <button type="button" onClick={() => setReplacing(false)} className="mt-2 text-xs text-muted hover:text-ink">Cancel</button>
@@ -198,7 +204,7 @@ function ResumeSection({
       <input
         ref={fileRef}
         type="file"
-        accept=".pdf,.docx,.txt"
+        accept={RESUME_ACCEPT_ATTRIBUTE}
         className="sr-only"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f); }}
       />
@@ -263,6 +269,10 @@ export default function ProfilePage() {
           onUpdated={setProfilePictureUrl}
         />
       </div>
+
+      {/* Career profile — the analysis entry point sits with the resume it
+          analyses, rather than behind a separate top-level destination. */}
+      <ResumeAnalysisCta hasResume={Boolean(form.resumeUrl)} />
 
       {/* Text fields */}
       <div className="card-pad grid gap-4 md:grid-cols-2">
