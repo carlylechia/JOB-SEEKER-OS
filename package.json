@@ -22,6 +22,7 @@
     "prisma:studio": "prisma studio",
     "monetization:initialize": "tsx scripts/monetization-initialize.ts",
     "monetization:status": "tsx scripts/monetization-status.ts",
+    "ai-credits:impact": "tsx scripts/ai-credits-impact.ts",
     "admin:bootstrap": "tsx scripts/bootstrap-admin.ts",
     "admin:revoke": "tsx scripts/revoke-admin.ts",
     "maintenance:run": "tsx scripts/run-maintenance.ts",
