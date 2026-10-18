@@ -365,6 +365,7 @@ subscription rows.
 | Feature gates | `requireEntitlement()` → safe `403 PLAN_REQUIRED` |
 | Usage limits | Row-locked transaction; concurrency-tested |
 | Cron | Fail-closed constant-time bearer check |
+| Schema drift | `npm run schema:check` blocks a deploy on proven drift; `GET /api/health` reports `503` when the DB is behind |
 | Resume files | Private blobs + authenticated, ownership-checked route |
 | Cache safety | `private, no-store` on all admin/billing responses |
 | Input validation | Strict Zod schemas rejecting unknown fields |
