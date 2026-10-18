@@ -49,6 +49,7 @@ model User {
   resumeDocuments           ResumeDocument[]
   resumeExtractions         ResumeExtraction[]  @relation("ExtractionOwner")
   confirmedCareerRecords    CareerRecordSource[]
+  jobAnalyses               JobIntelligenceAnalysis[]
 
   @@index([createdAt])
   @@index([emailVerificationToken])
@@ -129,6 +130,18 @@ model JobLead {
   salaryMax           Int?
   currency            String?   @default("USD")
   notes               String?
+  /// The pasted job description, kept separate from `notes`.
+  ///
+  /// `notes` is a free-text field the ingestion flow fills with generated clue
+  /// strings ("Detected stack: … | Eligibility clues: …") and that users
+  /// overwrite freely, so it is not a dependable source of what the employer
+  /// actually wrote. Job Intelligence needs a field that means "this is the
+  /// posting", which is why this one was added rather than trying to parse
+  /// `notes`.
+  ///
+  /// Nullable and additive: existing rows keep working exactly as before, and
+  /// a job with no description still analyses on its metadata alone.
+  jobDescription      String?
   status              String    @default("LEAD")
   dateFound           DateTime  @default(now())
   dateApplied         DateTime?
@@ -144,6 +157,7 @@ model JobLead {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analyses            JobIntelligenceAnalysis[]
 
   @@index([userId, status])
   @@index([userId, company])
@@ -665,4 +679,53 @@ model CareerCredential {
 
   @@index([userId, kind])
   @@index([profileId, sortOrder])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI JOB INTELLIGENCE
+//
+// One analysis is one user's reading of one job, at one point in time, from
+// one set of inputs. It is never shared and never written onto a shared job
+// record: a personalised verdict about someone's career, stored anywhere other
+// than their own rows, is a privacy problem even when the job itself is public.
+//
+// The unique index on (userId, jobId, inputFingerprint, schemaVersion) does two
+// jobs at once, the same way `ResumeExtraction` does: it is the cache key that
+// stops a user paying twice for the same answer, and it is the lock that stops
+// two identical requests triggering two provider calls.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model JobIntelligenceAnalysis {
+  id              String   @id @default(cuid())
+  userId          String
+  jobId           String
+  /// Contract version this result conforms to. Bumping it invalidates old rows
+  /// instead of silently serving them under a newer contract.
+  schemaVersion   Int
+  /// SHA-256 over the normalised job, profile, preference and scoring inputs.
+  /// A completed result is reusable only while this still matches.
+  inputFingerprint String
+  status          String   @default("PROCESSING")
+  /// The verified structured analysis. Stored as JSON because it is versioned
+  /// and variable-shaped data, and because the model's contribution and the
+  /// application's own deterministic facts live side by side in it.
+  data            Json?
+  /// Only a machine-readable code. The user-facing copy lives in
+  /// `ANALYSIS_ERROR_MESSAGES`, never in the database.
+  errorCode       String?
+  provider        String?
+  model           String?
+  /// True when the posting text was cut before analysis. Lets the UI say "this
+  /// analysis ran on a shortened posting" rather than implying full coverage.
+  jobTextTruncated Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  completedAt     DateTime?
+
+  job  JobLead @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId, inputFingerprint, schemaVersion])
+  @@index([userId, jobId, createdAt])
+  @@index([userId, status])
 }

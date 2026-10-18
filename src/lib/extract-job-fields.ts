@@ -69,7 +69,7 @@ export function extractJobFields(input: ExtractInput): ExtractOutput {
   const signals = [stack.length ? `Detected stack: ${stack.join(', ')}` : '', inferEligibilityRegion(rawText) ? `Region clues: ${inferEligibilityRegion(rawText)}` : '', inferTimezoneRequirement(rawText) ? `Timezone clues: ${inferTimezoneRequirement(rawText)}` : ''].filter(Boolean);
   const notes = [stack.length ? `Detected stack: ${stack.join(', ')}` : '', inferEligibilityRegion(rawText) ? `Eligibility clues: ${inferEligibilityRegion(rawText)}` : '', inferTimezoneRequirement(rawText) ? `Timezone clues: ${inferTimezoneRequirement(rawText)}` : ''].filter(Boolean).join(' | ');
   return {
-    prefill: { company, title, source: input.jobUrl ? sourceLabelFromUrl(input.jobUrl) : 'Pasted description', jobUrl: input.jobUrl || '', location: guessLocation(rawText), remoteType: inferRemoteType(rawText), timezoneRequirement: inferTimezoneRequirement(rawText), eligibilityRegion: inferEligibilityRegion(rawText), salaryMin: salary.salaryMin, salaryMax: salary.salaryMax, currency: salary.currency, notes, status: 'LEAD', ...scoring },
+    prefill: { company, title, source: input.jobUrl ? sourceLabelFromUrl(input.jobUrl) : 'Pasted description', jobUrl: input.jobUrl || '', location: guessLocation(rawText), remoteType: inferRemoteType(rawText), timezoneRequirement: inferTimezoneRequirement(rawText), eligibilityRegion: inferEligibilityRegion(rawText), salaryMin: salary.salaryMin, salaryMax: salary.salaryMax, currency: salary.currency, notes, jobDescription: rawText, status: 'LEAD', ...scoring },
     signals,
     previewText: sanitizeText(rawText, 1200),
   };

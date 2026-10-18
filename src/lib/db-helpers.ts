@@ -18,6 +18,7 @@ export type DbJob = {
   salaryMax: number | null;
   currency: string | null;
   notes: string | null;
+  jobDescription: string | null;
   status: string;
   dateFound: Date;
   dateApplied: Date | null;
@@ -49,6 +50,7 @@ export function mapDbJob(job: DbJob): JobLead {
     salaryMax: job.salaryMax ?? undefined,
     currency: job.currency || 'USD',
     notes: job.notes || '',
+    jobDescription: job.jobDescription || '',
     status: job.status as JobLead['status'],
     dateFound: toDateString(job.dateFound) || new Date().toISOString().slice(0, 10),
     dateApplied: toDateString(job.dateApplied),
@@ -189,6 +191,7 @@ export function buildStoredJobPayload(values: JobFormValues | any, preferences: 
     salaryMax: values.salaryMax ? Number(values.salaryMax) : undefined,
     currency: values.currency || 'USD',
     notes: values.notes,
+    jobDescription: values.jobDescription || '',
     status: values.status,
     dateFound: values.dateFound || new Date().toISOString().slice(0, 10),
     dateApplied: values.status === 'APPLIED' ? new Date().toISOString().slice(0, 10) : undefined,

@@ -232,10 +232,16 @@ export function computeDeterministicInputs(params: {
     preferenceCurrency: 'USD',
   });
 
-  // 4. Job text. `notes` is only treated as a description when it actually
-  //    looks like one — see `looksLikeJobDescription`.
-  const rawText = looksLikeJobDescription(description) ? description : '';
-  const prepared = prepareJobTextForProvider(rawText);
+  // 4. Job text.
+  //
+  //    `JobLead.jobDescription` is the field that means "this is the posting".
+  //    `notes` is NOT used as a description source: the ingestion flow writes
+  //    generated clue strings into it and users overwrite it freely, so feeding
+  //    it to the model would present our own guesses to the user as the
+  //    employer's words. `notes` is still read for the work-arrangement
+  //    classification above, where it is only a weak keyword hint, and that
+  //    result is replaced by the user's explicit `remoteType` when set.
+  const prepared = prepareJobTextForProvider(job.jobDescription ?? '');
   const hadJobDescription =
     prepared.text.length > 0 && countMeaningfulJobChars(prepared.text) >= JOB_INTELLIGENCE_MEANINGFUL_CHAR_FLOOR;
 
@@ -273,13 +279,10 @@ export function computeDeterministicInputs(params: {
 /**
  * Does this text look like a real job description?
  *
- * `JobLead.notes` is a free-text field that the ingestion flow fills with
- * generated clue strings like "Detected stack: … | Eligibility clues: …".
- * Feeding that to the model as a posting would be presenting our own guesses
- * to the user as the employer's words, so it is excluded here.
- *
- * The test is structural rather than clever: a description has sentences. A
- * clue line is a single pipe-delimited fragment with a label prefix.
+ * Used by the ingestion and form paths to warn a user before they analyse a
+ * lead whose "description" is only generated clue strings — the same strings
+ * `extractJobFields()` writes into `notes`. It is a heuristic for a hint, never
+ * a gate: a description that fails this test still analyses, on metadata.
  */
 export function looksLikeJobDescription(notes: string): boolean {
   const text = normaliseJobText(notes);
@@ -290,7 +293,9 @@ export function looksLikeJobDescription(notes: string): boolean {
   if (lines.length === 0) return false;
 
   const clueLine = /^(detected stack|eligibility clues|timezone clues|region clues|score notes?)\s*:/i;
-  const allLinesAreClues = lines.every((line) => clueLine.test(line) || (line.includes('|') && line.split('|').every((part) => clueLine.test(part.trim()))));
+  const allLinesAreClues = lines.every(
+    (line) => clueLine.test(line) || (line.includes('|') && line.split('|').every((part) => clueLine.test(part.trim()))),
+  );
 
   if (allLinesAreClues) return false;
 

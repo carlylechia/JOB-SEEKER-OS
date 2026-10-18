@@ -64,6 +64,7 @@ export async function POST(request: Request) {
         salaryMax: job.salaryMax ?? null,
         currency: job.currency,
         notes: job.notes,
+        jobDescription: job.jobDescription || null,
         status: job.status,
         dateFound: new Date(job.dateFound),
         dateApplied: job.dateApplied ? new Date(job.dateApplied) : null,

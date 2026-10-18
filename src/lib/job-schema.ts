@@ -16,6 +16,12 @@ export const jobPayloadSchema = z.object({
   salaryMax: z.union([z.string(), z.number(), z.null(), z.undefined()]).transform((v) => (v === '' || v == null ? undefined : Number(v))).refine((v) => v === undefined || (Number.isFinite(v) && v >= 0 && v <= 1_000_000), 'Invalid maximum salary'),
   currency: z.string().optional().default('USD').transform((v) => sanitizeText(v, 10).toUpperCase() || 'USD'),
   notes: z.string().optional().default('').transform((v) => sanitizeText(v, 5000)),
+  /**
+   * The pasted job description. Bounded separately from `notes` because it is
+   * a different kind of data: this one is the employer's own text, which the
+   * analysis path treats as untrusted input, while `notes` is the user's.
+   */
+  jobDescription: z.string().optional().default('').transform((v) => sanitizeText(v, 20000)),
   status: z.enum(['LEAD', 'SAVED', 'APPLYING', 'APPLIED', 'INTERVIEWING', 'OFFER', 'REJECTED', 'ARCHIVED']).default('LEAD'),
   nextFollowUp: z.string().optional().default('').transform((v) => sanitizeText(v, 20)),
   coreStackMatch: scoreField,
