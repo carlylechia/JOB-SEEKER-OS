@@ -21,8 +21,8 @@ import { auth } from '@/auth';
 import { apiError, handleRoute, jsonOk, privateNoStore } from '@/lib/api';
 import { handleOptions } from '@/lib/cors';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
-import { z } from 'zod';
 import { applyAcceptedOperations } from '@/lib/resume-builder/optimization/service';
+import { applyOptimizationRequestSchema } from '@/lib/resume-builder/requests';
 import { resumeBuilderErrorResponse } from '@/lib/resume-builder/route-errors';
 import { buildResumeLayoutFromRecord } from '@/lib/resume-builder/serve';
 import { serialiseLayout, serialiseResume } from '@/lib/resume-builder/wire';
@@ -36,31 +36,6 @@ type Params = { params: Promise<{ id: string }> };
 export async function OPTIONS(request: Request) {
   return handleOptions(request);
 }
-
-/**
- * Strict, and deliberately so.
- *
- * Note what is absent: `userId`, `jobId`, `plan`, `targetResumeId`. A payload
- * carrying any of them fails validation rather than being quietly ignored, so
- * there is no way to redirect the write at another user's document or another
- * resume.
- */
-const applySchema = z
-  .object({
-    optimizationId: z.string().min(1).max(64),
-    acceptedOperationIds: z.array(z.string().min(1).max(64)).min(1).max(20),
-    /**
-     * The user's own edit to a suggestion, keyed by operation id.
-     *
-     * Bounded, and re-checked with exactly the same anti-fabrication pass as the
-     * model's text — "edit before accepting" is a convenience, not a way around
-     * the truthfulness rule.
-     */
-    editedText: z.record(z.string().max(2000)).optional(),
-    /** The revision the review screen was built from. */
-    expectedRevision: z.number().int().min(1),
-  })
-  .strict();
 
 export async function POST(request: Request, { params }: Params) {
   return handleRoute(
@@ -83,7 +58,7 @@ export async function POST(request: Request, { params }: Params) {
         return apiError('BAD_REQUEST', 'That request was not valid.', { request });
       }
 
-      const parsed = applySchema.safeParse(body);
+      const parsed = applyOptimizationRequestSchema.safeParse(body);
       if (!parsed.success) {
         return apiError('VALIDATION_FAILED', 'That request was not valid.', { request });
       }

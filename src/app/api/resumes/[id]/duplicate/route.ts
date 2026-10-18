@@ -17,30 +17,18 @@ import { auth } from '@/auth';
 import { apiError, handleRoute, jsonOk, privateNoStore } from '@/lib/api';
 import { handleOptions } from '@/lib/cors';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
-import { z } from 'zod';
 import { getEntitlements, requireEntitlement } from '@/lib/billing/subscriptions';
 import { duplicateResume } from '@/lib/resume-builder/documents';
 import { RESUME_BUILDER_FEATURE } from '@/lib/resume-builder/entitlements';
 import { resumeBuilderErrorResponse } from '@/lib/resume-builder/route-errors';
 import { serialiseResume } from '@/lib/resume-builder/wire';
+import { duplicateResumeRequestSchema } from '@/lib/resume-builder/requests';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const ROUTE = '/api/resumes/[id]/duplicate';
 type Params = { params: Promise<{ id: string }> };
-
-/**
- * Strict. `name` and `targetJobId` are both optional; neither carries ownership,
- * a plan or a revision, and the target job is re-resolved against rows the
- * caller owns before it is written.
- */
-const duplicateSchema = z
-  .object({
-    name: z.string().trim().min(1).max(120).optional(),
-    targetJobId: z.string().max(64).nullable().optional(),
-  })
-  .strict();
 
 export async function OPTIONS(request: Request) {
   return handleOptions(request);
@@ -66,7 +54,7 @@ export async function POST(request: Request, { params }: Params) {
       } catch {
         // An empty body duplicates with the defaults.
       }
-      const parsed = duplicateSchema.safeParse(body ?? {});
+      const parsed = duplicateResumeRequestSchema.safeParse(body ?? {});
       if (!parsed.success) {
         return apiError('VALIDATION_FAILED', 'That request was not valid.', { request });
       }

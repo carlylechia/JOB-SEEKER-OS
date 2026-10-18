@@ -1255,6 +1255,12 @@ function pushSkills(
     return;
   }
 
+  // When every skill fell into the default group there is nothing to label:
+  // the section heading already says "SKILLS". Printing the word again would
+  // make this template's text differ from the others for no visual gain, and a
+  // template should never add words the user did not write.
+  const singleUngrouped = groupsInOrder.length === 1 && groupsInOrder[0][0] === 'Skills';
+
   for (const [label, items] of groupsInOrder) {
     const names = items
       .filter((skill) => skill.name.trim().length > 0)
@@ -1273,16 +1279,18 @@ function pushSkills(
         }),
       );
     } else {
-      push(
-        textFlowable({
-          text: label,
-          style: 'semibold',
-          size: body * 0.95,
-          color: accent.accentDeep,
-          lineHeight: metaLineOf(body, bodyLine),
-          metrics,
-        }),
-      );
+      if (!singleUngrouped) {
+        push(
+          textFlowable({
+            text: label,
+            style: 'semibold',
+            size: body * 0.95,
+            color: accent.accentDeep,
+            lineHeight: metaLineOf(body, bodyLine),
+            metrics,
+          }),
+        );
+      }
       push(
         textFlowable({
           text: names.join(' · '),

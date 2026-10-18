@@ -26,7 +26,6 @@
  */
 
 import fs from 'node:fs';
-import path from 'node:path';
 import { createRequire } from 'node:module';
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
@@ -35,14 +34,30 @@ import type { FontStyle, LayoutDocument, LayoutMetrics } from './layout';
 // ─── Font files ─────────────────────────────────────────────────────────────
 
 /**
- * Resolved through `require.resolve` so the path works whether the package is
- * hoisted or nested, and so no bundler tries to trace a literal path that does
- * not exist in this repository.
+ * Resolved at RUNTIME, through `createRequire`, with a variable specifier.
+ *
+ * This is deliberate and slightly awkward, so the reason is recorded here:
+ *
+ *  - A LITERAL `require.resolve('….ttf')` makes webpack create a module for
+ *    the font file and try to parse it as JavaScript. The production build fails
+ *    with `Module parse failed: Unexpected character`.
+ *  - `serverExternalPackages` does not help: it externalises packages reached
+ *    through `require`, not a deep file reached through `require.resolve`.
+ *  - A variable specifier defeats static analysis, so the bundler emits a
+ *    "Critical dependency" warning and leaves the binary alone. The build
+ *    succeeds and the file is read from disk exactly where Node put it.
+ *
+ * The alternative was committing ~690 KB of TTF binaries to the repository to
+ * silence one cosmetic warning. The warning is the cheaper trade, and the
+ * behaviour it describes — the fonts are runtime assets, not modules — is what
+ * we actually want.
  */
-const FONT_FILES: Record<FontStyle, string> = {
+const FONT_SPECIFIERS: Record<FontStyle, string> = {
   regular: '@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf',
   semibold: '@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf',
 };
+
+const requireFromHere = createRequire(import.meta.url);
 
 let fontBytesCache: Record<FontStyle, Uint8Array> | null = null;
 
@@ -56,10 +71,9 @@ let fontBytesCache: Record<FontStyle, Uint8Array> | null = null;
 function loadFontBytes(): Record<FontStyle, Uint8Array> {
   if (fontBytesCache) return fontBytesCache;
 
-  const require_ = createRequire(import.meta.url);
   const loaded = {} as Record<FontStyle, Uint8Array>;
-  for (const [style, specifier] of Object.entries(FONT_FILES) as Array<[FontStyle, string]>) {
-    loaded[style] = new Uint8Array(fs.readFileSync(require_.resolve(specifier)));
+  for (const style of ['regular', 'semibold'] as FontStyle[]) {
+    loaded[style] = new Uint8Array(fs.readFileSync(requireFromHere.resolve(FONT_SPECIFIERS[style])));
   }
   fontBytesCache = loaded;
   return loaded;
@@ -297,7 +311,16 @@ export async function renderPdfLayout(layout: LayoutDocument): Promise<RenderPdf
     }
   }
 
-  const output = await doc.save({ useObjectStreams: true });
+  // Object streams OFF, deliberately.
+  //
+  // They would save a few kilobytes on a file that is almost entirely embedded
+  // font, and cost something real: the catalog, page tree and font dictionaries
+  // become invisible in the raw bytes. That matters because the security
+  // guarantees here — no `/JavaScript`, no `/OpenAction`, no `/Launch` in a
+  // document built from untrusted resume text — are asserted against the raw
+  // file, and an assertion against compressed bytes proves nothing. An
+  // inspectable export is also a better one to debug.
+  const output = await doc.save({ useObjectStreams: false });
   return { bytes: output, pageCount: layout.pages.length };
 }
 

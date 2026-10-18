@@ -512,22 +512,27 @@ export async function careerProfileSummary(userId: string): Promise<{
 /**
  * Create a resume.
  *
- * `limits.resumes` is enforced HERE and only here, from the centralised plan
- * configuration. `null` means unlimited. The check and the insert are not in
- * one transaction, which is a known and accepted looseness: two simultaneous
- * creates could both pass a limit of 1 and produce 2. That is strictly better
- * than a read/check/write quota that could be raced to bypass entirely, and it
- * matches how the existing `consumeUsage` advisory lock is scoped to the
- * expensive AI path rather than to cheap document creation.
+ * `limit` is REQUIRED, not defaulted. Every call site must pass the value
+ * resolved from the caller's entitlements, and the compiler enforces it — a
+ * default would quietly fall back to the Free limit and give a paying customer
+ * one resume because a route forgot to pass the argument. Required-and-explicit
+ * is the fail-closed choice.
+ *
+ * `null` means unlimited. The check and the insert are not in one transaction,
+ * which is a known and accepted looseness: two simultaneous creates could both
+ * pass a limit of 1 and produce 2. That is strictly better than a read/check/write
+ * quota that could be raced to bypass entirely, and it matches how the existing
+ * `consumeUsage` advisory lock is scoped to the expensive AI path rather than to
+ * cheap document creation.
  */
 export async function createResume(params: {
   userId: string;
   input: CreateResumeInput;
-  limit?: PlanLimitValue;
+  limit: PlanLimitValue;
 }): Promise<StructuredResumeRecord> {
   const { userId, input } = params;
 
-  const limit = params.limit ?? PLAN_LIMITS.FREE.resumes;
+  const limit = params.limit;
   if (limit !== null) {
     const used = await countResumes(userId);
     if (used >= limit) throw new ResumeLimitExceededError(limit, used);
@@ -553,9 +558,14 @@ export async function createResume(params: {
 
   if (input.from === 'DUPLICATE') {
     const source = await getResume({ userId, resumeId: input.sourceResumeId as string });
-    // A deep copy of the CONTENT, not of the row: the variant gets fresh entry
-    // ids so an edit to one can never be mistaken for an edit to the other.
-    content = structuredClone(source.content);
+    // A deep copy of the CONTENT with FRESH ENTRY IDS.
+    //
+    // The ids matter. If a variant kept the master's entry ids, then anything
+    // that addresses an entry by id — a stored optimisation, an in-flight
+    // request — could be applied to the wrong document, and two documents would
+    // be indistinguishable to that code. Regenerating them makes the copies
+    // genuinely independent rather than merely separately stored.
+    content = reidentifyEntries(structuredClone(source.content));
     sourceResumeId = source.id;
     origin = 'DUPLICATE';
     sourceProfileVersion = source.sourceProfileVersion;
@@ -614,7 +624,8 @@ export async function duplicateResume(params: {
   name?: string;
   /** Optional target job, so "create a tailored version" is one action. */
   targetJobId?: string | null;
-  limit?: PlanLimitValue;
+  /** Required — see `createResume`. */
+  limit: PlanLimitValue;
 }): Promise<StructuredResumeRecord> {
   const source = await getResume(params);
   return createResume({
@@ -735,6 +746,23 @@ export async function deleteResume(params: { userId: string; resumeId: string })
 async function resolveTargetJobId(userId: string, jobId: string | null): Promise<string | null> {
   const resolved = await resolveTargetJob({ userId, jobId });
   return resolved?.id ?? null;
+}
+
+/**
+ * Replace every entry id in a copied document.
+ *
+ * Only ids change. Nothing is edited, reordered, added or removed, so a copy
+ * is byte-for-byte equivalent in content while being a different document.
+ */
+function reidentifyEntries(content: ResumeContent): ResumeContent {
+  return {
+    ...content,
+    experiences: content.experiences.map((entry) => ({ ...entry, id: randomUUID() })),
+    education: content.education.map((entry) => ({ ...entry, id: randomUUID() })),
+    skills: content.skills.map((entry) => ({ ...entry, id: randomUUID() })),
+    projects: content.projects.map((entry) => ({ ...entry, id: randomUUID() })),
+    credentials: content.credentials.map((entry) => ({ ...entry, id: randomUUID() })),
+  };
 }
 
 /** Non-empty content test, used only for a log hint. Never for behaviour. */

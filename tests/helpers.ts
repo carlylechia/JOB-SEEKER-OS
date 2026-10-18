@@ -10,13 +10,15 @@ export const DAY_MS = 24 * 60 * 60 * 1000;
 /** Launch timestamp used by every test, so assertions are deterministic. */
 export const T0 = new Date('2026-03-01T12:00:00.000Z');
 
-export async function createUser(opts: { role?: 'USER' | 'ADMIN'; email?: string } = {}) {
+export async function createUser(
+  opts: { role?: 'USER' | 'ADMIN'; email?: string; name?: string } = {},
+) {
   const email = opts.email ?? `test-${Math.random().toString(36).slice(2, 10)}@example.test`;
   return prisma.user.create({
     data: {
       email,
       passwordHash: 'not-a-real-hash',
-      name: 'Test User',
+      name: opts.name ?? 'Test User',
       role: opts.role ?? 'USER',
       emailVerified: new Date(),
     },

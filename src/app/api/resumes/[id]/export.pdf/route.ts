@@ -32,7 +32,7 @@ import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 import { logImportantError, logImportantInfo } from '@/lib/observability';
 import { getResume } from '@/lib/resume-builder/documents';
 import { buildResumeLayoutFromRecord, renderResumePdf } from '@/lib/resume-builder/serve';
-import { resumeDownloadFileName } from '@/lib/resume-builder/pdf';
+import { resumeDownloadHeaders } from '@/lib/resume-builder/download';
 import { resumeBuilderErrorResponse } from '@/lib/resume-builder/route-errors';
 
 export const runtime = 'nodejs';
@@ -90,8 +90,6 @@ export async function GET(request: Request, { params }: Params) {
         const layout = await buildResumeLayoutFromRecord(resume);
         const { bytes, pageCount } = await renderResumePdf(layout);
 
-        const fileName = resumeDownloadFileName(resume.name);
-
         await logImportantInfo({
           event: 'resume_pdf_exported',
           userId,
@@ -107,21 +105,10 @@ export async function GET(request: Request, { params }: Params) {
 
         return new Response(bytes as unknown as BodyInit, {
           status: 200,
-          headers: {
-            'Content-Type': 'application/pdf',
-            'Content-Length': String(bytes.byteLength),
-            // `attachment` so the browser downloads rather than navigates, and
-            // the ASCII fallback plus the RFC 5987 form so non-Latin names
-            // survive. The filename is server-derived, never client-supplied.
-            'Content-Disposition': `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
-            'Content-Security-Policy': "default-src 'none'; sandbox",
-            'X-Content-Type-Options': 'nosniff',
-            // A resume must never be cached by a CDN, a proxy or the browser's
-            // back button.
-            'Cache-Control': 'private, no-store, max-age=0, must-revalidate',
-            Pragma: 'no-cache',
-            Vary: 'Cookie',
-          },
+          headers: resumeDownloadHeaders({
+            resumeName: resume.name,
+            byteLength: bytes.byteLength,
+          }),
         });
       } catch (error) {
         await logImportantError({

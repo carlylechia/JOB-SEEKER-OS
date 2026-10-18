@@ -19,7 +19,6 @@ import { auth } from '@/auth';
 import { apiError, handleRoute, jsonOk, privateNoStore } from '@/lib/api';
 import { handleOptions } from '@/lib/cors';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
-import { z } from 'zod';
 import { getEntitlements } from '@/lib/billing/subscriptions';
 import { getOptimizationModel } from '@/lib/resume-builder/optimization/ai-client';
 import { AI_PRIVACY_NOTICE } from '@/lib/resume-builder/optimization/prompt';
@@ -32,6 +31,7 @@ import {
 import { resumeBuilderErrorResponse } from '@/lib/resume-builder/route-errors';
 import { RESUME_OPTIMIZATION_FEATURE } from '@/lib/resume-builder/entitlements';
 import { serialiseOptimization } from '@/lib/resume-builder/wire';
+import { runOptimizationRequestSchema } from '@/lib/resume-builder/requests';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -127,18 +127,6 @@ export async function GET(request: Request, { params }: Params) {
   );
 }
 
-/**
- * Strict: an unexpected field is an error, not something to ignore. A payload
- * carrying `userId`, `jobId`, `plan` or `content` must not validate — in
- * particular there is no way to name a different target job from here.
- */
-const requestSchema = z
-  .object({
-    /** Re-run even when a completed proposal exists for these exact inputs. */
-    force: z.boolean().optional(),
-  })
-  .strict();
-
 export async function POST(request: Request, { params }: Params) {
   return handleRoute(
     async () => {
@@ -163,7 +151,7 @@ export async function POST(request: Request, { params }: Params) {
         // already aimed at.
       }
 
-      const parsed = requestSchema.safeParse(body ?? {});
+      const parsed = runOptimizationRequestSchema.safeParse(body ?? {});
       if (!parsed.success) {
         return apiError('VALIDATION_FAILED', 'That request was not valid.', { request });
       }

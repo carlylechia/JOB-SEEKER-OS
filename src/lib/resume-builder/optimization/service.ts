@@ -111,6 +111,27 @@ export class NoOperationsAcceptedError extends Error {
   }
 }
 
+/**
+ * The user accepted a suggestion, edited it, and the edit introduced something
+ * their resume does not support.
+ *
+ * Deliberately DISTINCT from `NoOperationsAcceptedError`. Telling somebody to
+ * "choose at least one suggestion" when they chose one and then typed their own
+ * version would send them looking in entirely the wrong place — and the thing
+ * they actually need to know is that the figure they typed is the problem.
+ */
+export class EditedTextRejectedError extends Error {
+  readonly code = 'VALIDATION_FAILED';
+  readonly status = 422;
+
+  constructor() {
+    super(
+      'Your edited text introduced something your resume does not support, so nothing was changed. Take the figure out, or add it to your resume first.',
+    );
+    this.name = 'EditedTextRejectedError';
+  }
+}
+
 export type OptimizationSummary = {
   id: string;
   resumeId: string;
@@ -339,9 +360,14 @@ export async function buildOptimizationInputs(params: {
   const fitTier = deterministic?.fitTier ?? 'C';
   const blockedBy = deterministic?.blockedBy ?? [];
 
+  // "Thin" means we could not see enough to be specific. A missing posting, a
+  // sparse resume and an unconfirmed career profile all reduce confidence in
+  // the same direction, and the review UI says so rather than implying the
+  // proposal had everything.
   const thinInputs =
-    (!hadJobDescription && jobText.length < JOB_INTELLIGENCE_MIN_JOB_CHARS) ||
+    jobText.length < JOB_INTELLIGENCE_MIN_JOB_CHARS ||
     resumeText.length < OPTIMIZATION_MIN_RESUME_CHARS ||
+    !hadConfirmedProfile ||
     profileText.length < OPTIMIZATION_MIN_PROFILE_CHARS;
 
   const inputFingerprint = fingerprintFor({
@@ -444,7 +470,10 @@ export async function runOptimization(
   // comparison of two fingerprints rather than a heuristic.
   const inputs = await buildOptimizationInputs({ userId, resumeId, jobId: options.jobId });
 
-  if (!inputs.hadJobDescription && inputs.jobText.length < JOB_INTELLIGENCE_MIN_JOB_CHARS) {
+  // Length, not presence. A job whose description field holds three words is
+  // the same problem as one that has none, and paying for an analysis of
+  // "x" would be spending the user's credit on nothing.
+  if (inputs.jobText.length < JOB_INTELLIGENCE_MIN_JOB_CHARS) {
     await logImportantInfo({
       event: 'resume_optimization_failed',
       userId,
@@ -925,8 +954,10 @@ export async function applyAcceptedOperations(
 
   // Anything the re-check refused is reported, not applied.
   const recheckIds = new Set(recheck.operations.map((operation) => operation.id));
+  let editedTextRejections = 0;
   for (const operation of chosen) {
     if (recheckIds.has(operation.id)) continue;
+    editedTextRejections += 1;
     skipped.push({
       id: operation.id,
       reason: 'The edited text introduced something your resume does not support.',
@@ -935,6 +966,9 @@ export async function applyAcceptedOperations(
   const applicable = recheck.operations;
 
   if (applicable.length === 0) {
+    // The user DID select something; if the only reason nothing applied is that
+    // their own edit introduced an unsupported claim, say so.
+    if (editedTextRejections > 0) throw new EditedTextRejectedError();
     throw new NoOperationsAcceptedError();
   }
 

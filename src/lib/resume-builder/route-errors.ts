@@ -23,6 +23,7 @@ import {
 } from './documents';
 import {
   DuplicateOptimizationInFlightError,
+  EditedTextRejectedError,
   NoOperationsAcceptedError,
   NoTargetJobError,
   OptimizationStaleError,
@@ -81,6 +82,10 @@ function map(error: unknown): Mapped | null {
   }
 
   if (error instanceof NoOperationsAcceptedError) {
+    return { code: 'VALIDATION_FAILED', message: error.message };
+  }
+
+  if (error instanceof EditedTextRejectedError) {
     return { code: 'VALIDATION_FAILED', message: error.message };
   }
 

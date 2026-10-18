@@ -160,9 +160,30 @@ export function findNewClaims(proposed: string, corpus: SourceCorpus): ClaimViol
   const haystack = lower(
     [corpus.resumeText, corpus.profileText, corpus.jobText, corpus.jobMetaText].join('\n'),
   );
-  // Strip separators so "1,200" in the source matches "1200" in the proposal and
-  // vice versa.
-  const haystackDigits = haystack.replace(/[,\s]/g, '');
+
+  // ── What may license a claim ────────────────────────────────────────────
+  //
+  // ONLY the candidate's own resume and career profile. Deliberately NOT the
+  // job description.
+  //
+  // A number in the posting is somebody else's number. If the job says "we cut
+  // latency by 40%", then "Cut latency by 40%" is not something the candidate
+  // may put on their resume — it would be a claim about an employer presented as
+  // a personal achievement, which is precisely the fabrication this feature
+  // exists to refuse. The posting licenses the REQUIREMENT ("improve
+  // reliability"), never the RESULT.
+  const claimable = lower([corpus.resumeText, corpus.profileText].join('\n'));
+
+  // Numbers are compared as whole TOKENS, not as substrings. A substring test
+  // would let "4 million" be licensed by "40 analysts" elsewhere in the resume,
+  // because "4" appears inside "40". That is not a theoretical gap: it is exactly
+  // the kind of near-miss a fabricated figure would be built to exploit.
+  const sourceNumbers = new Set<string>();
+  for (const match of claimable.matchAll(NUMERIC_PATTERN)) {
+    const token = match[0].trim();
+    const digits = token.replace(/[^\d.]/g, '');
+    if (digits.length > 0) sourceNumbers.add(digits);
+  }
 
   const violations: ClaimViolation[] = [];
   const seen = new Set<string>();
@@ -173,9 +194,7 @@ export function findNewClaims(proposed: string, corpus: SourceCorpus): ClaimViol
     const digits = token.replace(/[^\d.]/g, '');
     if (digits.length === 0) continue;
 
-    const inSource =
-      haystack.includes(lower(token)) || haystackDigits.includes(digits.replace(/[.,]/g, ''));
-    if (inSource) continue;
+    if (sourceNumbers.has(digits)) continue;
 
     const key = `M:${digits}`;
     if (seen.has(key)) continue;
@@ -183,34 +202,35 @@ export function findNewClaims(proposed: string, corpus: SourceCorpus): ClaimViol
     violations.push({
       token,
       kind: 'METRIC',
-      detail: 'This figure does not appear in your resume, your career profile or the job description.',
+      detail:
+        'This figure does not appear in your resume or your career profile. A number in the job description describes the employer, not you.',
     });
   }
 
   for (const match of proposed.matchAll(ACRONYM_PATTERN)) {
     const token = match[0];
-    if (haystack.includes(lower(token))) continue;
+    if (claimable.includes(lower(token))) continue;
     const key = `A:${token}`;
     if (seen.has(key)) continue;
     seen.add(key);
     violations.push({
       token,
       kind: 'ACRONYM',
-      detail: 'This technology or standard is not named anywhere in your resume or career profile.',
+      detail: 'This technology or standard is not named in your resume or your career profile.',
     });
   }
 
   for (const match of proposed.matchAll(PROPER_NOUN_PATTERN)) {
     const token = match[0];
     if (SENTENCE_STARTERS.has(lower(token))) continue;
-    if (haystack.includes(lower(token))) continue;
+    if (claimable.includes(lower(token))) continue;
     const key = `P:${lower(token)}`;
     if (seen.has(key)) continue;
     seen.add(key);
     violations.push({
       token,
       kind: 'PROPER_NOUN',
-      detail: 'This name is not mentioned in your resume, your career profile or the job description.',
+      detail: 'This name is not mentioned in your resume or your career profile.',
     });
   }
 
