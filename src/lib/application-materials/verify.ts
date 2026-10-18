@@ -264,7 +264,12 @@ export function verifyMaterial(params: {
   const { model, candidate, sources, meta } = params;
 
   const knownNumbers = candidate.numbers;
-  const organisations = [...candidate.organisationNames, ...candidate.jobTitles];
+  const organisations = [
+    ...candidate.organisationNames,
+    ...candidate.jobTitles,
+    ...candidate.technologies,
+    ...candidate.skillNames,
+  ];
 
   const claims: VerifiedClaim[] = [];
   const seenClaims = new Set<string>();
@@ -322,7 +327,9 @@ export function verifyMaterial(params: {
   }
 
   // ── Assemble the full text ───────────────────────────────────────────────
-  const content = assembleContent(model.subject, model.opening, model.body, model.closing);
+  // Assembled from the VERIFIED paragraphs, not the raw model output, so a
+  // sentence removed by verification never reaches the stored draft.
+  const content = assembleVerifiedParagraphs(paragraphs);
 
   const reviewNotes = [
     ...model.reviewNotes
@@ -375,23 +382,16 @@ export function verifyMaterial(params: {
 }
 
 /**
- * Assemble opening + body + closing into the stored text.
+ * Assemble verified paragraphs into the stored text.
  *
  * The greeting and sign-off are computed server-side from real values; the
  * model never writes them.
  */
-function assembleContent(
-  subject: string | null,
-  opening: string,
-  body: Array<{ heading: string | null; text: string }>,
-  closing: string,
-): string {
+function assembleVerifiedParagraphs(paragraphs: DraftParagraph[]): string {
   const lines: string[] = [];
-  if (opening.trim()) lines.push(opening.trim());
-  for (const paragraph of body) {
+  for (const paragraph of paragraphs) {
     if (paragraph.heading) lines.push(paragraph.heading.trim());
     if (paragraph.text.trim()) lines.push(paragraph.text.trim());
   }
-  if (closing.trim()) lines.push(closing.trim());
   return lines.join('\n\n').slice(0, MATERIAL_MAX_CONTENT_CHARS);
 }

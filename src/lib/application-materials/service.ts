@@ -291,6 +291,12 @@ export async function runGeneration(
     profileVersion,
   });
 
+  // A job id that does not resolve to one of the caller's own jobs is a 404,
+  // identical to a job that does not exist. Never confirm another user's job.
+  if (options.jobId && !context.job) {
+    throw new JobNotFoundError();
+  }
+
   // 3. Build the input fingerprint over the real context the model will see,
   //    so two identical requests never diverge.
   const fingerprintInput = {
