@@ -379,6 +379,8 @@ export async function runResumeExtraction(
   } else {
     try {
       const usage = await consumeUsage(userId, AI_RESUME_PARSER_FEATURE, 1, {
+        // One shared AI allowance, not a per-feature one. See `usage.ts`.
+        pool: 'AI',
         limit: entitlements.limits.aiCredits,
         idempotencyKey,
       });
