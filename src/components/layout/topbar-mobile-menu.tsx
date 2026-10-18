@@ -47,7 +47,9 @@ export function TopbarMobileMenu({ label }: { label: string }) {
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-12 z-40 w-[min(88vw,22rem)] rounded-2xl border border-line bg-card/95 p-3 shadow-lift backdrop-blur-xl">
+        /* Opaque, and height-capped so a short viewport scrolls the menu
+           instead of letting it run off the screen. */
+        <div className="absolute right-0 top-12 z-40 max-h-[calc(100dvh-5rem)] w-[min(88vw,22rem)] overflow-y-auto overscroll-contain rounded-2xl border border-line bg-card p-3 shadow-lift">
           <div className="mb-3 rounded-xl border border-line bg-surface px-3 py-2 text-sm text-muted">{label}</div>
 
           <div className="grid gap-2">

@@ -296,10 +296,11 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
       <header className="sticky top-0 z-30 border-b border-line bg-[color:var(--nav-scrim)] px-6 py-4 backdrop-blur-xl supports-[backdrop-filter]:bg-[color:var(--nav-scrim)]">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Logo compact href="/" />
+            <Logo compact hideTextOnSmall href="/" />
           </div>
-          <div className="flex items-center gap-2">
-            <ThemeSwitch size="sm" />
+          <div className="flex shrink-0 items-center gap-2">
+            <ThemeSwitch size="xs" className="sm:hidden" />
+            <ThemeSwitch size="sm" className="hidden sm:flex" />
             <button
               type="button"
               onClick={handleSkip}

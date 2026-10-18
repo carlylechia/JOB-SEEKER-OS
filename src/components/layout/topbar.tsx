@@ -42,10 +42,11 @@ export function Topbar({ user }: { user: TopbarUser }) {
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-[color:var(--nav-scrim)] backdrop-blur-xl supports-[backdrop-filter]:bg-[color:var(--nav-scrim)]">
-      <div className="flex min-h-16 items-center justify-between gap-3 px-4 py-3 lg:px-8">
-        <div className="flex items-center">
+      <div className="flex min-h-16 items-center justify-between gap-2 px-4 py-3 lg:gap-3 lg:px-8">
+        <div className="flex min-w-0 items-center">
           <div className="lg:hidden">
-            <Logo compact href="/dashboard" />
+            {/* Mark only below sm: the wordmark returns once there is room. */}
+            <Logo compact hideTextOnSmall href="/dashboard" />
           </div>
 
           <div className="relative hidden w-full max-w-md md:block">
@@ -54,7 +55,7 @@ export function Topbar({ user }: { user: TopbarUser }) {
           </div>
         </div>
 
-        <div className="hidden items-center gap-3 lg:flex">
+        <div className="hidden shrink-0 items-center gap-3 lg:flex">
           <Link href="/profile" className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-ink">
             <UserAvatar user={user} />
             <span>{label}</span>
@@ -66,8 +67,10 @@ export function Topbar({ user }: { user: TopbarUser }) {
           <SignOutButton />
         </div>
 
-        <div className="flex items-center gap-2 lg:hidden">
-          <ThemeSwitch size="sm" />
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 lg:hidden">
+          {/* Icon-only pill on phones; the fuller switch once space allows. */}
+          <ThemeSwitch size="xs" className="sm:hidden" />
+          <ThemeSwitch size="sm" className="hidden sm:flex" />
           <TopbarMobileMenu label={label} />
         </div>
       </div>

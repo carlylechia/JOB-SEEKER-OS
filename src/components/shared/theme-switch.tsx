@@ -30,6 +30,16 @@ const OPTIONS: Option[] = [
 ];
 
 const SIZES = {
+  /** Tiny navbar variant: icon-only, no chips, still a clear two-slot pill. */
+  xs: {
+    wrap: 'gap-0.5 p-0.5',
+    slot: 'h-8 w-8 justify-center',
+    icon: 'h-4 w-4',
+    chip: 'hidden',
+    // Container padding 0.125rem, gap 0.125rem -> each column is 50% - 0.1875rem.
+    thumb: 'w-[calc(50%-0.1875rem)]',
+    shift: 'translate-x-[calc(100%+0.125rem)]',
+  },
   sm: {
     wrap: 'p-1 gap-1',
     slot: 'h-8 gap-1.5 px-2.5 text-xs',
@@ -51,6 +61,8 @@ const SIZES = {
   },
 } as const;
 
+export type ThemeSwitchSize = keyof typeof SIZES;
+
 /**
  * Segmented light/dark switch.
  *
@@ -59,17 +71,19 @@ const SIZES = {
  * lone selected value, and a thumb slides between the two slots.
  * Implemented as a real radiogroup: arrow keys and screen readers both work.
  */
-export function ThemeSwitch({ size = 'md' }: { size?: 'sm' | 'md' }) {
+export function ThemeSwitch({ size = 'md', className = '' }: { size?: ThemeSwitchSize; className?: string }) {
   const { theme, setTheme, mounted } = useTheme();
   const s = SIZES[size];
   const active = mounted ? theme : 'light';
   const { register, onKeyDown } = useRadioGroup(OPTIONS.length);
+  // Only the roomy variants have space for a written label.
+  const showLabel = size === 'md';
 
   return (
     <div
       role="radiogroup"
       aria-label="Colour theme"
-      className={`relative inline-grid shrink-0 grid-cols-2 items-center rounded-full border border-line bg-surface ${s.wrap}`}
+      className={`relative inline-grid shrink-0 grid-cols-2 items-center rounded-full border border-line bg-surface ${s.wrap} ${className}`}
     >
       {/* Thumb carries the active state and animates between the two slots. */}
       <span
@@ -100,7 +114,7 @@ export function ThemeSwitch({ size = 'md' }: { size?: 'sm' | 'md' }) {
             }`}
           >
             <Icon className={`${s.icon} shrink-0`} aria-hidden />
-            {size === 'md' ? <span className="leading-none">{label}</span> : null}
+            {showLabel ? <span className="leading-none">{label}</span> : null}
             {/* Faint outline + palette chip so the unselected theme still reads
                 as a real, available option. */}
             <span

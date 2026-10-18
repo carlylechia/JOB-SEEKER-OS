@@ -126,7 +126,9 @@ export function FeatureComparisonTable({ currentPlan }: { currentPlan: string })
                       >
                         {included ? 'Included' : 'Not included'}
                         {isCurrent ? (
-                          <span className="ml-2 text-[10px] font-medium uppercase tracking-wide text-warn-text">
+                          /* Drops to its own line on narrow cells so the table
+                             never has to scroll sideways. */
+                          <span className="mt-1 block whitespace-nowrap text-[10px] font-medium uppercase tracking-wide text-warn-text sm:mt-0 sm:ml-2 sm:inline">
                             Current
                           </span>
                         ) : null}

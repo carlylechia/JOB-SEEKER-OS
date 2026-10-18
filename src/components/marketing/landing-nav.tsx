@@ -28,7 +28,8 @@ export async function LandingNav() {
         <div className="rounded-[28px] border border-line bg-[color:var(--nav-scrim)] px-4 py-3 shadow-nav backdrop-blur-2xl sm:px-5">
           <div className="flex items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-4">
-              <Logo compact href="/" />
+              {/* Mark only below sm so the pill nav fits small phones. */}
+              <Logo compact hideTextOnSmall href="/" />
             </div>
 
             <nav className="hidden items-center gap-1 rounded-full border border-line bg-surface-sunken p-1 lg:flex">
@@ -49,7 +50,7 @@ export async function LandingNav() {
               </Link>
             </nav>
 
-            <div className="hidden items-center gap-2.5 md:flex">
+            <div className="hidden shrink-0 items-center gap-2.5 md:flex">
               <ThemeSwitch size="sm" />
               {session?.user ? (
                 <Link
@@ -78,8 +79,9 @@ export async function LandingNav() {
               )}
             </div>
 
-            <div className="flex items-center gap-2 md:hidden">
-              <ThemeSwitch size="sm" />
+            <div className="flex shrink-0 items-center gap-2 md:hidden">
+              <ThemeSwitch size="xs" className="sm:hidden" />
+              <ThemeSwitch size="sm" className="hidden sm:flex" />
               <details className="group relative">
                 <summary className="inline-flex h-10 w-10 list-none items-center justify-center rounded-xl border border-line bg-surface-sunken text-ink transition hover:bg-surface-sunken-hover [&::-webkit-details-marker]:hidden">
                   <Menu className="h-5 w-5 group-open:hidden" />
@@ -87,7 +89,7 @@ export async function LandingNav() {
                   <span className="sr-only">Open menu</span>
                 </summary>
 
-                <div className="absolute right-0 top-14 z-40 w-[min(88vw,22rem)] rounded-2xl border border-line bg-card/95 p-3 shadow-lift backdrop-blur-xl">
+                <div className="absolute right-0 top-14 z-40 max-h-[calc(100dvh-6rem)] w-[min(88vw,22rem)] overflow-y-auto overscroll-contain rounded-2xl border border-line bg-card p-3 shadow-lift">
                   <div className="grid gap-2">
                     {navLinks.map((link) => (
                       <a

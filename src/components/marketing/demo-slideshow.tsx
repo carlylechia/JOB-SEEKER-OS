@@ -446,7 +446,7 @@ export function DemoSlideshow() {
                   Home
                 </Link>
                 <div className="hidden sm:block md:block">
-                  <Logo compact href="/" />
+                  <Logo compact hideTextOnSmall href="/" />
                 </div>
               </div>
 
@@ -462,8 +462,9 @@ export function DemoSlideshow() {
                 ))}
               </div>
 
-              <div className="flex items-center gap-2">
-                <ThemeSwitch size="sm" />
+              <div className="flex shrink-0 items-center gap-2">
+                <ThemeSwitch size="xs" className="sm:hidden" />
+                <ThemeSwitch size="sm" className="hidden sm:flex" />
                 <Link
                   href="/jobs-public"
                   className="hidden md:inline-flex items-center rounded-full border border-line bg-surface-sunken px-4 py-2 text-sm font-medium text-ink-2 transition hover:bg-surface-sunken hover:text-ink"

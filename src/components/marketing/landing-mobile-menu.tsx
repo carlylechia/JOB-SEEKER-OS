@@ -20,7 +20,7 @@ export function LandingMobileMenu() {
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-14 z-30 w-[min(88vw,22rem)] rounded-2xl border border-line bg-card/95 p-3 shadow-soft backdrop-blur">
+        <div className="absolute right-0 top-14 z-30 max-h-[calc(100dvh-6rem)] w-[min(88vw,22rem)] overflow-y-auto overscroll-contain rounded-2xl border border-line bg-card p-3 shadow-soft">
           <div className="grid gap-2">
             <Link
               href="#features"
