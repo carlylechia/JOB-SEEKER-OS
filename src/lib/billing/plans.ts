@@ -89,6 +89,32 @@ export function isFeatureKey(value: unknown): value is FeatureKey {
 }
 
 /**
+ * Shared, metered allowances.
+ *
+ * A POOL is one budget a customer spends across SEVERAL features. `AI` is the
+ * only one today, and it is what `PLAN_LIMITS[*].aiCredits` actually means: one
+ * monthly allowance for AI-assisted work, not a separate allowance per feature.
+ *
+ * This is what `PLAN_MARKETING.PRO.highlights` already promises — "AI-assisted
+ * resume and cover letter help" reads as a bundle — and it is what stops a new
+ * feature from silently multiplying every customer's entitlement. Summing per
+ * `featureKey`, as the accounting layer used to, meant a Free user with an
+ * allowance of 25 could run 25 resume analyses AND 25 job analyses AND 25
+ * resume optimisations in the same month: three times what they were sold, a
+ * figure that grew again with every metered feature that shipped.
+ *
+ * `FEATURE_ENTITLEMENTS[feature].usagePool` declares which pool a feature spends
+ * from, so the decision is forced where a feature is added — the cheapest place
+ * to make it — rather than discovered once a customer has been overcharged.
+ */
+export const USAGE_POOLS = ['AI'] as const;
+export type UsagePool = (typeof USAGE_POOLS)[number];
+
+export function isUsagePool(value: unknown): value is UsagePool {
+  return typeof value === 'string' && (USAGE_POOLS as readonly string[]).includes(value);
+}
+
+/**
  * Metadata for a feature key, or undefined when the key is unknown.
  * Lets callers fail safely on a typo or an unmapped capability instead of
  * crashing on an undefined lookup.
@@ -106,31 +132,53 @@ export function getFeatureMeta(feature: string) {
  */
 export const FEATURE_ENTITLEMENTS: Record<
   FeatureKey,
-  { plans: readonly PlanCode[]; label: string; released: boolean; description: string }
+  {
+    plans: readonly PlanCode[];
+    label: string;
+    released: boolean;
+    description: string;
+    /**
+     * Which shared allowance this feature spends from, or `null` when it is not
+     * metered at all.
+     *
+     * Required rather than optional, so a new capability cannot be added without
+     * deciding whether it draws on a budget. Optional would let it default to
+     * unmetered by omission, which is the opposite of a safe default here.
+     */
+    usagePool: UsagePool | null;
+  }
 > = {
   JOB_TRACKING: {
     plans: ['FREE', 'PRO', 'PREMIUM'],
     label: 'Job tracking workspace',
     released: true,
     description: 'Capture leads, score fit, and track your pipeline.',
+    // Part of the workspace itself, not a metered capability.
+    usagePool: null,
   },
   PUBLIC_JOB_IMPORT: {
     plans: ['FREE', 'PRO', 'PREMIUM'],
     label: 'Public job import',
     released: true,
     description: 'Save public jobs straight into your private workspace.',
+    // Part of the workspace itself, not a metered capability.
+    usagePool: null,
   },
   ADVANCED_JOB_MATCHING: {
     plans: ['PRO', 'PREMIUM'],
     label: 'Advanced job matching',
     released: true,
     description: 'Personalised fit scoring against your profile and preferences.',
+    // Part of the workspace itself, not a metered capability.
+    usagePool: null,
   },
   RESUME_UPLOAD: {
     plans: ['FREE', 'PRO', 'PREMIUM'],
     label: 'Resume upload',
     released: true,
     description: 'Upload and parse your resume for tailored applications.',
+    // Part of the workspace itself, not a metered capability.
+    usagePool: null,
   },
   /**
    * Creating, editing, templating and exporting a structured resume.
@@ -144,6 +192,8 @@ export const FEATURE_ENTITLEMENTS: Record<
     label: 'Resume builder',
     released: true,
     description: 'Build, tailor and export a structured resume for each role you apply to.',
+    // Part of the workspace itself, not a metered capability.
+    usagePool: null,
   },
   /**
    * The paid operation behind job-specific optimisation: proposing
@@ -160,6 +210,8 @@ export const FEATURE_ENTITLEMENTS: Record<
     released: true,
     description:
       'Get specific, evidence-backed suggestions for one resume and one job — you decide what to keep.',
+    // Draws on the one shared `aiCredits` allowance, not its own.
+    usagePool: 'AI',
   },
   /**
    * The paid operation behind AI Job Intelligence: explaining how a specific
@@ -175,18 +227,24 @@ export const FEATURE_ENTITLEMENTS: Record<
     released: true,
     description:
       'Understand why a role fits you — strengths, gaps, and what to confirm before you apply.',
+    // Draws on the one shared `aiCredits` allowance, not its own.
+    usagePool: 'AI',
   },
   AI_COVER_LETTER: {
     plans: ['PRO', 'PREMIUM'],
     label: 'AI cover letters',
     released: false,
     description: 'Draft tailored cover letters for each application.',
+    // Draws on the one shared `aiCredits` allowance, not its own.
+    usagePool: 'AI',
   },
   AI_INTERVIEW_PREP: {
     plans: ['PRO', 'PREMIUM'],
     label: 'AI interview preparation',
     released: false,
     description: 'Generate structured interview preparation packs.',
+    // Draws on the one shared `aiCredits` allowance, not its own.
+    usagePool: 'AI',
   },
   /**
    * The paid operation behind Resume Intelligence: analysing a stored resume
@@ -201,6 +259,8 @@ export const FEATURE_ENTITLEMENTS: Record<
     label: 'AI resume analysis',
     released: true,
     description: 'Turn a resume into a structured, editable career profile.',
+    // Draws on the one shared `aiCredits` allowance, not its own.
+    usagePool: 'AI',
   },
   /**
    * The structured career data itself, and the foundation later releases build
@@ -213,24 +273,32 @@ export const FEATURE_ENTITLEMENTS: Record<
     released: true,
     description:
       'A verified career profile built from your resume and reused across every AI feature.',
+    // Part of the workspace itself, not a metered capability.
+    usagePool: null,
   },
   PRIORITY_QUEUE: {
     plans: ['PRO', 'PREMIUM'],
     label: 'Priority processing',
     released: false,
     description: 'Faster turnaround on AI-assisted work.',
+    // Part of the workspace itself, not a metered capability.
+    usagePool: null,
   },
   ADVANCED_PREPARATION: {
     plans: ['PREMIUM'],
     label: 'Advanced preparation',
     released: false,
     description: 'Deeper preparation tooling and career coaching.',
+    // Part of the workspace itself, not a metered capability.
+    usagePool: null,
   },
   LINKEDIN_ENRICHMENT: {
     plans: ['PRO', 'PREMIUM'],
     label: 'LinkedIn enrichment',
     released: false,
     description: 'Enrich leads with additional profile context.',
+    // Part of the workspace itself, not a metered capability.
+    usagePool: null,
   },
 };
 
