@@ -119,7 +119,7 @@ export type StructuredResumeRecord = {
   sourceProfileVersion: number | null;
   createdAt: Date;
   updatedAt: Date;
-  targetJob?: {
+  targetJob: {
     id: string;
     title: string;
     company: string;
@@ -610,13 +610,24 @@ export async function createResume(params: {
 export async function duplicateResume(params: {
   userId: string;
   resumeId: string;
+  /** Optional name for the copy. Defaults to "<source> (copy)". */
+  name?: string;
+  /** Optional target job, so "create a tailored version" is one action. */
+  targetJobId?: string | null;
   limit?: PlanLimitValue;
 }): Promise<StructuredResumeRecord> {
   const source = await getResume(params);
   return createResume({
     userId: params.userId,
     limit: params.limit,
-    input: { from: 'DUPLICATE', sourceResumeId: source.id, name: undefined },
+    input: {
+      from: 'DUPLICATE',
+      sourceResumeId: source.id,
+      name: params.name,
+      // Falls back to the source's own target so a plain Duplicate keeps the
+      // same aim; a tailored version deliberately changes it.
+      targetJobId: params.targetJobId === undefined ? source.targetJobId : params.targetJobId,
+    },
   });
 }
 
