@@ -26,6 +26,7 @@ import {
 } from '@/lib/resume/service';
 import { resumeErrorResponse } from '@/lib/resume/route-errors';
 import type { RunExtractionResult } from '@/lib/resume/service';
+import { getAiCreditsPayload } from '@/lib/billing/ai-credits';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -72,6 +73,9 @@ export async function GET(request: Request) {
         }),
       ]);
 
+      // The measured balance, not the plan's ceiling.
+      const aiCredits = await getAiCreditsPayload(userId, entitlements.limits.aiCredits);
+
       return privateNoStore(
         jsonOk(
           {
@@ -100,7 +104,7 @@ export async function GET(request: Request) {
               plan: entitlements.plan,
               isAdmin: entitlements.isAdmin,
               isTrialing: entitlements.isTrialing,
-              aiCreditsRemaining: entitlements.limits.aiCredits,
+              aiCredits,
             },
             privacyNotice: AI_PRIVACY_NOTICE,
             model: getResumeModel(),

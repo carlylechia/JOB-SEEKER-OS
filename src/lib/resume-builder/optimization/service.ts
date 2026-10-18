@@ -576,6 +576,8 @@ export async function runOptimization(
   } else {
     try {
       const usage = await consumeUsage(userId, RESUME_OPTIMIZATION_FEATURE, 1, {
+        // One shared AI allowance, not a per-feature one. See `usage.ts`.
+        pool: 'AI',
         limit: entitlements.limits.aiCredits,
         idempotencyKey,
       });

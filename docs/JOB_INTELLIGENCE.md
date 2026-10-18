@@ -231,9 +231,10 @@ a "run it again" note rather than being silently presented as current.
 - **Feature:** `AI_JOB_ANALYSIS`, defined since the monetization launch, now
   `released: true`. Pro and Premium. This release ships an existing key rather
   than inventing a parallel one.
-- **Meter:** `consumeUsage(userId, 'AI_JOB_ANALYSIS', 1, { limit:
+- **Meter:** `consumeUsage(userId, 'AI_JOB_ANALYSIS', 1, { pool: 'AI', limit:
   entitlements.limits.aiCredits, idempotencyKey })`. Same advisory lock, same
-  `UsageRecord` table, same shared `aiCredits` budget as resume parsing.
+  `UsageRecord` table, same shared `aiCredits` pool as resume parsing and resume
+  optimisation — one monthly budget across all three, not one budget each.
 - **Burst limit:** 5 requests/min per user+IP. The monthly credit is the real
   spend control; this stops a stuck retry loop.
 - **Admins** bypass the gate and record zero customer credits, consistent with

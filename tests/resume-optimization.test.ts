@@ -1173,7 +1173,11 @@ describe('entitlements and usage', () => {
 
     let error: unknown;
     try {
-      await consumeUsage(user.id, RESUME_OPTIMIZATION_FEATURE, 1, { limit: 10, at: T0 });
+      await consumeUsage(user.id, RESUME_OPTIMIZATION_FEATURE, 1, {
+        pool: 'AI',
+        limit: 10,
+        at: T0,
+      });
     } catch (caught) {
       error = caught;
     }

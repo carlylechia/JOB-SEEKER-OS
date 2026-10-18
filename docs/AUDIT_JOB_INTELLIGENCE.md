@@ -196,10 +196,13 @@ Both defaults are set by measurement against the real schemas — see
   `PRO`/`PREMIUM`, currently `released: false`. This release flips that one
   flag. No new feature key, no new plan, no new limit row.
 * `requireEntitlement(userId, feature)` is the server gate.
-* `consumeUsage(userId, feature, units, { limit, idempotencyKey })` is the
-  meter — transaction-scoped advisory lock, `UsageRecord` table, no second
-  credit system.
-* `PLAN_LIMITS.aiCredits` is the shared AI budget across every AI capability.
+* `consumeUsage(userId, feature, units, { pool, limit, idempotencyKey })` is
+  the meter — transaction-scoped advisory lock, `UsageRecord` table, no second
+  credit system. `pool` is required, so a metered feature cannot join the
+  budget by omission.
+* `PLAN_LIMITS.aiCredits` is the shared AI budget across every AI capability, and
+  the lock is keyed on `(user, pool, period)` so two features cannot overshoot it
+  between them.
 * `applyRateLimit()` is the burst limiter.
 
 ## 8. Persistence

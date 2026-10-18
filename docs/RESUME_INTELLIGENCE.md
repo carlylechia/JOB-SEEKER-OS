@@ -163,8 +163,8 @@ The idempotency key is `resume-extract:<extractionId>`, derived from the
 document version, so a retry is not charged twice. A deliberate re-analysis
 uses a distinct `:forced` suffix and is charged.
 
-Limits come from the existing `PLAN_LIMITS.aiCredits`. No new quota was
-invented.
+Limits come from the existing `PLAN_LIMITS.aiCredits` — the single pool
+shared with job analysis and resume optimisation. No new quota was invented.
 
 ### Reuse and concurrency
 
