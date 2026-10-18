@@ -269,8 +269,17 @@ test-named. AI providers are replaced with fakes through the
 uploaded PDFs) and is reused here to **verify** generated PDFs in tests.
 
 No Playwright or equivalent exists in this repository, so no end-to-end browser
-suite is added. End-to-end coverage is exercised at the HTTP/service layer
-instead, and that limitation is stated in the release documentation.
+suite is added. End-to-end coverage is exercised at the service and contract
+layer instead.
+
+That layer has one real limitation worth naming at audit time: a Next.js App
+Router module may only export HTTP verbs, so **nothing defined inside a route
+file can be imported by a test**. The request schemas and the PDF download
+headers were therefore moved into `src/lib/resume-builder/requests.ts` and
+`download.ts`, where they are domain contracts that production and the tests
+share. Asserting against a copy would let production drift from what the tests
+claim to cover. The route handlers themselves are covered by a structural test
+that reads each module and asserts it derives identity only from the session.
 
 ---
 
@@ -292,10 +301,26 @@ Measured on this machine, Node 22.13:
   fontkit cannot detect the file type, the subsetter throws
   `RangeError: Index out of range`, and with subsetting disabled the extracted
   text comes back as `JJJJ JJJJJJ` — i.e. **not selectable**. Rejected.
+- `pdf-lib` + **WOFF2**, subset on: the subsetter crashes outright.
 - `pdf-lib` + **TTF** (`@expo-google-fonts/inter`, OFL-1.1) + `fontkit`, subset
-  on: 3 pages in **83 ms**, **9.6 KB**, and `unpdf` extracts
-  `José Müller — Zażółć gęślą Şişli — “smart” • ok` /
-  `Иван Петров, Αλέξανδρος` **exactly**. Chosen.
+  on: `unpdf` extracts the text perfectly, **but the embedded font stream has no
+  usable glyph outlines** — most renderers draw a sparse, nearly blank page.
+  Rejected. This was only caught by rasterising the output and looking at it;
+  text extraction alone gave a false pass.
+- `pdf-lib` + **TTF**, subsetting done by fontkit 2.x and handed back to
+  pdf-lib: does not parse (`TTFFont.get` on a table the v2 subsetter omits).
+- `pdf-lib` + **TTF**, subset **off**: renders correctly everywhere, text is
+  selectable, 3 pages in ~80 ms. Chosen, at ~180 KB per weight.
+
+The chosen option costs file size; the reasoning, including why the trade was
+made, is in [`RESUME_BUILDER.md` §7](./RESUME_BUILDER.md#7-pdf-export).
+
+**Font coverage, stated precisely.** The chosen face covers Latin, Latin
+Extended-A, Greek and Cyrillic. It does **not** cover CJK or emoji. Rather than
+let that pass silently, `LayoutMetrics.unsupportedCharacters()` checks every
+drawable string against the font's real character set and the layout reports the
+unrepresentable characters. The tests assert that report exists instead of
+leaving the case out.
 
 ### Layout parity
 
@@ -304,7 +329,8 @@ The chosen architecture is a **single layout engine**
 paginated, absolutely-positioned blocks in PDF points. The PDF renderer and the
 HTML preview are two renderers of the *same* block list, so the preview cannot
 drift from the export. Neither the engine nor `pdf-lib` is imported by the
-client editor bundle.
+client editor bundle — verified against the production build output, where no
+client chunk contains either.
 
 ---
 
