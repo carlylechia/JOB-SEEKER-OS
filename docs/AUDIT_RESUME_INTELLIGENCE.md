@@ -140,7 +140,7 @@ charcoal `#17191E`, warm white `#FAFAF7`. Component classes `.card-pad`,
 | Career data | Relational `CareerExperience` / `CareerEducation` / `CareerSkill` / `CareerProject` / `CareerCredential` models. Core relationships and searchable fields stay relational; the *pre-confirmation draft* is JSON on `ResumeExtraction` because it is versioned, throwaway-shaped data. |
 | Extraction run | `ResumeExtraction` with `PENDING/PROCESSING/COMPLETED/FAILED`, `contentHash`, `schemaVersion`. Unique on `(resumeId, contentHash, schemaVersion)` so the row is both the dedupe key **and** the concurrency lock. |
 | Entitlements | Two new keys in the existing registry: `AI_RESUME_PARSER` and `CAREER_PROFILE_INTELLIGENCE`, both Pro+. No parallel plan-checking logic. |
-| Usage | `consumeUsage(..., 'AI_RESUME_PARSER', 1, { limit: entitlements.limits.aiCredits, idempotencyKey })`. Existing table, existing lock, existing metering. |
+| Usage | `consumeUsage(..., 'AI_RESUME_PARSER', 1, { pool: 'AI', limit: entitlements.limits.aiCredits, idempotencyKey })`. Existing table, existing lock, existing metering — drawn from the same shared `aiCredits` pool as every other AI feature. |
 | Limits | New `src/lib/resume/limits.ts` — single source for size/char/page/timeout limits, replacing the three duplicated 5 MB constants. |
 | Extraction | `src/lib/resume/extract-text.ts` — magic-byte sniffing + `unpdf` (PDF), `mammoth` (DOCX), UTF-8 validation (TXT). No OCR; image-only PDFs are detected and reported honestly. |
 | AI | `src/lib/resume/ai-client.ts` — thin, injectable wrapper over the official `openai` SDK using schema-constrained `responses.parse()` with `zodTextFormat`. Tests inject a fake. |

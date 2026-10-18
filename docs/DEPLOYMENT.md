@@ -320,7 +320,39 @@ optimisation uses the existing `OPENAI_API_KEY`.
 12. In the developer network panel, confirm the PDF and optimisation responses
     carry `Cache-Control: private, no-store`.
 
-### 15. Monitor
+### 15. Verify the shared AI allowance
+
+Only relevant if you are shipping the shared-credit-pool change. **There is no
+migration and no environment variable** — but this is the one release in this
+list that reduces what some customers can do, so check it before shipping rather
+than after.
+
+The AI allowance was always described as one monthly figure, but was summed per
+feature key. A Free user with an allowance of 25 could run 25 resume analyses
+**and** 25 job analyses **and** 25 resume optimisations. It is now a single pool.
+
+1. Before deploying, measure who this affects:
+
+   ```bash
+   DATABASE_URL="<production-url>" npm run ai-credits:impact
+   ```
+
+   Read-only, cohort sizes only, no customer data in the output. Users listed as
+   over the allowance keep their remaining credits but will be declined once they
+   run out. **Notify them before this ships if the number is not zero.**
+2. Sign in as a **Free** user. Run a job analysis and check the panel now shows a
+   balance that is *less than* the plan figure — and that the figure **moves**
+   down when you use a different AI feature. It previously showed the ceiling,
+   which never changed.
+3. Exhaust the allowance across **two different** AI features and confirm the
+   second feature is declined at zero remaining. Before this change it was not.
+4. Confirm the reset date shown matches the UTC month boundary.
+5. Confirm an **admin** account is unaffected and records no customer credits.
+
+Run this check on a **current-period** deployment only. A past month's overage is
+history, is not re-billed, and is not retroactively enforced.
+
+### 16. Monitor
 
 Watch during the first 24 hours:
 
@@ -436,6 +468,8 @@ A permanently-warning check is a check people learn to ignore.
 [ ] OPENAI_API_KEY set in Production (if shipping Resume Intelligence)
 [ ] Resume analysis → review → save → survives reload verified
 [ ] Free-plan API refusal verified server-side (not just in the UI)
+[ ] `npm run ai-credits:impact` run against production (if shipping the shared AI allowance)
+[ ] Users over the shared AI allowance notified (only if the report listed any)
 [ ] No secrets committed to git
 ```
 
@@ -530,6 +564,7 @@ rollback.
 | `npm run monetization:initialize` | production (with backup) | Backfill trials + activate |
 | `npm run monetization:initialize -- --dry-run` | production | Report only, no writes |
 | `npm run monetization:status` | anywhere | Read-only state report |
+| `npm run ai-credits:impact` | anywhere | Read-only: users over the shared AI allowance |
 | `npm run admin:bootstrap -- <email>` | production | Promote one account to ADMIN |
 | `npm run admin:revoke -- <email>` | production | Demote an admin |
 | `npm run maintenance:run` | production | Drain outbox + reconcile (safe to repeat) |

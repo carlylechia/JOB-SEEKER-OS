@@ -331,6 +331,9 @@ npm run monetization:initialize
 # Read-only state report (users, trials, requests, email health)
 npm run monetization:status
 
+# Read-only: who would lose access under a shared AI credit pool
+npm run ai-credits:impact
+
 # Promote exactly one existing account to ADMIN (no self-service path)
 npm run admin:bootstrap -- owner@yourdomain.com
 
@@ -366,6 +369,7 @@ npm run prisma:seed
 npm run prisma:studio
 npm run monetization:initialize
 npm run monetization:status
+npm run ai-credits:impact
 npm run admin:bootstrap
 npm run admin:revoke
 npm run maintenance:run

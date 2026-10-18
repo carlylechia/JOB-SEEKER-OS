@@ -171,13 +171,21 @@ priced differently later.
 An `idempotencyKey` on each row means a retry of the same operation is recorded
 once, not twice.
 
-> **Open question.** `PLAN_LIMITS` defines a single `aiCredits` figure per plan,
-> while `consumeUsage` meters **per feature key**. Today a feature's ceiling is
-> therefore reached by usage of that feature, and the `aiCreditsRemaining` value
-> sent to the UI is the plan's figure rather than a computed remainder. This is
-> pre-existing behaviour across all AI features; the Resume Builder release did
-> not change it and records the discrepancy in
-> [`RESUME_BUILDER.md` §12](RESUME_BUILDER.md#12-usage-accounting).
+> **The AI allowance is one shared pool.** `PLAN_LIMITS[*].aiCredits` is a
+> single monthly budget spent across *every* AI capability, not an allowance per
+> feature. `FEATURE_ENTITLEMENTS[feature].usagePool` declares which pool a
+> feature draws from — `null` means it is not metered at all — so adding a
+> metered feature forces the billing decision at the point it is added.
+>
+> Summing per feature key instead would have meant a Free user with an allowance
+> of 25 could run 25 resume analyses **and** 25 job analyses **and** 25 resume
+> optimisations: three times the allowance, growing again with every feature that
+> shipped. The advisory lock in `consumeUsage` is keyed on `(user, pool, period)`
+> for the same reason — a per-feature lock would let two different AI features
+> each pass a check against a stale total and jointly overshoot.
+>
+> Clients receive the measured balance from `getPoolUsageSummary`, not the plan's
+> ceiling. See [`RESUME_BUILDER.md` §12](RESUME_BUILDER.md#12-usage-accounting).
 
 ---
 

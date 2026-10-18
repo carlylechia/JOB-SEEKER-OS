@@ -485,7 +485,7 @@ system.
 | Key | Plans | Released by this release | Notes |
 | --- | --- | --- | --- |
 | `RESUME_BUILDER` | PRO, PREMIUM | yes | **Not metered.** Building a document costs the user nothing; `PLAN_LIMITS.resumes` bounds how many they may keep. |
-| `RESUME_OPTIMIZATION` | PRO, PREMIUM | yes | Metered against `limits.aiCredits`. |
+| `RESUME_OPTIMIZATION` | PRO, PREMIUM | yes | Metered against the shared `limits.aiCredits` pool, not a separate allowance. |
 
 **PDF export has no key of its own, deliberately.** A built resume cannot exist
 without `RESUME_BUILDER`, so a separate gate would be an invented restriction
@@ -533,13 +533,30 @@ lock), or a cached reuse.
 **On a usage rejection** the claimed row is released back to `FAILED`, so a
 phantom in-flight run does not block the user for the stale window.
 
-> **Known nuance, not changed here.** `consumeUsage()` meters **per feature
-> key**, while `PLAN_LIMITS` defines a single `aiCredits` figure. So today the
-> ceiling for each AI feature is reached by usage of that feature, and the
-> `aiCreditsRemaining` value the UI shows is the plan's figure rather than a
-> computed remainder. This is the behaviour of the two already-shipped AI
-> features and changing it would alter them, so this release leaves it alone and
-> records it here. See "Recommended next work".
+> **The AI allowance is one shared pool, and the UI shows a balance.**
+>
+> `consumeUsage()` draws from a **pool**, not from a feature key.
+> `FEATURE_ENTITLEMENTS[feature].usagePool` maps each metered feature onto the
+> single `aiCredits` allowance, so a Free user with a limit of 25 gets 25 AI
+> operations per month **in total** — not 25 of each kind. This matches what
+> `PLAN_LIMITS` and the plan copy have always described.
+>
+> Prior to this the accounting summed per feature key, which meant 25 resume
+> analyses *and* 25 job analyses *and* 25 resume optimisations in the same
+> month: three times the allowance, a figure that grew again with every metered
+> feature shipped. The advisory lock is keyed on `(user, pool, period)` for the
+> same reason — a per-feature lock would let two AI features each pass a check
+> against a stale total and jointly overshoot.
+>
+> `pool` is a **required** argument to `consumeUsage`, so a new metered feature
+> cannot silently join (or bypass) the pool by omission.
+
+**What the UI shows.** Routes previously sent
+`aiCreditsRemaining: entitlements.limits.aiCredits` — the plan's *ceiling*, under
+a label reading "credits left". A user on their last credit was told "25 AI
+credits left", and the number never moved. They now receive the measured balance
+(`used`, `remaining`, `resetsAt`, and a per-feature breakdown of the same total)
+from `getPoolUsageSummary`, rendered by `AiCreditsMeter`.
 
 ---
 
@@ -774,13 +791,9 @@ into the user's own workspace first. This release does not relax that.
 
 Not implemented here, deliberately:
 
-1. **Resolve the `aiCredits` semantics.** Decide whether the AI budget is one
-   shared pool across every AI feature or one allowance per feature, and make
-   `consumeUsage` and the `aiCreditsRemaining` the UI shows agree with the
-   answer. Today they do not; §12 records the discrepancy.
-2. **CJK and other script font faces**, behind a per-deployment choice rather
+1. **CJK and other script font faces**, behind a per-deployment choice rather
    than an always-on size cost.
-3. **A browser end-to-end suite**, once the repository has a runner worth using.
-4. **Cover-letter generation**, which reads the same structures and is the
+2. **A browser end-to-end suite**, once the repository has a runner worth using.
+3. **Cover-letter generation**, which reads the same structures and is the
    obvious next release. Interview intelligence is further off and needs
    different primitives.
