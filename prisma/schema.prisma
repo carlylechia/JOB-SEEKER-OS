@@ -33,6 +33,11 @@ model User {
   createdJobTitles         JobTitle[]         @relation("JobTitleCreator")
   notifications            Notification[]
   profile                  UserProfile?
+  careerExperiences        CareerExperience[]
+  careerEducation          CareerEducation[]
+  careerSkills             CareerSkill[]
+  careerProjects           CareerProject[]
+  careerCredentials        CareerCredential[]
 
   subscription              Subscription?
   usageRecords              UsageRecord[]
@@ -41,6 +46,9 @@ model User {
   actedSubscriptionEvents   SubscriptionEvent[] @relation("SubscriptionEventActor")
   resolvedUpgradeRequests   UpgradeRequest[]    @relation("UpgradeRequestResolver")
   adminUpdatedSubscriptions Subscription[]      @relation("SubscriptionAdminUpdater")
+  resumeDocuments           ResumeDocument[]
+  resumeExtractions         ResumeExtraction[]  @relation("ExtractionOwner")
+  confirmedCareerRecords    CareerRecordSource[]
 
   @@index([createdAt])
   @@index([emailVerificationToken])
@@ -79,9 +87,31 @@ model UserProfile {
   profileCompleted       Boolean   @default(false)
   profileCompletedAt     DateTime?
   linkedinPhotoUrl       String?
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
+
+  // ── Confirmed career profile (Resume Intelligence) ────────────────────────
+  // Additive only: every pre-existing column above keeps its meaning and its
+  // value. `resumeUrl` remains the "primary resume" pointer used by the
+  // existing download, onboarding and profile flows.
+  phone                   String?
+  summary                 String?
+  websiteUrl              String?
+  careerProfileConfirmedAt DateTime?
+  /// Incremented on every confirmed save. The client echoes the version it
+  /// loaded; a mismatch means someone else (or another tab) saved first, and
+  /// the write is rejected with 409 rather than silently clobbering it.
+  careerProfileVersion    Int       @default(0)
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
   user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  experiences            CareerExperience[]
+  education              CareerEducation[]
+  skills                 CareerSkill[]
+  projects               CareerProject[]
+  credentials            CareerCredential[]
+
+  @@index([careerProfileConfirmedAt])
 }
 
 model JobLead {
@@ -394,4 +424,245 @@ enum EmailOutboxStatus {
   SENT
   FAILED
   CANCELLED
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RESUME INTELLIGENCE
+//
+// A stored resume is a durable artefact, an extraction is a run against one
+// artefact, and a career profile is what the user chose to keep from it. Keeping
+// those three separate is what lets us re-run analysis, audit where a value
+// came from, and never overwrite existing profile data without being told to.
+//
+// `UserProfile.resumeUrl` is intentionally left in place: it is the "primary
+// resume" pointer used by the existing download, onboarding and profile flows,
+// and this release must not change how those behave.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// One resume the user has stored.
+///
+/// Previously a resume existed only as a single `UserProfile.resumeUrl` string,
+/// which made "which resume was this extracted from?" unanswerable. Rows are
+/// backfilled from that column, so every existing upload becomes a real
+/// document without the user doing anything.
+model ResumeDocument {
+  id          String   @id @default(cuid())
+  userId      String
+  /// Server-derived storage URL. Never a client-supplied filename, never used
+  /// as an access-control identifier on its own.
+  url         String
+  /// Sanitised display name only. Storage names are generated server-side.
+  fileName    String
+  /// Chosen by sniffing magic bytes on the server, not from the upload name.
+  format      String
+  sizeBytes   Int
+  /// True for the document currently referenced by `UserProfile.resumeUrl`.
+  isPrimary   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  extractions ResumeExtraction[]
+
+  @@index([userId, createdAt])
+  @@index([userId, isPrimary])
+}
+
+/// One analysis run against one version of one document.
+///
+/// The unique constraint on (resumeId, contentHash, schemaVersion) is doing two
+/// jobs: it lets an unchanged document reuse a completed result instead of
+/// paying for the same extraction again, and it makes the row itself the lock
+/// that stops two identical requests triggering two provider calls.
+model ResumeExtraction {
+  id            String                  @id @default(cuid())
+  resumeId      String
+  userId        String
+  /// SHA-256 of the normalised text we would send to the provider. Hashing the
+  /// text rather than the bytes means a re-exported identical resume reuses the
+  /// cached result. Scoped to a user: one user's extraction is never served to
+  /// another.
+  contentHash   String
+  /// Contract version this result conforms to. Bumping it invalidates old rows
+  /// instead of silently serving them under a newer contract.
+  schemaVersion Int
+  status        String                  @default("PROCESSING")
+  /// Structured extraction, stored as JSON because it is versioned,
+  /// pre-confirmation, variable-shaped data. Confirmed values are promoted into
+  /// the relational career tables; this stays as the reviewable draft.
+  data          Json?
+  /// Only a machine-readable code. The user-facing copy lives in
+  /// `EXTRACTION_ERROR_MESSAGES`, never in the database.
+  errorCode     String?
+  provider      String?
+  model         String?
+  /// Truncation is recorded so the review UI can say "this resume was longer
+  /// than we analysed" instead of implying full coverage.
+  wasTruncated  Boolean                 @default(false)
+  extractedChars Int?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  completedAt   DateTime?
+
+  resume    ResumeDocument @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  user      User           @relation("ExtractionOwner", fields: [userId], references: [id], onDelete: Cascade)
+  appliedTo CareerRecordSource[]
+
+  @@unique([resumeId, contentHash, schemaVersion])
+  @@index([userId, createdAt])
+  @@index([userId, status])
+}
+
+/// Provenance for every confirmed career-profile record.
+///
+/// Kept as its own relation rather than three nullable columns on each table so
+/// that "which resume did this come from" stays answerable for every section,
+/// and so deleting a resume can find exactly what it produced.
+model CareerRecordSource {
+  id             String   @id @default(cuid())
+  extractionId   String
+  userId         String
+  /// Logical section this record came from, e.g. 'experience', 'education'.
+  section        String
+  /// Primary key of the confirmed row within that section.
+  recordId       String
+  confirmedAt    DateTime @default(now())
+
+  extraction ResumeExtraction @relation(fields: [extractionId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([section, recordId])
+  @@index([userId, section])
+  @@index([extractionId])
+}
+
+/// A confirmed role. Relational because job matching and tailored resume
+/// generation both need to query and filter these by company, title and dates.
+model CareerExperience {
+  id              String    @id @default(cuid())
+  profileId       String
+  userId          String
+  jobTitle        String?
+  company         String?
+  location        String?
+  startDate       String?
+  endDate         String?
+  isCurrent       Boolean   @default(false)
+  responsibilities String[]
+  achievements    String[]
+  technologies    String[]
+  /// Short label for the section of the resume this came from.
+  sourceSection   String?
+  evidenceSnippet String?
+  /// True when the document contradicted itself here and the user has not
+  /// resolved it. Kept visible rather than silently dropped.
+  hasConflict     Boolean   @default(false)
+  sortOrder       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startDate])
+  @@index([profileId, sortOrder])
+  @@index([company])
+}
+
+model CareerEducation {
+  id              String    @id @default(cuid())
+  profileId       String
+  userId          String
+  institution     String?
+  qualification   String?
+  fieldOfStudy    String?
+  startDate       String?
+  endDate         String?
+  details         String?
+  sourceSection   String?
+  evidenceSnippet String?
+  sortOrder       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, endDate])
+  @@index([profileId, sortOrder])
+}
+
+/// A skill the user has confirmed. `origin` is carried through from extraction
+/// so an inferred skill can never be presented as a verified one.
+model CareerSkill {
+  id              String    @id @default(cuid())
+  profileId       String
+  userId          String
+  name            String
+  /// STATED | SUPPORTED | INFERRED, from the extraction contract.
+  origin          String    @default("INFERRED")
+  evidenceSnippet String?
+  confirmed       Boolean   @default(false)
+  sortOrder       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, name])
+  @@index([userId, confirmed])
+}
+
+model CareerProject {
+  id              String    @id @default(cuid())
+  profileId       String
+  userId          String
+  name            String?
+  description     String?
+  role            String?
+  technologies    String[]
+  startDate       String?
+  endDate         String?
+  projectUrl      String?
+  results         String[]
+  sourceSection   String?
+  evidenceSnippet String?
+  sortOrder       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sortOrder])
+  @@index([profileId, sortOrder])
+}
+
+/// Certifications, licences, languages, awards, publications and volunteer work.
+/// One table with a `kind` discriminator: they share a shape, they are queried
+/// together for tailored resumes, and splitting them would add structure
+/// without adding meaning.
+model CareerCredential {
+  id              String    @id @default(cuid())
+  profileId       String
+  userId          String
+  kind            String
+  name            String
+  issuer          String?
+  issuedDate      String?
+  expiresDate     String?
+  proficiency     String?
+  details         String?
+  sourceSection   String?
+  evidenceSnippet String?
+  sortOrder       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind])
+  @@index([profileId, sortOrder])
 }

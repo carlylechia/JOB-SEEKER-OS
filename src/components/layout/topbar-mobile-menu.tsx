@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   Settings,
+  Sparkles,
   Target,
   UserCircle2,
   Users,
@@ -24,6 +25,7 @@ const mobileLinks = [
   { href: '/pipeline', label: 'Pipeline', icon: KanbanSquare },
   { href: '/contacts', label: 'Contacts', icon: Users },
   { href: '/profile', label: 'Profile', icon: UserCircle2 },
+  { href: '/career-profile', label: 'Career Profile', icon: Sparkles },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 

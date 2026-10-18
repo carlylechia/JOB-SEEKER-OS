@@ -25,8 +25,16 @@ Preview build needs to boot the app).
 | `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET` | optional | LinkedIn sign-in |
 | `ALERT_WEBHOOK_URL` | optional | Discord alerting for important errors |
 | `MONETIZATION_ENABLED=false` | optional | Emergency kill switch |
+| `OPENAI_API_KEY` | yes for Resume Intelligence | AI provider key (server-only). Never `NEXT_PUBLIC_*` |
+| `RESUME_INTELLIGENCE_MODEL` | optional | Extraction model. Defaults to `gpt-5.4-mini`. Must support Structured Outputs |
 
 **Never** hardcode any of these in source. Do not commit real values.
+
+> **AI key safety.** `OPENAI_API_KEY` is read only in server code. If it is ever
+> exposed to the browser, rotate it immediately — a public key is a billable
+> credential. Without it, Resume uploads and downloads keep working and the
+> analysis endpoint returns a clear "not available" message; it never simulates
+> a successful extraction.
 
 > **Preview safety.** `MONETIZATION_ENABLED=false` in the Preview environment
 > guarantees preview builds can never start real trials.
@@ -137,7 +145,24 @@ Vercel Cron runs `/api/cron/maintenance` nightly at 03:00 UTC. Verify
 curl -H "Authorization: Bearer $CRON_SECRET" https://yourdomain.com/api/cron/maintenance
 ```
 
-### 11. Monitor
+### 11. Verify Resume Intelligence
+
+Only relevant if you are shipping the Resume Intelligence release.
+
+1. Confirm `OPENAI_API_KEY` is set in **Production** (not only Preview).
+2. Sign in as a Pro (or running-trial) user, open `/profile`, and use
+   **Analyse resume** on a text-based PDF.
+3. Confirm the review opens, shows evidence, and that **Save** writes the
+   profile. Reload the page: the data must still be there.
+4. Sign in as a Free user and confirm the upgrade prompt appears and the API
+   itself refuses — check the server log for `resume_parse_denied`.
+5. Upload an image-only scan and confirm the honest "looks like a scan" message
+   rather than an empty review.
+
+A disabled key is safe: uploads and downloads keep working and analysis returns
+a clear message. Confirm that behaviour rather than assuming it.
+
+### 12. Monitor
 
 Watch during the first 24 hours:
 
@@ -146,6 +171,10 @@ Watch during the first 24 hours:
 - upgrade request creation
 - admin plan mutations
 - `/admin/system` email health (pending / failed counts)
+- `resume_parse_succeeded` vs `resume_parse_failed` and
+  `resume_extraction_provider_failed` rates
+- `resume_parse_usage_denied`, which would mean users are hitting the monthly
+  credit ceiling sooner than expected
 
 ---
 
@@ -165,6 +194,9 @@ Watch during the first 24 hours:
 [ ] Billing UI verified as a real user
 [ ] Upgrade request → admin approval → plan activation verified
 [ ] Cron endpoint verified with curl
+[ ] OPENAI_API_KEY set in Production (if shipping Resume Intelligence)
+[ ] Resume analysis → review → save → survives reload verified
+[ ] Free-plan API refusal verified server-side (not just in the UI)
 [ ] No secrets committed to git
 ```
 
@@ -200,6 +232,39 @@ DATABASE_URL="<production-url>" npm run admin:revoke -- former-admin@yourdomain.
 ```
 
 The command refuses to remove the last remaining admin.
+
+### Resume analysis failing for everyone
+
+Work down this list; the app degrades safely at every step.
+
+1. Is `OPENAI_API_KEY` set in Production? A missing or rejected key produces
+   `resume_extraction_provider_failed` with provider status 401/403.
+2. `resume_extraction_provider_failed` with 429 means the provider is rate
+   limiting us. Confirm the model and check the account's tier limits.
+3. `resume_extraction_invalid_output` means refusals or schema misses — the
+   model rejected the contract. Verify `RESUME_INTELLIGENCE_MODEL` supports
+   Structured Outputs.
+4. `resume_storage_read_failed` means stored blobs are unreadable. Check
+   `BLOB_READ_WRITE_TOKEN`.
+5. Users reporting "looks like a scan" have image-only PDFs. This is expected
+   and correct; there is no OCR, by design.
+
+**The safe move while diagnosing:** unset `OPENAI_API_KEY`. Resume upload,
+download and replacement keep working, and analysis returns a clear message
+instead of failing opaquely.
+
+### Recovering a failed extraction
+
+No user action is lost. A failed run is stored with a machine-readable code and
+can be retried from `/profile` without re-uploading the resume. Because the
+retry reuses the same document version, it is not charged a second time.
+
+To force a completely fresh analysis, use **Run analysis again**, which is
+charged as a new operation.
+
+Raw resume text is never stored, so there is nothing to clean up manually. To
+remove a resume and everything derived from it, delete it as usual — the
+extractions and confirmed career records cascade.
 
 ### Emergency: disable monetization
 

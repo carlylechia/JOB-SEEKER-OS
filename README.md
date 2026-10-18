@@ -34,6 +34,16 @@ teChia Jobs gives users one place to:
 - dashboard with KPI cards, weekly trends, top priorities, streaks, and upcoming items
 - interview prep workspace and reusable follow-up templates
 
+### Resume Intelligence & Career Profile (Pro)
+
+- AI analysis of a resume you have already uploaded — no duplicate upload needed
+- structured extraction of basic details, work experience, education, skills, projects, certifications, languages, awards and publications
+- every extracted item shows its evidence, and conflicting or uncertain values are surfaced rather than resolved for you
+- accept, edit, reject or add items section by section; only what you confirm is saved
+- become the reusable career profile behind job matching, tailored resumes, cover letters and interview prep
+
+Full behaviour, limits, configuration and troubleshooting: [docs/RESUME_INTELLIGENCE.md](docs/RESUME_INTELLIGENCE.md).
+
 ### Intake and onboarding
 
 - multi-step onboarding flow with autosaved progress
@@ -124,6 +134,9 @@ Priority states are then used to surface what matters now, including:
 - structured error handling for API responses
 - optional webhook-based alerting for important failures
 - database indexes for common query paths
+- resume files kept private, identified by magic bytes rather than filename or browser-supplied type, and read only on behalf of their owner
+- AI extraction schema-constrained, re-validated against the source document, and given no tools; resume text is treated as untrusted data
+- prompt content is never persisted, and resume contents never reach logs, analytics or error payloads
 
 ## Local Setup
 
@@ -188,6 +201,20 @@ For durable resume and avatar uploads in production, also set:
 ```env
 BLOB_READ_WRITE_TOKEN="vercel_blob_rw_xxxxxxxxx"
 ```
+
+For Resume Intelligence (Pro), also set:
+
+```env
+# Server-side only. Never prefix with NEXT_PUBLIC_ — anything public ships to
+# the browser. Without this key the analysis endpoint returns a clear
+# configuration error and never simulates a successful extraction.
+OPENAI_API_KEY="sk-xxxxxxxxx"
+
+# Optional. Must support Structured Outputs. Defaults to gpt-5.4-mini.
+# RESUME_INTELLIGENCE_MODEL="gpt-5.4-mini"
+```
+
+No test needs an API key: the test suite injects a fake provider.
 
 Optional:
 
@@ -321,8 +348,15 @@ development data.
 
 Covered: trial semantics and idempotency, entitlement gating, upgrade requests
 and their state machine, plan-change transactions and audit, cross-user
-isolation, cron authorization, email failure isolation, and usage limits
-(including concurrency).
+isolation, cron authorization, email failure isolation, usage limits
+(including concurrency), and Resume Intelligence (format detection, archive-bomb
+protection, evidence verification, prompt-injection containment, merge
+behaviour, and the security regressions around cross-user access and privilege
+escalation).
+
+**No test needs an API key or makes a network call.** AI extraction is served
+by an injected fake provider, and every resume fixture is generated in code — no
+real resume and no binary blob is committed.
 
 ## Production DB Sync
 

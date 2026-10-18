@@ -75,6 +75,8 @@ export const FEATURE_KEYS = [
   'AI_JOB_ANALYSIS',
   'AI_COVER_LETTER',
   'AI_INTERVIEW_PREP',
+  'AI_RESUME_PARSER',
+  'CAREER_PROFILE_INTELLIGENCE',
   'PRIORITY_QUEUE',
   'ADVANCED_PREPARATION',
   'LINKEDIN_ENRICHMENT',
@@ -159,6 +161,32 @@ export const FEATURE_ENTITLEMENTS: Record<
     label: 'AI interview preparation',
     released: false,
     description: 'Generate structured interview preparation packs.',
+  },
+  /**
+   * The paid operation behind Resume Intelligence: analysing a stored resume
+   * with the AI provider.
+   *
+   * Deliberately separate from RESUME_UPLOAD, which stays on Free. Gating the
+   * parse — not the upload — keeps a Free user able to keep and manage their
+   * document while making the expensive part a paid capability.
+   */
+  AI_RESUME_PARSER: {
+    plans: ['PRO', 'PREMIUM'],
+    label: 'AI resume analysis',
+    released: true,
+    description: 'Turn a resume into a structured, editable career profile.',
+  },
+  /**
+   * The structured career data itself, and the foundation later releases build
+   * on: job-match explanations, tailored resumes, cover letters and interview
+   * prep all read from the same reviewed profile.
+   */
+  CAREER_PROFILE_INTELLIGENCE: {
+    plans: ['PRO', 'PREMIUM'],
+    label: 'Career profile intelligence',
+    released: true,
+    description:
+      'A verified career profile built from your resume and reused across every AI feature.',
   },
   PRIORITY_QUEUE: {
     plans: ['PRO', 'PREMIUM'],

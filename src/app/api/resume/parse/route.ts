@@ -4,8 +4,15 @@ import { logImportantError } from '@/lib/observability';
 import { extractResumeProfile } from '@/lib/resume';
 import { prisma } from '@/lib/prisma';
 import { uploadUserAsset } from '@/lib/durable-upload';
+import { recordResumeDocument } from '@/lib/resume/documents';
+import { detectResumeFormat } from '@/lib/resume/extract-text';
+import {
+  RESUME_MAX_FILE_BYTES,
+  RESUME_MIME_BY_FORMAT,
+  RESUME_UNSUPPORTED_MEDIA_MESSAGE,
+} from '@/lib/resume/limits';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_FILE_SIZE = RESUME_MAX_FILE_BYTES;
 const ALLOWED_TYPES = new Set([
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -42,7 +49,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Only PDF, DOCX, and TXT resumes are supported' }, { status: 415 });
     }
 
-    const ext = MIME_TO_EXT[file.type] ?? 'bin';
+    // The browser-supplied Content-Type is attacker-controlled, so the real
+    // format is decided from the bytes. A DOCX labelled application/pdf is
+    // stored and parsed as a DOCX.
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const detected = detectResumeFormat(bytes, file.name);
+    if (!detected.ok) {
+      return NextResponse.json(
+        { error: detected.message || RESUME_UNSUPPORTED_MEDIA_MESSAGE },
+        { status: 415 },
+      );
+    }
+
+    const ext = MIME_TO_EXT[RESUME_MIME_BY_FORMAT[detected.format]] ?? 'bin';
     const extracted = await extractResumeProfile(file);
 
     const currentProfile = await prisma.userProfile.findUnique({
@@ -64,6 +83,17 @@ export async function POST(request: Request) {
       where: { userId: session.user.id },
       create: { userId: session.user.id, resumeUrl },
       update: { resumeUrl },
+    });
+
+    // Register it as a real document so Resume Intelligence can analyse this
+    // exact file later without the user uploading it a second time.
+    await recordResumeDocument({
+      userId: session.user.id,
+      url: resumeUrl,
+      fileName: file.name,
+      format: detected.format,
+      sizeBytes: bytes.length,
+      makePrimary: true,
     });
 
     return NextResponse.json({

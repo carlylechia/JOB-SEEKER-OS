@@ -371,3 +371,29 @@ subscription rows.
 | Secrets | Server-only env vars; never logged |
 | Error messages | Safe codes and copy; details logged server-side only |
 | Indexes | On `User.role`, `Subscription.{userId,status,trialEndsAt,endsAt}`, `UpgradeRequest.{userId,status,createdAt}`, `UsageRecord.{userId,featureKey,periodStart}` |
+
+---
+
+## 13. Resume Intelligence
+
+Added by the Resume Intelligence release. It reuses everything above rather
+than introducing a second system: the entitlement resolver, the `consumeUsage`
+advisory lock, `PLAN_LIMITS.aiCredits`, the observability helpers and the
+private-blob access pattern.
+
+Full detail — pipeline, limits, configuration, troubleshooting — is in
+[`docs/RESUME_INTELLIGENCE.md`](RESUME_INTELLIGENCE.md). The points that
+matter architecturally:
+
+| Concern | Decision |
+|---|---|
+| Entitlements | `AI_RESUME_PARSER` gates the provider call; `CAREER_PROFILE_INTELLIGENCE` gates reading and saving the profile. Both Pro+. Resume **upload stays Free**, so gating the AI operation never breaks existing functionality. |
+| Usage | `consumeUsage` with an idempotency key derived from the document version. No new table, no second credit system. |
+| Dedupe / concurrency | The unique index on `ResumeExtraction(resumeId, contentHash, schemaVersion)` is simultaneously the cache key and the concurrency lock. |
+| Document model | `ResumeDocument` is new; `UserProfile.resumeUrl` stays as the primary pointer so download, onboarding and the profile page are unchanged. Backfilled from existing values. |
+| Confirmed data | Relational `Career*` tables, because job matching and tailored resume generation need to query them. The pre-confirmation draft is JSON, because it is versioned and throwaway-shaped. |
+| Concurrency on save | Compare-and-swap on `UserProfile.careerProfileVersion`; a stale tab gets `409`, not a silent overwrite. |
+| Provider boundary | `ai-client.ts` is the only module that knows OpenAI exists. The next AI feature depends on the `ResumeAiProvider` interface, not on the SDK. |
+| Prompt injection | The document is fenced and labelled as data, the model gets **no tools**, and nothing it returns is trusted — every value is re-checked against the source text before it is stored. |
+| Evidence | The model's self-reported confidence is discarded. A claim is `SUPPORTED` only if its snippet can actually be found in the resume. |
+| Retention | Raw resume text is **never persisted**. Verification runs before the extraction is stored, which is what makes that possible. |

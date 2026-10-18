@@ -1,7 +1,13 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { FileText, Upload, X, CheckCircle, AlertCircle, Loader, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
+import { FileText, Upload, X, CheckCircle, AlertCircle, Loader, ExternalLink, Sparkles } from 'lucide-react';
+import {
+  RESUME_ACCEPT_ATTRIBUTE,
+  RESUME_MAX_FILE_BYTES,
+  formatAcceptLabel,
+} from '@/lib/resume/limits';
 
 type ExtractedData = {
   resumeUrl?: string;
@@ -25,7 +31,7 @@ const ALLOWED_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'text/plain',
 ]);
-const MAX_SIZE = 5 * 1024 * 1024;
+const MAX_SIZE = RESUME_MAX_FILE_BYTES;
 
 export function StepResume({ resumeUrl: initialResumeUrl, onExtracted }: Props) {
   const dropRef = useRef<HTMLDivElement>(null);
@@ -111,7 +117,7 @@ export function StepResume({ resumeUrl: initialResumeUrl, onExtracted }: Props) 
         <div className="mb-3 text-5xl">📄</div>
         <h2 className="text-2xl font-bold tracking-tight text-ink">Upload your resume</h2>
         <p className="mt-2 text-sm text-muted">
-          We&apos;ll extract your skills and job titles to pre-fill the next step. PDF, DOCX, or TXT — max 5 MB.
+          We&apos;ll save it to your profile. {formatAcceptLabel()} — max 5 MB.
         </p>
       </div>
 
@@ -151,9 +157,10 @@ export function StepResume({ resumeUrl: initialResumeUrl, onExtracted }: Props) 
         <div className="flex items-start gap-4 rounded-2xl border border-success/30 bg-success/10 px-5 py-4">
           <CheckCircle size={22} className="mt-0.5 shrink-0 text-success-text" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-success-text">Resume uploaded &amp; parsed!</p>
+            <p className="text-sm font-medium text-success-text">Resume uploaded!</p>
             <p className="mt-0.5 text-xs text-success-text/70">
-              Skills, job titles, and profile fields have been pre-filled. Your resume is saved to your profile.
+              Saved to your profile. Carry on with onboarding, or turn it into a full career
+              profile now — both work, and you can do it later either way.
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               {displayName && (
@@ -173,6 +180,15 @@ export function StepResume({ resumeUrl: initialResumeUrl, onExtracted }: Props) 
                   View resume
                 </a>
               )}
+              {/* Optional and never a gate. Onboarding completes exactly as it
+                  did before, and the same action lives on the Profile page. */}
+              <Link
+                href="/career-profile"
+                className="flex items-center gap-1 text-xs font-medium text-accent-text underline underline-offset-2 hover:text-accent-text/80"
+              >
+                <Sparkles size={12} aria-hidden="true" />
+                Build my career profile
+              </Link>
             </div>
           </div>
           <button type="button" onClick={reset} className="shrink-0 text-muted hover:text-ink">
@@ -206,13 +222,13 @@ export function StepResume({ resumeUrl: initialResumeUrl, onExtracted }: Props) 
       <input
         ref={fileRef}
         type="file"
-        accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+        accept={`${RESUME_ACCEPT_ATTRIBUTE},application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain`}
         className="hidden"
         onChange={handleFileInput}
       />
 
       <p className="text-center text-xs text-muted">
-        Your resume is stored in your profile and can be updated anytime in settings.
+        Your resume is stored privately and can be updated anytime in settings.
       </p>
     </div>
   );
