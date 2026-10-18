@@ -24,6 +24,7 @@
     "monetization:status": "tsx scripts/monetization-status.ts",
     "admin:bootstrap": "tsx scripts/bootstrap-admin.ts",
     "admin:revoke": "tsx scripts/revoke-admin.ts",
+    "admin:password": "tsx scripts/set-admin-password.ts",
     "maintenance:run": "tsx scripts/run-maintenance.ts",
     "postinstall": "prisma generate"
   },

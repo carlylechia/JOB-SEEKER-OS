@@ -414,6 +414,40 @@ The `UNIQUE` constraint on `userId` makes this impossible through the app.
 
 Email failures never affect accounts, subscriptions, or plan changes.
 
+### Recover an admin account
+
+If an administrator is locked out, there is no public route that can help —
+no admin-registration endpoint, no "is admin?" signup field, no admin address
+in client-side code. That is deliberate. The CLI is the way back in.
+
+```bash
+DATABASE_URL="<production-url>" npm run admin:password -- you@yourdomain.com --promote
+```
+
+- Generates a strong 24-character password (128 bits of entropy) and prints it
+  **once**. Omit the `--promote` flag to reset the password without changing the
+  role; pass an explicit password as a second argument if you prefer.
+- **Destroys any outstanding password-reset token.** A token issued before the
+  recovery would still be redeemable otherwise, which is a takeover path on the
+  very account being recovered.
+- Refuses anything under 14 characters, anything predictable, and anything over
+  72 bytes — bcrypt silently truncates at 72 bytes, so a longer password would
+  appear stronger than it is.
+- Uses the same cost factor (12) as registration, so no rehash is needed on
+  next sign-in.
+- The password is never written to a log, an exception, or stdout.
+
+To promote an account **without** touching its password:
+
+```bash
+DATABASE_URL="<production-url>" npm run admin:bootstrap -- you@yourdomain.com
+```
+
+> **Changing the password does not end existing sessions.** Sessions are signed
+> JWTs, so a session issued before the change stays valid until it expires. If
+> you are recovering from a suspected compromise, revoke sessions at your
+> identity provider as well.
+
 ### Revoke admin access
 
 ```bash
