@@ -50,9 +50,9 @@ function RegisterForm() {
           <div className="mb-6 flex justify-center">
             <Logo centered />
           </div>
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-8">
+          <div className="rounded-xl border border-emerald-500/20 bg-success/8 px-4 py-8">
             <div className="text-3xl">📧</div>
-            <h2 className="mt-3 text-lg font-semibold text-emerald-700">Check your inbox!</h2>
+            <h2 className="mt-3 text-lg font-semibold text-success-text">Check your inbox!</h2>
             <p className="mt-2 text-sm text-muted">
               We sent a verification link to <strong className="text-ink">{email}</strong>.
               Click it to activate your account.
@@ -127,7 +127,7 @@ function RegisterForm() {
           />
 
           {error ? (
-            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
+            <div className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger-text">
               {error}
             </div>
           ) : null}
@@ -163,7 +163,7 @@ function RegisterForm() {
 
         <p className="mt-4 text-sm text-muted">
           Already have an account?{' '}
-          <Link href={callbackUrl && callbackUrl !== '/onboarding' ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/login'} className="text-[#8A6D1F]">
+          <Link href={callbackUrl && callbackUrl !== '/onboarding' ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/login'} className="text-accent-text">
             Sign in
           </Link>
         </p>

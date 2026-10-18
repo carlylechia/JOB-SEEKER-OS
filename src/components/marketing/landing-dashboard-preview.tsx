@@ -24,17 +24,17 @@ function useReveal() {
 }
 
 const pipeline = [
-  { stage: 'Saved', count: 14, color: 'bg-[#C9CED6]' },
+  { stage: 'Saved', count: 14, color: 'bg-line-strong' },
   { stage: 'Applied', count: 8, color: 'bg-accent' },
-  { stage: 'Phone Screen', count: 4, color: 'bg-amber-400' },
-  { stage: 'Interview', count: 2, color: 'bg-[#C9CED6]' },
-  { stage: 'Offer', count: 1, color: 'bg-emerald-400' },
+  { stage: 'Phone Screen', count: 4, color: 'bg-warn' },
+  { stage: 'Interview', count: 2, color: 'bg-line-strong' },
+  { stage: 'Offer', count: 1, color: 'bg-success' },
 ];
 
 const queueMini = [
-  { company: 'Stripe', role: 'Senior Engineer', score: 94, color: 'bg-emerald-400' },
-  { company: 'Linear', role: 'Product Engineer', score: 87, color: 'bg-[#D4AF37]' },
-  { company: 'Vercel', role: 'DX Engineer', score: 82, color: 'bg-[#D4AF37]' },
+  { company: 'Stripe', role: 'Senior Engineer', score: 94, color: 'bg-success' },
+  { company: 'Linear', role: 'Product Engineer', score: 87, color: 'bg-accent' },
+  { company: 'Vercel', role: 'DX Engineer', score: 82, color: 'bg-accent' },
 ];
 
 export function LandingDashboardPreview() {
@@ -47,30 +47,30 @@ export function LandingDashboardPreview() {
 
         {/* Left: copy */}
         <div ref={ref} className={`reveal-hidden ${visible ? 'reveal-visible' : ''}`}>
-          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/[0.08] px-3 py-1.5 text-xs font-semibold text-emerald-700">
+          <span className="inline-flex items-center gap-2 rounded-full border border-success/25 bg-success/[0.08] px-3 py-1.5 text-xs font-semibold text-success-text">
             <TrendingUp className="h-3 w-3" /> Unified dashboard
           </span>
-          <h2 className="mt-5 text-3xl font-bold tracking-tight text-[#17191E] sm:text-4xl">
+          <h2 className="mt-5 text-3xl font-bold tracking-tight text-ink sm:text-4xl">
             Everything in one view. Nothing hidden.
           </h2>
-          <p className="mt-5 text-base leading-7 text-[#686F7B]">
+          <p className="mt-5 text-base leading-7 text-muted">
             Your dashboard surfaces your streak, today's priorities, pipeline health, and upcoming follow-ups — so you can
             start each session knowing exactly what to do.
           </p>
 
           <div className="mt-8 grid gap-4">
             {[
-              { icon: Flame, heading: 'Streak tracking', body: 'Consecutive days of activity build your streak and surface engagement milestones.', color: 'text-amber-400' },
-              { icon: Clock, heading: 'Follow-up reminders', body: 'Automatic notifications when leads are going stale or follow-ups are overdue.', color: 'text-[#8A6D1F]' },
-              { icon: CheckCircle2, heading: 'Priority scoring', body: 'AI score + application stage determines your daily priority ranking automatically.', color: 'text-emerald-400' },
+              { icon: Flame, heading: 'Streak tracking', body: 'Consecutive days of activity build your streak and surface engagement milestones.', color: 'text-warn-text' },
+              { icon: Clock, heading: 'Follow-up reminders', body: 'Automatic notifications when leads are going stale or follow-ups are overdue.', color: 'text-accent-text' },
+              { icon: CheckCircle2, heading: 'Priority scoring', body: 'AI score + application stage determines your daily priority ranking automatically.', color: 'text-success-text' },
             ].map(({ icon: Icon, heading, body, color }) => (
-              <div key={heading} className="flex gap-4 rounded-xl border border-[#E2E5EA] bg-black/[0.03] p-4">
+              <div key={heading} className="flex gap-4 rounded-xl border border-line bg-surface-sunken p-4">
                 <div className={`flex-shrink-0 mt-0.5 ${color}`}>
                   <Icon className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[#17191E]">{heading}</p>
-                  <p className="mt-1 text-sm leading-6 text-[#686F7B]">{body}</p>
+                  <p className="text-sm font-semibold text-ink">{heading}</p>
+                  <p className="mt-1 text-sm leading-6 text-muted">{body}</p>
                 </div>
               </div>
             ))}
@@ -79,14 +79,14 @@ export function LandingDashboardPreview() {
 
         {/* Right: frosted glass mock UI */}
         <div ref={cardRef} className={`reveal-hidden ${cardVisible ? 'reveal-visible' : ''}`} style={{ transitionDelay: '150ms' }}>
-          <div className="relative overflow-hidden rounded-3xl border border-[#DFE3E9] bg-black/[0.02] p-1 shadow-[0_32px_100px_rgba(17,19,24,0.1)] backdrop-blur-xl">
+          <div className="relative overflow-hidden rounded-3xl border border-line bg-surface-sunken p-1 shadow-lift backdrop-blur-xl">
 
             {/* Window chrome */}
-            <div className="flex items-center gap-2 border-b border-[#E2E5EA] px-4 py-3">
-              <div className="h-2.5 w-2.5 rounded-full bg-rose-500/70" />
-              <div className="h-2.5 w-2.5 rounded-full bg-amber-500/70" />
-              <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/70" />
-              <div className="ml-3 text-xs text-[#686F7B]">dashboard · techiajobs.app</div>
+            <div className="flex items-center gap-2 border-b border-line px-4 py-3">
+              <div className="h-2.5 w-2.5 rounded-full bg-danger/70" />
+              <div className="h-2.5 w-2.5 rounded-full bg-warn/70" />
+              <div className="h-2.5 w-2.5 rounded-full bg-success/70" />
+              <div className="ml-3 text-xs text-muted">dashboard · techiajobs.app</div>
             </div>
 
             <div className="p-5 space-y-5">
@@ -99,31 +99,31 @@ export function LandingDashboardPreview() {
                   { label: 'Streak', value: '7d', change: '🔥', pos: true },
                   { label: 'Avg Score', value: '81', change: '↑', pos: true },
                 ].map(({ label, value, change, pos }) => (
-                  <div key={label} className="rounded-xl border border-[#E2E5EA] bg-black/[0.035] p-3">
-                    <p className="text-[10px] text-[#686F7B]">{label}</p>
-                    <p className="mt-1 text-lg font-bold text-[#17191E]">{value}</p>
-                    <p className={`text-[10px] font-medium ${pos ? 'text-emerald-400' : 'text-rose-400'}`}>{change}</p>
+                  <div key={label} className="rounded-xl border border-line bg-surface-sunken p-3">
+                    <p className="text-[10px] text-muted">{label}</p>
+                    <p className="mt-1 text-lg font-bold text-ink">{value}</p>
+                    <p className={`text-[10px] font-medium ${pos ? 'text-success-text' : 'text-danger-text'}`}>{change}</p>
                   </div>
                 ))}
               </div>
 
               {/* Pipeline */}
-              <div className="rounded-xl border border-[#E2E5EA] bg-black/[0.03] p-4">
+              <div className="rounded-xl border border-line bg-surface-sunken p-4">
                 <div className="mb-3 flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-[#8A6D1F]" />
-                  <span className="text-xs font-semibold text-[#4A505A]">Pipeline Overview</span>
+                  <Briefcase className="h-4 w-4 text-accent-text" />
+                  <span className="text-xs font-semibold text-ink-2">Pipeline Overview</span>
                 </div>
                 <div className="flex items-end gap-1">
                   {pipeline.map((s) => {
                     const h = Math.round((s.count / 14) * 48) + 16;
                     return (
                       <div key={s.stage} className="flex flex-1 flex-col items-center gap-1.5">
-                        <span className="text-[9px] font-bold text-[#4A505A]">{s.count}</span>
+                        <span className="text-[9px] font-bold text-ink-2">{s.count}</span>
                         <div
                           className={`w-full rounded-t-md ${s.color} opacity-80`}
                           style={{ height: `${h}px` }}
                         />
-                        <span className="text-[8px] text-[#686F7B] text-center leading-tight">{s.stage}</span>
+                        <span className="text-[8px] text-muted text-center leading-tight">{s.stage}</span>
                       </div>
                     );
                   })}
@@ -131,27 +131,27 @@ export function LandingDashboardPreview() {
               </div>
 
               {/* Today's queue preview */}
-              <div className="rounded-xl border border-[#E2E5EA] bg-black/[0.03] p-4">
-                <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-[#8A6D1F]">
+              <div className="rounded-xl border border-line bg-surface-sunken p-4">
+                <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-accent-text">
                   Today&apos;s Queue
                 </div>
                 <div className="space-y-2.5">
                   {queueMini.map((item) => (
                     <div key={item.company} className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/[0.04] text-[10px] font-bold text-[#4A505A]">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-sunken text-[10px] font-bold text-ink-2">
                           {item.company[0]}
                         </div>
                         <div>
-                          <p className="text-xs font-semibold text-[#17191E]">{item.company}</p>
-                          <p className="text-[10px] text-[#686F7B]">{item.role}</p>
+                          <p className="text-xs font-semibold text-ink">{item.company}</p>
+                          <p className="text-[10px] text-muted">{item.role}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-12 h-1 overflow-hidden rounded-full bg-black/[0.05]">
+                        <div className="w-12 h-1 overflow-hidden rounded-full bg-surface-sunken">
                           <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.score}%` }} />
                         </div>
-                        <span className="text-xs font-bold text-[#17191E]">{item.score}</span>
+                        <span className="text-xs font-bold text-ink">{item.score}</span>
                       </div>
                     </div>
                   ))}

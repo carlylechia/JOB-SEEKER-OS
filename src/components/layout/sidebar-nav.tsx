@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Briefcase, LayoutDashboard, Users, KanbanSquare, Target, FileText, Settings, UserCircle2 } from 'lucide-react';
+import { Briefcase, LayoutDashboard, Users, KanbanSquare, Target, FileText, Settings, UserCircle2, CreditCard, Shield } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
 
 const items = [
@@ -15,13 +15,17 @@ const items = [
   { href: '/templates', label: 'Templates', icon: FileText },
   { href: '/profile', label: 'Profile', icon: UserCircle2 },
   { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/settings/billing', label: 'Plan & Billing', icon: CreditCard },
 ];
 
-export function SidebarNav() {
+/** Only rendered for admins. The server still enforces access independently —
+ *  hiding the link is presentation, not authorization. */
+export function SidebarNav({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
+
   return (
-    <aside className="hidden w-72 flex-col border-r border-line bg-[#FFFFFF] p-4 lg:flex">
-      <div className="mb-6 rounded-2xl border border-line bg-black/[0.03] p-4">
+    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col overflow-y-auto border-r border-line bg-sidebar p-4 lg:flex">
+      <div className="mb-6 rounded-2xl border border-line bg-surface p-4">
         <Logo href="/dashboard" />
       </div>
       <nav className="space-y-1">
@@ -29,12 +33,35 @@ export function SidebarNav() {
           const active = pathname.startsWith(item.href);
           const Icon = item.icon;
           return (
-            <Link key={item.href} href={item.href} className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${active ? 'bg-accent text-[#17191E]' : 'text-muted hover:bg-black/[0.04] hover:text-ink'}`}>
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={active ? 'page' : undefined}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors ${
+                active
+                  ? 'bg-accent font-medium text-accent-ink'
+                  : 'text-muted hover:bg-surface-sunken hover:text-ink'
+              }`}
+            >
               <Icon className="h-4 w-4" />
               {item.label}
             </Link>
           );
         })}
+        {isAdmin ? (
+          <Link
+            href="/admin"
+            aria-current={pathname.startsWith('/admin') ? 'page' : undefined}
+            className={`mt-2 flex items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors ${
+              pathname.startsWith('/admin')
+                ? 'border-transparent bg-accent font-medium text-accent-ink'
+                : 'border-line text-muted hover:bg-surface-sunken hover:text-ink'
+            }`}
+          >
+            <Shield className="h-4 w-4" />
+            Admin
+          </Link>
+        ) : null}
       </nav>
     </aside>
   );

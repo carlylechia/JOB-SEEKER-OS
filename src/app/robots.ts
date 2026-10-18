@@ -12,6 +12,7 @@ export default function robots(): MetadataRoute.Robots {
       // `/jobs-public` route stays crawlable.
       disallow: [
         '/api/',
+        '/admin',
         '/dashboard',
         '/jobs$',
         '/jobs/',

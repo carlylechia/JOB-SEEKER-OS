@@ -1,9 +1,17 @@
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Analytics } from '@vercel/analytics/next';
 import { getAppUrl } from '@/lib/site-url';
+import { ThemeProvider, themeInitScript } from '@/components/shared/theme-provider';
 
 const appUrl = getAppUrl();
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#FAFAF7' },
+    { media: '(prefers-color-scheme: dark)', color: '#08111f' },
+  ],
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
@@ -40,9 +48,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Applies the stored/system theme before first paint so there is no
+            flash of the wrong palette. */}
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body suppressHydrationWarning>
-        {children}
+        <ThemeProvider>{children}</ThemeProvider>
         <Analytics />
       </body>
     </html>

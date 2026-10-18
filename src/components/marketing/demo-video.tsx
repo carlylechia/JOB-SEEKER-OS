@@ -28,7 +28,7 @@ export function DemoVideo() {
   }, []);
 
   return (
-    <div ref={ref} className="relative overflow-hidden rounded-[1.5rem] border border-[#DFE3E9] bg-[#FFFFFF]">
+    <div ref={ref} className="relative overflow-hidden rounded-[1.5rem] border border-line bg-card">
       {shouldLoad ? (
         <video
           className="h-auto w-full"

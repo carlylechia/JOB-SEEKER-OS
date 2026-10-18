@@ -56,7 +56,7 @@ function FaqItem({ item, index }: { item: typeof faqs[number]; index: number }) 
   return (
     <div
       ref={ref}
-      className={`reveal-hidden overflow-hidden rounded-2xl border border-[#E2E5EA] bg-black/[0.03] transition-all duration-200 hover:border-[#DFE3E9] ${open ? 'border-[#D4AF37]/20 bg-black/[0.04]' : ''} ${visible ? 'reveal-visible' : ''}`}
+      className={`reveal-hidden overflow-hidden rounded-2xl border border-line bg-surface-sunken transition-all duration-200 hover:border-line ${open ? 'border-accent/20 bg-surface-sunken' : ''} ${visible ? 'reveal-visible' : ''}`}
       style={{ transitionDelay: visible ? `${index * 60}ms` : '0ms' }}
     >
       <button
@@ -65,9 +65,9 @@ function FaqItem({ item, index }: { item: typeof faqs[number]; index: number }) 
         className="flex w-full items-start justify-between gap-4 px-6 py-5 text-left"
         aria-expanded={open}
       >
-        <span className="text-sm font-semibold leading-6 text-[#17191E] sm:text-base">{item.q}</span>
+        <span className="text-sm font-semibold leading-6 text-ink sm:text-base">{item.q}</span>
         <ChevronDown
-          className={`mt-0.5 h-5 w-5 flex-shrink-0 text-[#686F7B] transition-transform duration-300 ${open ? 'rotate-180 text-[#8A6D1F]' : ''}`}
+          className={`mt-0.5 h-5 w-5 flex-shrink-0 text-muted transition-transform duration-300 ${open ? 'rotate-180 text-accent-text' : ''}`}
         />
       </button>
 
@@ -79,7 +79,7 @@ function FaqItem({ item, index }: { item: typeof faqs[number]; index: number }) 
           opacity: open ? 1 : 0,
         }}
       >
-        <p className="px-6 pb-5 text-sm leading-7 text-[#686F7B]">{item.a}</p>
+        <p className="px-6 pb-5 text-sm leading-7 text-muted">{item.a}</p>
       </div>
     </div>
   );
@@ -94,10 +94,10 @@ export function LandingFaq() {
         ref={headRef}
         className={`reveal-hidden mb-12 max-w-2xl ${headVisible ? 'reveal-visible' : ''}`}
       >
-        <span className="inline-flex items-center rounded-full border border-[#DFE3E9] bg-black/[0.04] px-3 py-1.5 text-xs font-semibold text-[#4A505A]">
+        <span className="inline-flex items-center rounded-full border border-line bg-surface-sunken px-3 py-1.5 text-xs font-semibold text-ink-2">
           FAQ
         </span>
-        <h2 className="mt-5 text-3xl font-bold tracking-tight text-[#17191E] sm:text-4xl">
+        <h2 className="mt-5 text-3xl font-bold tracking-tight text-ink sm:text-4xl">
           Built to make the search more strategic, not just more organized.
         </h2>
       </div>

@@ -7,6 +7,9 @@
  *
  * Protect with CRON_SECRET header in production:
  *  Authorization: Bearer <CRON_SECRET>
+ *
+ * Authorization uses `isCronAuthorized`, which FAILS CLOSED: with no
+ * CRON_SECRET configured this endpoint is unreachable rather than public.
  */
 
 import { NextResponse } from 'next/server';
@@ -14,18 +17,16 @@ import { prisma } from '@/lib/prisma';
 import { createNotification } from '@/lib/notifications';
 import { sendStreakRiskNotifications } from '@/lib/streak';
 import { logImportantInfo, logImportantError } from '@/lib/observability';
+import { isCronAuthorized } from '@/lib/cron-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  // Guard with CRON_SECRET
-  const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const auth = request.headers.get('authorization');
-    if (auth !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // Fail closed — previously this only guarded when CRON_SECRET was set, which
+  // left the endpoint publicly reachable whenever the variable was missing.
+  if (!isCronAuthorized(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const summary = { users: 0, notifications: 0, streakWarnings: 0, errors: 0 };

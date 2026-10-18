@@ -73,6 +73,17 @@ teChia Jobs gives users one place to:
 - Vercel Analytics
 - Resend
 
+## Monetization & Access Architecture
+
+- `Plan` → `Subscription` → effective plan → entitlements → feature access
+- one current subscription per user (enforced by a unique constraint)
+- effective access derived from timestamps, never trusted from a stored status
+- centralized entitlement gates (`requireEntitlement`) — no scattered plan checks
+- generic metered usage with concurrency-safe consumption
+- immutable subscription audit trail (`SubscriptionEvent`)
+- durable email outbox so provider failures never fail business transactions
+- server-side admin authorization (`requireAdmin` / `getCurrentAdmin`)
+
 ## Architecture Notes
 
 - Server-rendered App Router application with focused client-side interactivity where needed
@@ -148,6 +159,23 @@ EMAIL_FROM="teChia Jobs <noreply@yourdomain.com>"
 EMAIL_REPLY_TO="support@yourdomain.com"
 ```
 
+For monetization and scheduled jobs, also set:
+
+```env
+# Where new upgrade requests are notified (server-side only)
+ADMIN_NOTIFICATION_EMAIL="admin@yourdomain.com"
+
+# Bearer token for /api/cron/*. At least 16 characters.
+# Cron endpoints FAIL CLOSED without this — unreachable, not public.
+CRON_SECRET="replace-with-a-long-random-secret-at-least-16-chars"
+
+# Optional emergency kill switch: stops new trials from starting
+MONETIZATION_ENABLED="true"
+```
+
+To shorten trials while developing, set `DEV_TRIAL_DAYS` (e.g. `1`). It is
+ignored in production, so a stray value can never affect real billing.
+
 If you want LinkedIn auth locally, also set:
 
 ```env
@@ -192,6 +220,67 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+## Monetization
+
+teChia Jobs monetizes through **manual plan upgrades**, not automated payment
+collection:
+
+```
+user requests upgrade → admin reviews → admin contacts user (email/WhatsApp)
+→ arrangement happens outside the app → admin confirms
+→ plan activated → user notified
+```
+
+No payment provider is integrated. The subscription model already carries
+provider-neutral fields (`billingProvider`, `externalCustomerId`,
+`externalSubscriptionId`) so automated billing can be added later **without**
+changing the entitlement engine.
+
+### Plans
+
+Three configurable tiers — **Free**, **Pro**, **Premium**. Prices are stored as
+integer minor units and are currently `NULL` (undecided), so the UI renders
+"Contact us" rather than inventing an amount. Plan definitions, feature
+entitlements and limits live in `src/lib/billing/plans.ts`.
+
+### Trials
+
+New accounts get a **14-day Pro trial** starting at account creation. Existing
+accounts receive the same 14-day window anchored to a single immutable launch
+timestamp stored in `MonetizationConfig` — never to first login, onboarding, or
+email verification. Trials never restart, and expiry downgrades to Free
+**without deleting any user data**.
+
+Admins bypass all plan entitlements and never consume customer quotas.
+
+### Monetization commands
+
+```bash
+# Preview what would change — writes nothing
+npm run monetization:initialize -- --dry-run
+
+# Backfill trials and activate monetization
+npm run monetization:initialize
+
+# Read-only state report (users, trials, requests, email health)
+npm run monetization:status
+
+# Promote exactly one existing account to ADMIN (no self-service path)
+npm run admin:bootstrap -- owner@yourdomain.com
+
+# Demote an admin (refuses to remove the last one)
+npm run admin:revoke -- owner@yourdomain.com
+
+# Drain the email outbox and reconcile subscriptions manually
+npm run maintenance:run
+```
+
+Monetization is **not** live until `npm run monetization:initialize` runs.
+Until then no trials start and every user resolves to Free.
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the design and
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the production rollout runbook.
+
 ## Scripts
 
 ```bash
@@ -200,6 +289,8 @@ npm run build
 npm run build:vercel
 npm run start
 npm run lint
+npm run typecheck
+npm test
 npm run prisma:generate
 npm run prisma:migrate:dev -- --name your_change
 npm run prisma:migrate:deploy
@@ -207,15 +298,65 @@ npm run prisma:migrate:status
 npm run prisma:push
 npm run prisma:seed
 npm run prisma:studio
+npm run monetization:initialize
+npm run monetization:status
+npm run admin:bootstrap
+npm run admin:revoke
+npm run maintenance:run
 ```
+
+## Testing
+
+Tests run against a real Postgres database (the billing logic uses row locks,
+advisory locks and transactions that cannot be meaningfully mocked) using Node's
+built-in test runner — no extra test framework dependency.
+
+```bash
+npm test
+```
+
+The suite refuses to run against a non-local, non-test database. Point
+`TEST_DATABASE_URL` at a disposable database if you want to isolate it from your
+development data.
+
+Covered: trial semantics and idempotency, entitlement gating, upgrade requests
+and their state machine, plan-change transactions and audit, cross-user
+isolation, cron authorization, email failure isolation, and usage limits
+(including concurrency).
 
 ## Production DB Sync
 
-The repository now includes a committed Prisma baseline migration. The expected workflow is:
+The repository includes committed Prisma migrations. The expected workflow is:
 
 - use `npm run prisma:migrate:dev -- --name your_change` whenever `prisma/schema.prisma` changes in development
 - commit the generated `prisma/migrations/...` files with the schema change
-- let Vercel run `prisma migrate deploy` during every production build before `next build`
+- run `npm run prisma:migrate:deploy` against production **separately**, before or with the deploy
+
+> **Migrations deliberately do NOT run inside the build.** `build:vercel` runs
+> `prisma generate && next build` only. Previously the build ran
+> `prisma migrate deploy`, which meant a **Vercel preview build could mutate the
+> production database**. Keep schema changes as an explicit, reviewed step.
+
+If production ever drifts, repair it once by syncing the schema, then mark the
+baseline as applied — never reset production:
+
+```bash
+DATABASE_URL="your-production-url" npx prisma db push
+DATABASE_URL="your-production-url" npx prisma migrate resolve --applied 20260417000100_init
+```
+
+For a **local** database that predates migration history, either reset it if it
+is disposable:
+
+```bash
+npx prisma migrate reset
+```
+
+or mark the baseline as applied if the schema already matches:
+
+```bash
+npx prisma migrate resolve --applied 20260417000100_init
+```
 
 If production ever drifts again, repair it once by syncing the schema, then mark the baseline as applied:
 

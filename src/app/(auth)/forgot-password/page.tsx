@@ -39,9 +39,9 @@ function ForgotPasswordForm() {
           <div className="mb-6 flex justify-center">
             <Logo centered />
           </div>
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-8">
+          <div className="rounded-xl border border-emerald-500/20 bg-success/8 px-4 py-8">
             <div className="text-3xl">📧</div>
-            <h2 className="mt-3 text-lg font-semibold text-emerald-700">Check your inbox</h2>
+            <h2 className="mt-3 text-lg font-semibold text-success-text">Check your inbox</h2>
             <p className="mt-2 text-sm text-muted">
               If an account exists for <strong className="text-ink">{email}</strong>, you'll
               receive a password reset link shortly.
@@ -78,7 +78,7 @@ function ForgotPasswordForm() {
           />
 
           {error ? (
-            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
+            <div className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger-text">
               {error}
             </div>
           ) : null}
@@ -90,7 +90,7 @@ function ForgotPasswordForm() {
 
         <p className="mt-4 text-sm text-muted">
           Remember your password?{' '}
-          <Link href="/login" className="text-[#8A6D1F]">
+          <Link href="/login" className="text-accent-text">
             Sign in
           </Link>
         </p>

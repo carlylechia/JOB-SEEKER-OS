@@ -7,7 +7,7 @@ export function KpiCard({
   value,
   hint,
   icon: Icon,
-  accent = 'text-[#8A6D1F]',
+  accent = 'text-accent-text',
   trend,
   trendLabel,
 }: {
@@ -20,9 +20,9 @@ export function KpiCard({
   trendLabel?: string;
 }) {
   const trendColor =
-    trend === 'up' ? 'text-emerald-400' :
-    trend === 'down' ? 'text-rose-400' :
-    'text-[#686F7B]';
+    trend === 'up' ? 'text-success-text' :
+    trend === 'down' ? 'text-danger-text' :
+    'text-muted';
 
   const trendSymbol =
     trend === 'up' ? '↑' :
@@ -30,7 +30,7 @@ export function KpiCard({
     '–';
 
   return (
-    <div className="card-pad flex flex-col gap-3 transition-colors hover:border-[#D5DAE1]">
+    <div className="card-pad flex flex-col gap-3 transition-colors hover:border-line">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium uppercase tracking-wide text-muted">{label}</span>
         {Icon && <Icon className={`h-4 w-4 ${accent} opacity-60`} />}

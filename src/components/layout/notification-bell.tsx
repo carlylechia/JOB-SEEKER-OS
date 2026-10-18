@@ -112,19 +112,19 @@ export function NotificationBell() {
       >
         <Bell className="h-4 w-4" />
         {unread > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+          <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-danger-solid text-[10px] font-bold text-white">
             {unread > 9 ? '9+' : unread}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-[min(20rem,92vw)] rounded-xl border border-line bg-background shadow-2xl">
+        <div className="absolute right-0 top-full z-50 mt-2 max-h-[calc(100dvh-6rem)] w-[min(20rem,92vw)] overflow-y-auto overscroll-contain rounded-xl border border-line bg-background shadow-2xl">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             {selectedNotification ? (
               <button
-                className="inline-flex items-center gap-2 text-sm font-semibold text-foreground hover:text-[#8A6D1F]"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-foreground hover:text-accent-text"
                 onClick={() => setSelectedNotification(null)}
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -139,7 +139,7 @@ export function NotificationBell() {
               </button>
             ) : unread > 0 ? (
               <button
-                className="text-xs text-[#8A6D1F] hover:underline disabled:opacity-50"
+                className="text-xs text-accent-text hover:underline disabled:opacity-50"
                 onClick={markAllRead}
                 disabled={loading}
               >
@@ -150,7 +150,7 @@ export function NotificationBell() {
 
           {selectedNotification ? (
             <div className="max-h-96 overflow-y-auto px-4 py-4">
-              <div className="rounded-xl border border-line bg-black/[0.03] p-4">
+              <div className="rounded-xl border border-line bg-surface-sunken p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-foreground">{selectedNotification.title}</p>
@@ -175,7 +175,7 @@ export function NotificationBell() {
                 notifications.map((n) => (
                   <button
                     key={n.id}
-                    className={`w-full cursor-pointer px-4 py-3 text-left transition hover:bg-black/[0.04] ${!n.read ? 'bg-accent/5' : ''}`}
+                    className={`w-full cursor-pointer px-4 py-3 text-left transition hover:bg-surface-sunken ${!n.read ? 'bg-accent/5' : ''}`}
                     onClick={() => void openNotification(n)}
                   >
                     <div className="flex items-start justify-between gap-2">

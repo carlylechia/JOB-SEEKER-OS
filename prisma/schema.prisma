@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 model User {
   id                       String             @id @default(cuid())
   email                    String             @unique
@@ -22,15 +27,25 @@ model User {
   streakCount              Int                @default(0)
   lastActiveDate           DateTime?
   linkedinId               String?            @unique
+  role                     UserRole           @default(USER)
   templates                FollowUpTemplate[]
   jobLeads                 JobLead[]
   createdJobTitles         JobTitle[]         @relation("JobTitleCreator")
   notifications            Notification[]
   profile                  UserProfile?
 
+  subscription              Subscription?
+  usageRecords              UsageRecord[]
+  upgradeRequests           UpgradeRequest[]
+  subscriptionEvents        SubscriptionEvent[]
+  actedSubscriptionEvents   SubscriptionEvent[] @relation("SubscriptionEventActor")
+  resolvedUpgradeRequests   UpgradeRequest[]    @relation("UpgradeRequestResolver")
+  adminUpdatedSubscriptions Subscription[]      @relation("SubscriptionAdminUpdater")
+
   @@index([createdAt])
   @@index([emailVerificationToken])
   @@index([passwordResetToken])
+  @@index([role])
 }
 
 model UserProfile {
@@ -149,4 +164,234 @@ model Notification {
 
   @@index([userId, read])
   @@index([userId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MONETIZATION FOUNDATION
+//
+// Plan → Subscription → Entitlements is the single source of truth for access.
+// Effective access is always derived from stored timestamps, never trusted
+// blindly from a `status` column. See docs/ARCHITECTURE.md.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum PlanCode {
+  FREE
+  PRO
+  PREMIUM
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  SUSPENDED
+}
+
+/// Where the current access record came from. Allows a future payment provider
+/// to be introduced without changing the entitlement engine.
+enum SubscriptionSource {
+  TRIAL
+  ADMIN_MANUAL
+  FUTURE_BILLING
+  SYSTEM
+}
+
+enum UpgradeRequestStatus {
+  PENDING
+  CONTACTED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ContactMethod {
+  EMAIL
+  WHATSAPP
+}
+
+enum SubscriptionEventType {
+  TRIAL_STARTED
+  TRIAL_EXTENDED
+  TRIAL_EXPIRED
+  PLAN_UPGRADED
+  PLAN_DOWNGRADED
+  PLAN_CHANGED_BY_ADMIN
+  PLAN_SUSPENDED
+  PLAN_RESTORED
+}
+
+model Plan {
+  id           String   @id @default(cuid())
+  code         PlanCode @unique
+  name         String
+  slug         String   @unique
+  description  String
+  /// Monetary values are stored as integer minor units (e.g. cents) to avoid
+  /// floating-point arithmetic. NULL means "pricing not yet decided" — the UI
+  /// renders "Contact us" rather than inventing a number.
+  monthlyPrice Int?
+  yearlyPrice  Int?
+  currency     String   @default("USD")
+  active       Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@index([active, sortOrder])
+}
+
+/// Singleton record holding the immutable monetization launch configuration.
+/// The existing-user trial window is derived from `enabledAt` exactly once and
+/// must never be recomputed per-request.
+model MonetizationConfig {
+  id                         String    @id @default("global")
+  enabledAt                  DateTime?
+  existingUserTrialStartedAt DateTime?
+  existingUserTrialEndsAt    DateTime?
+  trialDays                  Int       @default(14)
+  trialPlan                  PlanCode  @default(PRO)
+  initializedAt              DateTime?
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
+}
+
+/// Exactly one current access record per user. Enforced by a unique userId so
+/// competing subscriptions cannot create ambiguous entitlements.
+model Subscription {
+  id                     String             @id @default(cuid())
+  userId                 String             @unique
+  planId                 String
+  status                 SubscriptionStatus
+  startsAt               DateTime
+  endsAt                 DateTime?
+  trialStartsAt          DateTime?
+  trialEndsAt            DateTime?
+  source                 SubscriptionSource @default(SYSTEM)
+  /// Provider-neutral fields for a future automated billing integration.
+  billingProvider        String?
+  externalCustomerId     String?
+  externalSubscriptionId String?
+  updatedByAdminId       String?
+  adminNote              String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  user           User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan           Plan  @relation(fields: [planId], references: [id])
+  updatedByAdmin User? @relation("SubscriptionAdminUpdater", fields: [updatedByAdminId], references: [id])
+
+  @@index([planId])
+  @@index([status])
+  @@index([trialEndsAt])
+  @@index([endsAt])
+  @@index([status, trialEndsAt])
+}
+
+/// Immutable audit trail of every subscription/access change.
+model SubscriptionEvent {
+  id                    String                @id @default(cuid())
+  userId                String
+  actorAdminId          String?
+  type                  SubscriptionEventType
+  previousPlanCode      PlanCode?
+  newPlanCode           PlanCode?
+  previousStatus        SubscriptionStatus?
+  newStatus             SubscriptionStatus?
+  previousStartsAt      DateTime?
+  newStartsAt           DateTime?
+  previousEndsAt        DateTime?
+  newEndsAt             DateTime?
+  previousTrialStartsAt DateTime?
+  previousTrialEndsAt   DateTime?
+  newTrialEndsAt        DateTime?
+  reason                String?
+  createdAt             DateTime              @default(now())
+
+  actorAdmin User? @relation("SubscriptionEventActor", fields: [actorAdminId], references: [id])
+  user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+  @@index([actorAdminId, createdAt])
+}
+
+model UpgradeRequest {
+  id                    String               @id @default(cuid())
+  userId                String
+  requestedPlan         PlanCode
+  /// Snapshots preserve what the user saw at request time, even after the
+  /// underlying subscription changes.
+  currentPlanSnapshot   PlanCode?
+  currentStatusSnapshot SubscriptionStatus?
+  contactMethod         ContactMethod
+  contactEmail          String?
+  whatsappNumber        String?
+  message               String
+  status                UpgradeRequestStatus @default(PENDING)
+  adminNote             String?
+  resolvedByAdminId     String?
+  resolvedAt            DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  user            User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resolvedByAdmin User? @relation("UpgradeRequestResolver", fields: [resolvedByAdminId], references: [id])
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+  @@index([createdAt])
+  @@index([requestedPlan])
+}
+
+/// Generic usage accounting. One table for all metered features so new AI
+/// capabilities never require a new table.
+model UsageRecord {
+  id             String   @id @default(cuid())
+  userId         String
+  featureKey     String
+  units          Int      @default(0)
+  periodStart    DateTime
+  periodEnd      DateTime
+  idempotencyKey String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, featureKey, periodStart, idempotencyKey])
+  @@index([userId, featureKey, periodStart])
+  @@index([periodStart, periodEnd])
+}
+
+/// Durable transactional email queue. A failed provider call must never roll
+/// back or fail the business transaction that enqueued the message.
+model EmailOutbox {
+  id                String            @id @default(cuid())
+  type              String
+  recipient         String
+  payload           Json
+  status            EmailOutboxStatus @default(PENDING)
+  attempts          Int               @default(0)
+  nextAttemptAt     DateTime          @default(now())
+  lastError         String?
+  providerMessageId String?
+  idempotencyKey    String?           @unique
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  sentAt            DateTime?
+
+  @@index([status, nextAttemptAt])
+  @@index([recipient])
+}
+
+enum EmailOutboxStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  CANCELLED
 }

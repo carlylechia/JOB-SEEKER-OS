@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { registerSchema } from '@/lib/register-schema';
 import { seedUserWorkspace } from '@/lib/db-helpers';
 import { sendVerificationEmail } from '@/lib/email';
+import { enqueueEmailBestEffort } from '@/lib/billing/email-outbox';
+import { maybeStartTrialForNewUser } from '@/lib/billing/monetization';
 import { logImportantError, logImportantInfo } from '@/lib/observability';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 
@@ -68,33 +70,67 @@ export async function POST(req: Request) {
       });
     }
 
-    // ✅ STEP 3: Send verification email (non-critical — don't block registration)
+    // ✅ STEP 3: Start the new-user trial.
+    // Monetization-off and every failure mode here are non-critical: a user
+    // without a subscription resolves to Free, which is correct behaviour.
     try {
-      await sendVerificationEmail(normalizedEmail, emailVerificationToken);
+      await maybeStartTrialForNewUser(user.id);
+    } catch (trialError) {
+      await logImportantError({
+        event: 'new_user_trial_failed',
+        userId: user.id,
+        route: '/api/register',
+        error: trialError,
+      });
+    }
+
+    // ✅ STEP 4: Queue the verification email.
+    // Queued, NOT sent inline: a Resend outage must not make a successfully
+    // created account look like a failed registration. The outbox worker
+    // retries with backoff and the user can request a resend.
+    const emailQueued = await enqueueEmailBestEffort({
+      type: 'verification',
+      recipient: normalizedEmail,
+      payload: { token: emailVerificationToken },
+      idempotencyKey: `verification:${user.id}`,
+    });
+
+    if (emailQueued) {
       await logImportantInfo({
-        event: 'verification_email_sent',
+        event: 'verification_email_queued',
         userId: user.id,
         route: '/api/register',
         context: { email: normalizedEmail },
       });
-    } catch (emailError) {
-      // Log but do not fail — user can request a resend later
-      await logImportantError({
-        event: 'verification_email_failed',
-        userId: user.id,
-        route: '/api/register',
-        error: emailError,
-      });
+    } else {
+      // Fall back to a direct send so the user is not stranded, but still
+      // never let this fail registration.
+      try {
+        await sendVerificationEmail(normalizedEmail, emailVerificationToken);
+        await logImportantInfo({
+          event: 'verification_email_sent',
+          userId: user.id,
+          route: '/api/register',
+        });
+      } catch (emailError) {
+        await logImportantError({
+          event: 'verification_email_failed',
+          userId: user.id,
+          route: '/api/register',
+          error: emailError,
+          context: { note: 'Account was created successfully; email can be resent.' },
+        });
+      }
     }
 
-    // ✅ STEP 4: Log registration
+    // ✅ STEP 5: Log registration
     await logImportantInfo({
       event: 'user_registered',
       userId: user.id,
       route: '/api/register',
     });
 
-    // ✅ STEP 5: Return — do NOT auto-login
+    // ✅ STEP 6: Return — do NOT auto-login
     return Response.json({
       ok: true,
       message: 'Account created! Check your email to verify your address before signing in.',

@@ -19,6 +19,7 @@ import {
   Users,
 } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
+import { ThemeSwitch } from '@/components/shared/theme-switch';
 
 const AUTO_ADVANCE_MS = 12000;
 
@@ -37,32 +38,32 @@ function accentStyles(accent: Slide['accent']) {
   switch (accent) {
     case 'emerald':
       return {
-        chip: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800',
-        glow: 'bg-emerald-500/15',
-        ring: 'ring-emerald-500/20',
-        dot: 'bg-emerald-400',
+        chip: 'border-success/30 bg-success/10 text-success-text',
+        glow: 'bg-success/15',
+        ring: 'ring-success/20',
+        dot: 'bg-success',
       };
     case 'amber':
       return {
-        chip: 'border-amber-500/30 bg-amber-500/10 text-amber-900',
-        glow: 'bg-amber-500/15',
-        ring: 'ring-amber-500/20',
-        dot: 'bg-amber-400',
+        chip: 'border-warn/30 bg-warn/10 text-warn-text',
+        glow: 'bg-warn/15',
+        ring: 'ring-warn/20',
+        dot: 'bg-warn',
       };
     case 'indigo':
       return {
-        chip: 'border-[#C9CED6] bg-[#C9CED6]/20 text-[#3A4048]',
-        glow: 'bg-[#C9CED6]/25',
-        ring: 'ring-[#C9CED6]',
-        dot: 'bg-[#C9CED6]',
+        chip: 'border-line-strong bg-line-strong/20 text-ink-2',
+        glow: 'bg-line-strong/25',
+        ring: 'ring-line-strong',
+        dot: 'bg-line-strong',
       };
     case 'cyan':
     default:
       return {
-        chip: 'border-[#D4AF37]/40 bg-[#D4AF37]/15 text-[#3A4048]',
-        glow: 'bg-[#D4AF37]/18',
-        ring: 'ring-[#D4AF37]/30',
-        dot: 'bg-[#E8C85C]',
+        chip: 'border-accent/40 bg-accent/15 text-ink-2',
+        glow: 'bg-accent/20',
+        ring: 'ring-accent/30',
+        dot: 'bg-accent-hover',
       };
   }
 }
@@ -74,18 +75,18 @@ function SlideGraphic({ slide }: { slide: Slide }) {
   return (
     <div className="relative mx-auto w-full max-w-[560px]">
       <div className={`absolute -inset-8 rounded-[40px] blur-[56px] opacity-80 sm:-inset-14 sm:rounded-[56px] sm:blur-[76px] ${a.glow}`} aria-hidden />
-      <div className="absolute inset-x-[10%] -top-6 h-16 rounded-full bg-black/[0.05] blur-3xl sm:-top-10 sm:h-24" aria-hidden />
+      <div className="absolute inset-x-[10%] -top-6 h-16 rounded-full bg-surface-sunken blur-3xl sm:-top-10 sm:h-24" aria-hidden />
 
-      <div className={`relative overflow-hidden rounded-[28px] border border-[#DFE3E9] bg-[linear-gradient(180deg,rgba(17,19,24,0.05),rgba(17,19,24,0.02))] shadow-[0_24px_80px_rgba(17,19,24,0.12)] backdrop-blur-2xl ring-1 sm:rounded-[40px] sm:shadow-[0_32px_110px_rgba(17,19,24,0.14)] ${a.ring}`}>
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(212,175,55,0.10),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(201,206,214,0.18),transparent_32%)]" />
-        <div className="flex items-center justify-between gap-3 border-b border-[#DFE3E9] px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
+      <div className={`relative overflow-hidden rounded-[28px] border border-line bg-gradient-to-b from-surface-sunken to-surface shadow-lift backdrop-blur-2xl ring-1 sm:rounded-[40px] sm:shadow-lift ${a.ring}`}>
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,var(--hero-orb-2),transparent_30%),radial-gradient(circle_at_bottom_right,var(--hero-orb-1),transparent_32%)]" />
+        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[#DFE3E9] bg-black/[0.04] sm:h-10 sm:w-10">
-              <Icon className="h-4 w-4 text-[#17191E] sm:h-5 sm:w-5" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-line bg-surface-sunken sm:h-10 sm:w-10">
+              <Icon className="h-4 w-4 text-ink sm:h-5 sm:w-5" />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4A505A]">{slide.kicker}</p>
-              <p className="mt-0.5 line-clamp-2 text-sm font-semibold text-[#17191E]">{slide.title}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-2">{slide.kicker}</p>
+              <p className="mt-0.5 line-clamp-2 text-sm font-semibold text-ink">{slide.title}</p>
             </div>
           </div>
           <span className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold sm:px-3 sm:text-[11px] ${a.chip}`}>
@@ -97,11 +98,11 @@ function SlideGraphic({ slide }: { slide: Slide }) {
           {slide.id === 'scoring' ? (
             <div className="grid gap-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-3xl border border-[#DFE3E9] bg-black/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
-                  <p className="text-xs text-[#686F7B]">Fit score</p>
-                  <p className="mt-2 text-3xl font-bold text-[#17191E] sm:text-4xl">92</p>
-                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-black/[0.05]">
-                    <div className="h-full w-[78%] rounded-full bg-[#D4AF37]/80" />
+                <div className="rounded-3xl border border-line bg-surface-sunken p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+                  <p className="text-xs text-muted">Fit score</p>
+                  <p className="mt-2 text-3xl font-bold text-ink sm:text-4xl">92</p>
+                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-surface-sunken">
+                    <div className="h-full w-[78%] rounded-full bg-accent/80" />
                   </div>
                   <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                     {[
@@ -109,33 +110,33 @@ function SlideGraphic({ slide }: { slide: Slide }) {
                       ['Remote', '100'],
                       ['Comp', '85'],
                     ].map(([label, value]) => (
-                      <div key={label} className="rounded-2xl border border-[#E2E5EA] bg-black/[0.06] px-2 py-2">
-                        <p className="text-[10px] uppercase tracking-[0.16em] text-[#686F7B]">{label}</p>
-                        <p className="mt-1 text-sm font-semibold text-[#17191E]">{value}</p>
+                      <div key={label} className="rounded-2xl border border-line bg-surface-sunken-hover px-2 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-muted">{label}</p>
+                        <p className="mt-1 text-sm font-semibold text-ink">{value}</p>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="rounded-3xl border border-[#DFE3E9] bg-black/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
-                  <p className="text-xs text-[#686F7B]">Confidence</p>
-                  <p className="mt-2 text-3xl font-bold text-[#17191E] sm:text-4xl">High</p>
+                <div className="rounded-3xl border border-line bg-surface-sunken p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+                  <p className="text-xs text-muted">Confidence</p>
+                  <p className="mt-2 text-3xl font-bold text-ink sm:text-4xl">High</p>
                   <div className="mt-3 grid gap-2">
                     {['Skills match', 'Scope alignment', 'Seniority'].map((label) => (
                       <div key={label} className="flex items-center justify-between gap-3">
-                        <span className="text-xs text-[#4A505A]">{label}</span>
-                        <span className="text-xs text-[#686F7B]">✓</span>
+                        <span className="text-xs text-ink-2">{label}</span>
+                        <span className="text-xs text-muted">✓</span>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
-              <div className="rounded-3xl border border-[#DFE3E9] bg-black/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
-                <p className="text-xs text-[#686F7B]">Why this match is strong</p>
+              <div className="rounded-3xl border border-line bg-surface-sunken p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+                <p className="text-xs text-muted">Why this match is strong</p>
                 <div className="mt-3 grid gap-2">
                   {['Role aligns with your recent projects', 'Requirements match your core stack', 'High signal description + clear outcomes'].map((x) => (
                     <div key={x} className="flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 text-[#8A6D1F]" />
-                      <p className="text-sm text-[#3A4048]/90">{x}</p>
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 text-accent-text" />
+                      <p className="text-sm text-ink-2/90">{x}</p>
                     </div>
                   ))}
                 </div>
@@ -144,31 +145,31 @@ function SlideGraphic({ slide }: { slide: Slide }) {
           ) : slide.id === 'queue' ? (
             <div className="grid gap-3">
               {[
-                { title: 'Follow up — recruiter reply', tag: 'Today', value: 'High', tone: 'bg-rose-400/70' },
-                { title: 'Tailor resume — role fit', tag: 'Next', value: 'Medium', tone: 'bg-[#D4AF37]/70' },
-                { title: 'Schedule screen — prep notes', tag: 'This week', value: 'High', tone: 'bg-[#C9CED6]/80' },
+                { title: 'Follow up — recruiter reply', tag: 'Today', value: 'High', tone: 'bg-danger/70' },
+                { title: 'Tailor resume — role fit', tag: 'Next', value: 'Medium', tone: 'bg-accent/70' },
+                { title: 'Schedule screen — prep notes', tag: 'This week', value: 'High', tone: 'bg-line-strong/80' },
               ].map((row) => (
-                <div key={row.title} className="flex flex-col gap-3 rounded-3xl border border-[#DFE3E9] bg-black/[0.04] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <div key={row.title} className="flex flex-col gap-3 rounded-3xl border border-line bg-surface-sunken px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className={`h-2.5 w-2.5 rounded-full ${row.tone}`} />
-                      <p className="truncate text-sm font-semibold text-[#17191E]">{row.title}</p>
+                      <p className="truncate text-sm font-semibold text-ink">{row.title}</p>
                     </div>
-                    <p className="mt-1 text-xs text-[#686F7B]">{row.tag}</p>
+                    <p className="mt-1 text-xs text-muted">{row.tag}</p>
                   </div>
                   <div className="flex items-center justify-between gap-3 sm:justify-start">
-                    <div className="h-2 w-full max-w-24 overflow-hidden rounded-full bg-black/[0.05]">
-                      <div className="h-full w-[70%] rounded-full bg-[#C9CED6]" />
+                    <div className="h-2 w-full max-w-24 overflow-hidden rounded-full bg-surface-sunken">
+                      <div className="h-full w-[70%] rounded-full bg-line-strong" />
                     </div>
-                    <span className="rounded-full border border-[#DFE3E9] bg-black/[0.035] px-3 py-1 text-xs font-semibold text-[#3A4048]">
+                    <span className="rounded-full border border-line bg-surface-sunken px-3 py-1 text-xs font-semibold text-ink-2">
                       {row.value}
                     </span>
                   </div>
                 </div>
               ))}
-              <div className="mt-2 rounded-3xl border border-[#DFE3E9] bg-black/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
-                <p className="text-xs text-[#686F7B]">Outcome</p>
-                <p className="mt-2 text-sm text-[#3A4048]/90">
+              <div className="mt-2 rounded-3xl border border-line bg-surface-sunken p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+                <p className="text-xs text-muted">Outcome</p>
+                <p className="mt-2 text-sm text-ink-2/90">
                   Your next actions are always obvious: do the highest-impact thing now, then move on.
                 </p>
               </div>
@@ -177,22 +178,22 @@ function SlideGraphic({ slide }: { slide: Slide }) {
             <div className="grid gap-4">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {['Saved', 'Applied', 'Interview', 'Offer'].map((stage, i) => (
-                  <div key={stage} className="rounded-3xl border border-[#DFE3E9] bg-black/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
-                    <p className="text-xs font-semibold text-[#3A4048]">{stage}</p>
-                    <p className="mt-2 text-2xl font-bold text-[#17191E]">{[9, 6, 2, 1][i]}</p>
-                    <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-black/[0.05]">
-                      <div className="h-full rounded-full bg-[#D4AF37]/80" style={{ width: `${[72, 56, 24, 12][i]}%` }} />
+                  <div key={stage} className="rounded-3xl border border-line bg-surface-sunken p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+                    <p className="text-xs font-semibold text-ink-2">{stage}</p>
+                    <p className="mt-2 text-2xl font-bold text-ink">{[9, 6, 2, 1][i]}</p>
+                    <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-surface-sunken">
+                      <div className="h-full rounded-full bg-accent/80" style={{ width: `${[72, 56, 24, 12][i]}%` }} />
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="rounded-3xl border border-[#DFE3E9] bg-black/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
-                <p className="text-xs text-[#686F7B]">One timeline across everything</p>
+              <div className="rounded-3xl border border-line bg-surface-sunken p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+                <p className="text-xs text-muted">One timeline across everything</p>
                 <div className="mt-3 grid gap-2">
                   {['Applied · Mon 9:18am', 'Recruiter reply · Tue 2:10pm', 'Interview scheduled · Thu 11:30am'].map((x) => (
                     <div key={x} className="flex items-center gap-3">
                       <span className={`h-2 w-2 rounded-full ${a.dot}`} />
-                      <p className="text-sm text-[#3A4048]/90">{x}</p>
+                      <p className="text-sm text-ink-2/90">{x}</p>
                     </div>
                   ))}
                 </div>
@@ -201,8 +202,8 @@ function SlideGraphic({ slide }: { slide: Slide }) {
           ) : slide.id === 'onboarding' ? (
             <div className="grid gap-4">
               <div className="grid gap-3 sm:grid-cols-[1.1fr_0.9fr]">
-                <div className="rounded-3xl border border-[#DFE3E9] bg-black/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
-                  <p className="text-xs text-[#686F7B]">Guided setup</p>
+                <div className="rounded-3xl border border-line bg-surface-sunken p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+                  <p className="text-xs text-muted">Guided setup</p>
                   <div className="mt-3 space-y-2.5">
                     {[
                       'Basic info + account identity',
@@ -210,26 +211,26 @@ function SlideGraphic({ slide }: { slide: Slide }) {
                       'Location, timezone, remote preference',
                       'Titles, skills, salary, target level',
                     ].map((step, idx) => (
-                      <div key={step} className="flex items-center gap-3 rounded-2xl border border-[#E2E5EA] bg-black/[0.06] px-3 py-2.5">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/15 text-xs font-bold text-[#3A4048]">
+                      <div key={step} className="flex items-center gap-3 rounded-2xl border border-line bg-surface-sunken-hover px-3 py-2.5">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full border border-accent/30 bg-accent/15 text-xs font-bold text-ink-2">
                           {idx + 1}
                         </div>
-                        <p className="text-sm text-[#3A4048]/90">{step}</p>
+                        <p className="text-sm text-ink-2/90">{step}</p>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="rounded-3xl border border-[#DFE3E9] bg-black/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
-                  <p className="text-xs text-[#686F7B]">What happens automatically</p>
+                <div className="rounded-3xl border border-line bg-surface-sunken p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+                  <p className="text-xs text-muted">What happens automatically</p>
                   <div className="mt-4 space-y-3">
                     {[
                       ['Resume parsed', 'Titles, links, and stack detected'],
                       ['Progress saved', 'Users can leave and resume later'],
                       ['Workspace ready', 'Queue and scoring adapt to the profile'],
                     ].map(([title, desc]) => (
-                      <div key={title} className="rounded-2xl border border-[#E2E5EA] bg-black/[0.06] p-3">
-                        <p className="text-sm font-semibold text-[#17191E]">{title}</p>
-                        <p className="mt-1 text-xs leading-5 text-[#686F7B]">{desc}</p>
+                      <div key={title} className="rounded-2xl border border-line bg-surface-sunken-hover p-3">
+                        <p className="text-sm font-semibold text-ink">{title}</p>
+                        <p className="mt-1 text-xs leading-5 text-muted">{desc}</p>
                       </div>
                     ))}
                   </div>
@@ -243,45 +244,45 @@ function SlideGraphic({ slide }: { slide: Slide }) {
                 { name: 'Jordan — Eng Manager', note: 'Warm intro · send portfolio' },
                 { name: 'Sam — Talent Partner', note: 'Resume submitted · waiting' },
               ].map((c) => (
-                <div key={c.name} className="flex flex-col gap-3 rounded-3xl border border-[#DFE3E9] bg-black/[0.04] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <div key={c.name} className="flex flex-col gap-3 rounded-3xl border border-line bg-surface-sunken px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#DFE3E9] bg-black/[0.04] text-sm font-bold text-[#17191E]">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-line bg-surface-sunken text-sm font-bold text-ink">
                       {c.name[0]}
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[#17191E]">{c.name}</p>
-                      <p className="mt-1 truncate text-xs text-[#686F7B]">{c.note}</p>
+                      <p className="truncate text-sm font-semibold text-ink">{c.name}</p>
+                      <p className="mt-1 truncate text-xs text-muted">{c.note}</p>
                     </div>
                   </div>
-                  <span className="rounded-full border border-[#DFE3E9] bg-black/[0.035] px-3 py-1 text-xs font-semibold text-[#3A4048]">
+                  <span className="rounded-full border border-line bg-surface-sunken px-3 py-1 text-xs font-semibold text-ink-2">
                     Next
                   </span>
                 </div>
               ))}
-              <div className="mt-2 rounded-3xl border border-[#DFE3E9] bg-black/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
-                <p className="text-xs text-[#686F7B]">Always know who to nudge</p>
-                <p className="mt-2 text-sm text-[#3A4048]/90">
+              <div className="mt-2 rounded-3xl border border-line bg-surface-sunken p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+                <p className="text-xs text-muted">Always know who to nudge</p>
+                <p className="mt-2 text-sm text-ink-2/90">
                   Follow-ups and context stay attached to people — not lost in inboxes.
                 </p>
               </div>
             </div>
           ) : (
             <div className="grid gap-4">
-              <div className="grid gap-3 rounded-3xl border border-[#DFE3E9] bg-black/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+              <div className="grid gap-3 rounded-3xl border border-line bg-surface-sunken p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
                 {[
                   { title: 'Smart resume builder', desc: 'Generate and refine role-specific resumes from your tracked experience and target role.' },
                   { title: 'AI job fetching', desc: 'Continuously pull, filter, and score fresh roles that match your preferences before you go looking.' },
                   { title: 'Auto-apply + suggestions', desc: 'AI-assisted application drafting, workflow suggestions, and deeper daily decision support.' },
                 ].map((x) => (
-                  <div key={x.title} className="rounded-2xl border border-[#DFE3E9] bg-black/[0.06] p-4">
-                    <p className="text-sm font-semibold text-[#17191E]">{x.title}</p>
-                    <p className="mt-2 text-sm text-[#4A505A]/90">{x.desc}</p>
+                  <div key={x.title} className="rounded-2xl border border-line bg-surface-sunken-hover p-4">
+                    <p className="text-sm font-semibold text-ink">{x.title}</p>
+                    <p className="mt-2 text-sm text-ink-2/90">{x.desc}</p>
                   </div>
                 ))}
               </div>
-              <div className="rounded-3xl border border-[#DFE3E9] bg-black/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
-                <p className="text-xs text-[#686F7B]">Next releases</p>
-                <p className="mt-2 text-sm text-[#3A4048]/90">
+              <div className="rounded-3xl border border-line bg-surface-sunken p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+                <p className="text-xs text-muted">Next releases</p>
+                <p className="mt-2 text-sm text-ink-2/90">
                   The next wave is intentionally AI-heavy: stronger resume generation, proactive job discovery, AI auto-apply assistance,
                   and smart suggestions that reduce busywork without hiding the workflow.
                 </p>
@@ -421,12 +422,12 @@ export function DemoSlideshow() {
     <div className="relative min-h-[100svh] overflow-x-hidden overscroll-none lg:h-screen lg:overflow-hidden">
       {/* background */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-        <div className="absolute inset-0 bg-[#FAFAF7]" />
-        <div className="absolute -inset-[40%] hero-beam-pan bg-[conic-gradient(from_140deg,rgba(212,175,55,0.0),rgba(212,175,55,0.16),rgba(232,186,91,0.14),rgba(212,175,55,0.0),rgba(201,206,214,0.18),rgba(212,175,55,0.0))] blur-[86px] opacity-[0.55]" />
-        <div className="absolute left-[8%] top-[12%] h-64 w-64 rounded-full bg-[#D4AF37]/10 blur-[110px] animate-pulse" />
-        <div className="absolute right-[10%] top-[18%] h-72 w-72 rounded-full bg-[#C9CED6]/25 blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[8%] left-[34%] h-64 w-64 rounded-full bg-[#F1D78A]/25 blur-[110px] animate-pulse" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(212,175,55,0.14),transparent_28%),radial-gradient(circle_at_82%_14%,rgba(201,206,214,0.16),transparent_28%),radial-gradient(circle_at_50%_62%,rgba(16,185,129,0.10),transparent_34%)]" />
+        <div className="absolute inset-0 bg-background" />
+        <div className="absolute -inset-[40%] hero-beam-pan bg-[conic-gradient(from_140deg,rgba(0,0,0,0),var(--hero-beam),var(--hero-beam),rgba(0,0,0,0),var(--hero-orb-1),rgba(0,0,0,0))] blur-[86px] opacity-[0.55]" />
+        <div className="absolute left-[8%] top-[12%] h-64 w-64 rounded-full bg-accent/10 blur-[110px] animate-pulse" />
+        <div className="absolute right-[10%] top-[18%] h-72 w-72 rounded-full bg-line-strong/25 blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[8%] left-[34%] h-64 w-64 rounded-full bg-accent-hover/25 blur-[110px] animate-pulse" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,var(--hero-orb-2),transparent_28%),radial-gradient(circle_at_82%_14%,var(--hero-orb-1),transparent_28%),radial-gradient(circle_at_50%_62%,rgb(var(--success)/0.10),transparent_34%)]" />
         <div className="absolute inset-0 opacity-[0.12] bg-[linear-gradient(90deg,rgba(23,25,30,0.05)_1px,transparent_1px),linear-gradient(0deg,rgba(23,25,30,0.05)_1px,transparent_1px)] bg-[size:110px_110px]" />
         
       </div>
@@ -434,43 +435,45 @@ export function DemoSlideshow() {
       {/* top bar */}
       <header className="relative z-20 px-3 pt-3 sm:px-0 sm:pt-4">
         <div className="shell">
-          <div className="rounded-[24px] border border-[#DFE3E9] bg-[#FAFAF7]/66 px-3 py-3 shadow-[0_18px_60px_rgba(17,19,24,0.12)] backdrop-blur-2xl sm:rounded-[28px] sm:px-5">
+          <div className="rounded-[24px] border border-line bg-background/70 px-3 py-3 shadow-nav backdrop-blur-2xl sm:rounded-[28px] sm:px-5">
             <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
               <div className="flex items-center gap-3">
                 <Link
                   href="/"
-                  className="inline-flex items-center gap-2 rounded-full border border-[#DFE3E9] bg-black/[0.035] px-3 py-2 text-sm font-medium text-[#3A4048] transition hover:bg-black/[0.05] hover:text-ink sm:px-4"
+                  className="inline-flex items-center gap-2 rounded-full border border-line bg-surface-sunken px-3 py-2 text-sm font-medium text-ink-2 transition hover:bg-surface-sunken hover:text-ink sm:px-4"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Home
                 </Link>
                 <div className="hidden sm:block md:block">
-                  <Logo compact href="/" />
+                  <Logo compact hideTextOnSmall href="/" />
                 </div>
               </div>
 
-              <div className="order-3 flex w-full items-center justify-center gap-2 rounded-full border border-[#DFE3E9] bg-black/[0.035] p-1.5 sm:order-none sm:w-auto md:flex">
+              <div className="order-3 flex w-full items-center justify-center gap-2 rounded-full border border-line bg-surface-sunken p-1.5 sm:order-none sm:w-auto md:flex">
                 {slides.map((s, i) => (
                   <button
                     key={s.id}
                     type="button"
                     onClick={() => go(i)}
                     aria-label={`Go to slide ${i + 1}: ${s.title}`}
-                    className={`h-2.5 w-2.5 rounded-full transition ${i === index ? a.dot : 'bg-black/[0.09] hover:bg-black/[0.12]'}`}
+                    className={`h-2.5 w-2.5 rounded-full transition ${i === index ? a.dot : 'bg-surface-sunken-hover'}`}
                   />
                 ))}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
+                <ThemeSwitch size="xs" className="sm:hidden" />
+                <ThemeSwitch size="sm" className="hidden sm:flex" />
                 <Link
                   href="/jobs-public"
-                  className="hidden md:inline-flex items-center rounded-full border border-[#DFE3E9] bg-black/[0.035] px-4 py-2 text-sm font-medium text-[#3A4048] transition hover:bg-black/[0.05] hover:text-ink"
+                  className="hidden md:inline-flex items-center rounded-full border border-line bg-surface-sunken px-4 py-2 text-sm font-medium text-ink-2 transition hover:bg-surface-sunken hover:text-ink"
                 >
                   Browse public jobs
                 </Link>
                 <Link
                   href="/register"
-                  className="inline-flex items-center gap-2 rounded-full bg-[#D4AF37] px-4 py-2 text-sm font-semibold text-[#17191E] shadow-[0_10px_32px_rgba(212,175,55,0.28)] transition hover:bg-[#E8C85C]"
+                  className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-ink shadow-[0_10px_32px_rgb(var(--accent)/0.28)] transition hover:bg-accent-hover"
                 >
                   Start free
                   <ArrowRight className="h-4 w-4" />
@@ -497,17 +500,17 @@ export function DemoSlideshow() {
                 {active.status ?? 'Now'}
               </span>
 
-              <h1 className="mt-4 text-3xl font-bold tracking-tight text-[#17191E] sm:mt-5 sm:text-5xl">
+              <h1 className="mt-4 text-3xl font-bold tracking-tight text-ink sm:mt-5 sm:text-5xl">
                 {active.title}
               </h1>
-              <p className="mt-4 text-sm leading-7 text-[#4A505A]/90 sm:mt-5 sm:text-lg sm:leading-8">
+              <p className="mt-4 text-sm leading-7 text-ink-2/90 sm:mt-5 sm:text-lg sm:leading-8">
                 {active.description}
               </p>
 
               <div className="mt-6 grid gap-2 sm:mt-7">
                 {active.bullets.map((b) => (
-                  <div key={b} className="flex items-start gap-2 text-sm text-[#3A4048]/90">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 text-[#8A6D1F]" />
+                  <div key={b} className="flex items-start gap-2 text-sm text-ink-2/90">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 text-accent-text" />
                     {b}
                   </div>
                 ))}
@@ -517,7 +520,7 @@ export function DemoSlideshow() {
                 <button
                   type="button"
                   onClick={prev}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#DFE3E9] bg-black/[0.035] px-5 py-2.5 text-sm font-medium text-[#3A4048] transition hover:bg-black/[0.05] hover:text-ink sm:w-auto"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-line bg-surface-sunken px-5 py-2.5 text-sm font-medium text-ink-2 transition hover:bg-surface-sunken hover:text-ink sm:w-auto"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Prev
@@ -525,29 +528,29 @@ export function DemoSlideshow() {
                 <button
                   type="button"
                   onClick={next}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#D4AF37] px-5 py-2.5 text-sm font-semibold text-[#17191E] shadow-[0_10px_32px_rgba(212,175,55,0.28)] transition hover:bg-[#E8C85C] sm:w-auto"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink shadow-[0_10px_32px_rgb(var(--accent)/0.28)] transition hover:bg-accent-hover sm:w-auto"
                 >
                   Next
                   <ArrowRight className="h-4 w-4" />
                 </button>
                 <Link
                   href="/login"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#DFE3E9] bg-black/[0.02] px-5 py-2.5 text-sm font-medium text-[#3A4048] transition hover:bg-black/[0.05] hover:text-ink sm:w-auto"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-line bg-surface-sunken px-5 py-2.5 text-sm font-medium text-ink-2 transition hover:bg-surface-sunken hover:text-ink sm:w-auto"
                 >
                   <ShieldCheck className="h-4 w-4" />
                   Sign in
                 </Link>
               </div>
 
-              <div className="mt-6 max-w-sm rounded-2xl border border-[#DFE3E9] bg-black/[0.03] p-4 backdrop-blur-xl">
-                <div className="flex items-center justify-between gap-4 text-xs text-[#686F7B]">
+              <div className="mt-6 max-w-sm rounded-2xl border border-line bg-surface-sunken p-4 backdrop-blur-xl">
+                <div className="flex items-center justify-between gap-4 text-xs text-muted">
                   <span className="inline-flex items-center gap-2">
-                    <Bot className="h-3.5 w-3.5 text-[#8A6D1F]" />
+                    <Bot className="h-3.5 w-3.5 text-accent-text" />
                     {isPaused ? 'Autoplay paused' : `Autoplay every ${AUTO_ADVANCE_MS / 1000}s`}
                   </span>
                   <span>{index + 1} / {slides.length}</span>
                 </div>
-                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/[0.05]">
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-sunken">
                   <div
                     key={`${active.id}-${isPaused ? 'paused' : 'running'}`}
                     className={`h-full rounded-full ${a.dot}`}
@@ -559,7 +562,7 @@ export function DemoSlideshow() {
                 </div>
               </div>
 
-              <p className="mt-4 text-xs leading-5 text-[#686F7B]">
+              <p className="mt-4 text-xs leading-5 text-muted">
                 Tip: use ← and → to navigate, or hover to pause the auto tour.
               </p>
             </div>
@@ -573,7 +576,7 @@ export function DemoSlideshow() {
 
       {/* bottom progress */}
       <div className="pointer-events-none absolute bottom-6 left-0 right-0 z-10 hidden justify-center md:flex" aria-hidden>
-        <div className="rounded-full border border-[#DFE3E9] bg-[#FAFAF7]/70 px-4 py-2 text-xs text-[#686F7B] backdrop-blur-xl">
+        <div className="rounded-full border border-line bg-background/70 px-4 py-2 text-xs text-muted backdrop-blur-xl">
           {index + 1} / {slides.length}
         </div>
       </div>

@@ -69,7 +69,7 @@ export function StepProfilePhoto({ profilePictureUrl, isLinkedinUser, linkedinPh
             className="h-10 w-10 shrink-0 rounded-full object-cover"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-[#0A5C8A]">Use your LinkedIn profile photo?</p>
+            <p className="text-xs font-medium text-info-text">Use your LinkedIn profile photo?</p>
             <p className="truncate text-[11px] text-muted">We found a photo from your LinkedIn account.</p>
           </div>
           <button
@@ -87,7 +87,7 @@ export function StepProfilePhoto({ profilePictureUrl, isLinkedinUser, linkedinPh
       {isUsingLinkedinPhoto && (
         <div className="flex items-center gap-2 rounded-xl border border-[#0A66C2]/40 bg-[#0A66C2]/[0.06] px-4 py-2.5">
           <Linkedin size={14} className="shrink-0 text-[#0A66C2]" />
-          <p className="flex-1 text-xs text-[#0A5C8A]">Using your LinkedIn profile photo</p>
+          <p className="flex-1 text-xs text-info-text">Using your LinkedIn profile photo</p>
           <button
             type="button"
             onClick={() => onUrlChange('')}
@@ -113,14 +113,14 @@ export function StepProfilePhoto({ profilePictureUrl, isLinkedinUser, linkedinPh
                 <button
                   type="button"
                   onClick={() => onUrlChange('')}
-                  className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500/80 text-[#17191E] hover:bg-red-500"
+                  className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-danger-solid text-white hover:bg-danger-solid/90"
                 >
                   <X size={12} />
                 </button>
               )}
             </div>
           ) : (
-            <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-dashed border-[#D5DAE1] bg-black/[0.03] text-2xl font-bold text-muted">
+            <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-dashed border-line bg-surface-sunken text-2xl font-bold text-muted">
               {name ? getInitials(name) : '?'}
             </div>
           )}

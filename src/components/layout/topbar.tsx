@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Search } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
+import { ThemeSwitch } from '@/components/shared/theme-switch';
 import { TopbarMobileMenu } from './topbar-mobile-menu';
 import { SignOutButton } from './sign-out-button';
 import { NotificationBell } from './notification-bell';
@@ -24,13 +25,13 @@ function UserAvatar({ user }: { user: TopbarUser }) {
       <img
         src={user.image}
         alt={user.name ?? 'Profile'}
-        className="h-8 w-8 rounded-full object-cover ring-2 ring-white/10"
+        className="h-8 w-8 rounded-full object-cover ring-2 ring-line"
       />
     );
   }
 
   return (
-    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold text-[#8A6D1F] ring-2 ring-accent/20">
+    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold text-accent-text ring-2 ring-accent/20">
       {initials}
     </span>
   );
@@ -40,11 +41,12 @@ export function Topbar({ user }: { user: TopbarUser }) {
   const label = user.name || user.email || 'Account';
 
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-background/85 backdrop-blur">
-      <div className="flex min-h-16 items-center justify-between gap-3 px-4 py-3 lg:px-8">
-        <div className="flex items-center">
+    <header className="sticky top-0 z-30 border-b border-line bg-[color:var(--nav-scrim)] backdrop-blur-xl supports-[backdrop-filter]:bg-[color:var(--nav-scrim)]">
+      <div className="flex min-h-16 items-center justify-between gap-2 px-4 py-3 lg:gap-3 lg:px-8">
+        <div className="flex min-w-0 items-center">
           <div className="lg:hidden">
-            <Logo compact href="/dashboard" />
+            {/* Mark only below sm: the wordmark returns once there is room. */}
+            <Logo compact hideTextOnSmall href="/dashboard" />
           </div>
 
           <div className="relative hidden w-full max-w-md md:block">
@@ -53,18 +55,22 @@ export function Topbar({ user }: { user: TopbarUser }) {
           </div>
         </div>
 
-        <div className="hidden items-center gap-3 lg:flex">
-          <Link href="/profile" className="flex items-center gap-2 rounded-xl border border-line bg-black/[0.03] px-3 py-1.5 text-sm text-muted transition-colors hover:bg-black/[0.06] hover:text-ink">
+        <div className="hidden shrink-0 items-center gap-3 lg:flex">
+          <Link href="/profile" className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-ink">
             <UserAvatar user={user} />
             <span>{label}</span>
           </Link>
+          <ThemeSwitch size="sm" />
           <NotificationBell />
           <Link href="/jobs/new" className="btn-primary inline-flex items-center justify-center">Add Job</Link>
           <Link href="/settings" className="btn-secondary inline-flex items-center justify-center">Settings</Link>
           <SignOutButton />
         </div>
 
-        <div className="lg:hidden">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 lg:hidden">
+          {/* Icon-only pill on phones; the fuller switch once space allows. */}
+          <ThemeSwitch size="xs" className="sm:hidden" />
+          <ThemeSwitch size="sm" className="hidden sm:flex" />
           <TopbarMobileMenu label={label} />
         </div>
       </div>

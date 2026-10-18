@@ -108,8 +108,8 @@ export function PublicJobBrowser({ onImport }: Props) {
               onClick={() => { setDays(r.value); setPage(1); }}
               className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                 days === r.value
-                  ? 'border-[#D4AF37]/60 bg-[#D4AF37]/15 text-[#8A6D1F]'
-                  : 'border-[#DFE3E9] bg-black/[0.03] text-muted hover:border-[#D5DAE1] hover:text-ink'
+                  ? 'border-accent/60 bg-accent/15 text-accent-text'
+                  : 'border-line bg-surface-sunken text-muted hover:border-line hover:text-ink'
               }`}
             >
               {r.label}
@@ -119,7 +119,7 @@ export function PublicJobBrowser({ onImport }: Props) {
       </form>
 
       {error && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
+        <div className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger-text">
           {error}
         </div>
       )}
@@ -140,11 +140,11 @@ export function PublicJobBrowser({ onImport }: Props) {
               return (
                 <div
                   key={job.id}
-                  className="flex items-start justify-between gap-4 rounded-2xl border border-[#DFE3E9] bg-black/[0.03] px-4 py-4"
+                  className="flex items-start justify-between gap-4 rounded-2xl border border-line bg-surface-sunken px-4 py-4"
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium text-ink">{job.title}</p>
-                    <p className="mt-0.5 truncate text-sm text-[#4A505A]">{job.company}</p>
+                    <p className="mt-0.5 truncate text-sm text-ink-2">{job.company}</p>
                     <p className="mt-1 text-xs text-muted">
                       {[job.remoteType, job.location].filter(Boolean).join(' · ') || 'Location not specified'}
                     </p>
@@ -154,7 +154,7 @@ export function PublicJobBrowser({ onImport }: Props) {
                   </div>
                   <div className="shrink-0 pt-0.5">
                     {imported ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-700">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2.5 py-1 text-xs text-success-text">
                         ✓ Added
                       </span>
                     ) : (

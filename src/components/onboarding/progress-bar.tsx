@@ -22,7 +22,7 @@ export function OnboardingProgressBar({ currentStep }: Props) {
       {/* Step indicators */}
       <div className="relative flex items-center justify-between">
         {/* Connecting line */}
-        <div className="absolute left-0 right-0 top-4 h-0.5 bg-black/[0.05]" />
+        <div className="absolute left-0 right-0 top-4 h-0.5 bg-surface-sunken" />
         <motion.div
           className="absolute left-0 top-4 h-0.5 bg-accent"
           initial={{ width: '0%' }}
@@ -41,10 +41,10 @@ export function OnboardingProgressBar({ currentStep }: Props) {
                 className={[
                   'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-colors',
                   isDone
-                    ? 'bg-emerald-500 text-[#17191E]'
+                    ? 'bg-success-solid text-success-ink'
                     : isActive
-                    ? 'bg-accent text-[#17191E] ring-2 ring-accent/30 ring-offset-2 ring-offset-[#FAFAF7]'
-                    : 'bg-black/[0.05] text-muted',
+                    ? 'bg-accent text-accent-ink ring-2 ring-accent/30 ring-offset-2 ring-offset-background'
+                    : 'bg-surface-sunken text-muted',
                 ].join(' ')}
                 animate={{ scale: isActive ? 1.1 : 1 }}
                 transition={{ duration: 0.2 }}
@@ -54,7 +54,7 @@ export function OnboardingProgressBar({ currentStep }: Props) {
               <span
                 className={[
                   'hidden text-xs font-medium sm:block',
-                  isActive ? 'text-ink' : isDone ? 'text-emerald-400' : 'text-muted',
+                  isActive ? 'text-ink' : isDone ? 'text-success-text' : 'text-muted',
                 ].join(' ')}
               >
                 {step.label}

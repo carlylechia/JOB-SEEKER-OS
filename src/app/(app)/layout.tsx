@@ -3,6 +3,8 @@ import { headers } from 'next/headers';
 import { cache } from 'react';
 import { auth } from '@/auth';
 import { AppShell } from '@/components/layout/app-shell';
+import { TrialBanner } from '@/components/billing/trial-countdown';
+import { getEffectiveSubscription } from '@/lib/billing/subscriptions';
 import { prisma } from '@/lib/prisma';
 
 const getProfileStatus = cache(async (userId: string) => {
@@ -10,6 +12,20 @@ const getProfileStatus = cache(async (userId: string) => {
     where: { userId },
     select: { onboardingCompleted: true, profilePictureUrl: true },
   });
+});
+
+/**
+ * Billing state is resolved once per request on the server and passed down.
+ * The client only renders it — it never decides access.
+ */
+const getBillingBanner = cache(async (userId: string) => {
+  const effective = await getEffectiveSubscription(userId);
+  return {
+    isAdmin: effective.isAdmin,
+    isTrialing: effective.isTrialing,
+    trialExpired: effective.trialExpired,
+    trialEndsAt: effective.trialEndsAt?.toISOString() ?? null,
+  };
 });
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
@@ -32,10 +48,33 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     redirect('/onboarding');
   }
 
+  // Role is read fresh from the database, never from a stale JWT claim.
+  const [dbUser, billing] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    }),
+    getBillingBanner(session.user.id),
+  ]);
+
   const userWithAvatar = {
     ...session.user,
     image: profile?.profilePictureUrl ?? session.user.image ?? null,
+    role: dbUser?.role ?? 'USER',
   };
 
-  return <AppShell user={userWithAvatar}>{children}</AppShell>;
+  const showTrialBanner = !billing.isAdmin && Boolean(billing.trialEndsAt);
+
+  return (
+    <AppShell user={userWithAvatar}>
+      {showTrialBanner && billing.trialEndsAt ? (
+        <TrialBanner
+          trialEndsAt={billing.trialEndsAt}
+          isTrialing={billing.isTrialing}
+          trialExpired={billing.trialExpired}
+        />
+      ) : null}
+      {children}
+    </AppShell>
+  );
 }
