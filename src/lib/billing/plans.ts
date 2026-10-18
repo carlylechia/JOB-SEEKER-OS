@@ -132,17 +132,34 @@ export const FEATURE_ENTITLEMENTS: Record<
     released: true,
     description: 'Upload and parse your resume for tailored applications.',
   },
+  /**
+   * Creating, editing, templating and exporting a structured resume.
+   *
+   * Plans were set at the monetization launch; this release ships the feature
+   * behind them. It is deliberately NOT metered: building a document costs the
+   * user nothing, and `PLAN_LIMITS.resumes` bounds how many they may keep.
+   */
   RESUME_BUILDER: {
     plans: ['PRO', 'PREMIUM'],
     label: 'Resume builder',
-    released: false,
-    description: 'Build and tailor resumes to a specific role.',
+    released: true,
+    description: 'Build, tailor and export a structured resume for each role you apply to.',
   },
+  /**
+   * The paid operation behind job-specific optimisation: proposing
+   * evidence-backed edits to ONE resume for ONE job.
+   *
+   * Kept separate from RESUME_BUILDER because building and editing must keep
+   * working exactly as they do; only the model call is metered, and it draws on
+   * the same shared `aiCredits` budget as every other AI feature. One AI
+   * allowance, not several competing ones.
+   */
   RESUME_OPTIMIZATION: {
     plans: ['PRO', 'PREMIUM'],
     label: 'Resume optimisation',
-    released: false,
-    description: 'Improve your resume for a specific job description.',
+    released: true,
+    description:
+      'Get specific, evidence-backed suggestions for one resume and one job — you decide what to keep.',
   },
   /**
    * The paid operation behind AI Job Intelligence: explaining how a specific
