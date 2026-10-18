@@ -366,6 +366,8 @@ subscription rows.
 | Usage limits | Row-locked transaction; concurrency-tested |
 | Cron | Fail-closed constant-time bearer check |
 | Schema drift | `npm run schema:check` blocks a deploy on proven drift; `GET /api/health` reports `503` when the DB is behind |
+| Migrations | GitHub Actions applies them on every merge to `main`, serialised via `concurrency`, then waits for a healthy deployment |
+| Deploy verification | The pipeline polls `/api/health` until the schema is CURRENT; a green build alone is never treated as success |
 | Resume files | Private blobs + authenticated, ownership-checked route |
 | Cache safety | `private, no-store` on all admin/billing responses |
 | Input validation | Strict Zod schemas rejecting unknown fields |

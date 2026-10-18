@@ -28,6 +28,7 @@ Preview build needs to boot the app).
 | `OPENAI_API_KEY` | yes for Resume Intelligence | AI provider key (server-only). Never `NEXT_PUBLIC_*` |
 | `RESUME_INTELLIGENCE_MODEL` | optional | Extraction model. Defaults to `gpt-4o-mini`. Must support Structured Outputs |
 | `JOB_INTELLIGENCE_MODEL` | optional | Job-fit analysis model. Defaults to `gpt-4.1-mini`. Must support Structured Outputs |
+| `PRODUCTION_URL` | yes for deploys | Repository **variable** (not secret): the public app origin, used by the deploy workflow to verify health |
 
 **Never** hardcode any of these in source. Do not commit real values.
 
@@ -53,6 +54,82 @@ Preview build needs to boot the app).
 
 Verify these stay current before each release; see `docs/ARCHITECTURE.md`.
 
+## Deployment pipeline
+
+Merging to `main` now deploys automatically, and migrations are no longer a
+manual step. `.github/workflows/deploy.yml` runs on every push to `main`:
+
+```
+  push to main
+      │
+      ├─ 1. Inspect schema drift          read-only; logs what is pending
+      ├─ 2. Apply pending migrations      prisma migrate deploy
+      ├─ 3. Verify the schema matches     npm run schema:check  → must be CURRENT
+      ├─ 4. Wait for a healthy deploy     GET /api/health until ok, then verify
+      └─ 5. Summarise                     into the run summary
+```
+
+Step 4 is the one that matters. A green build does not mean a working site —
+on 2026-10-18 the build went green while every dashboard load returned a 500.
+So the pipeline keeps polling `/api/health` until the deployment reports a
+CURRENT schema, and fails (and alerts on Discord) if it never does.
+
+### Ordering, and the race it creates
+
+Vercel auto-deploys on push to `main`, so the migration job and the Vercel build
+run **concurrently**. Migrations take seconds and a Vercel build takes a minute
+or two, so the migration normally wins — but that is a timing assumption, not a
+guarantee, and this bug has already taken the site down once.
+
+Two properties make the residual window harmless rather than fatal:
+
+- `concurrency: production-deploy` with `cancel-in-progress: false` means two
+  rapid merges can never run two migrations against the database at once. A
+  newer push **waits**; it never cancels a half-finished migration.
+- `/api/health` re-reads the database on **every request**, so the moment the
+  migration lands the deployment recovers on its own. The exposure is seconds.
+
+### Why migrations do not run inside the Vercel build
+
+It is tempting to put `prisma migrate deploy` in `build:vercel`. Do not:
+
+- Vercel builds a **preview** for every pull request. A preview build that
+  migrates production is a production outage waiting for a typo.
+- Vercel builds are not guaranteed to run once. A retry or a cache hit would
+  re-run the migration step.
+- Builds can run concurrently, and two `migrate deploy` processes against one
+  database is not a supported race.
+
+GitHub Actions runs on `main` only, has an explicit, inspectable log, and cannot
+fire for a fork.
+
+### Required GitHub configuration
+
+| Name | Kind | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | Secret | Production database. Never printed by the workflow. |
+| `ALERT_WEBHOOK_URL` | Secret | Discord, for failed-deployment alerts. |
+| `PRODUCTION_URL` | Variable | Public app origin, used to verify health. Not secret. |
+
+Set with:
+
+```bash
+gh secret set DATABASE_URL
+gh secret set ALERT_WEBHOOK_URL
+gh variable set PRODUCTION_URL --body "https://yourdomain.com"
+```
+
+### Triggering a deploy manually
+
+```bash
+gh workflow run deploy.yml -f reason="migration failed, retrying"
+```
+
+Use this after fixing a migration that failed mid-deploy. It runs the same
+pipeline, so it is safe.
+
+---
+
 ## Deployment sequence
 
 ### 1. Prepare
@@ -71,16 +148,15 @@ path exists **before** continuing.
 
 ### 3. Verify the schema matches this build
 
+**Automated.** Merging to `main` runs this pipeline. Run it manually when
+deploying from a workstation, or when recovering from a failed deploy:
+
 ```bash
 DATABASE_URL="<production-url>" npm run schema:check
 ```
 
-This compares the migrations committed here against the ones actually applied
-to the target database. It only reads — it never migrates.
-
-Expect `Safe to deploy.` A non-zero exit means **stop**: it names the missing
-migration and refuses to let a broken deploy through. See §"Why the schema gate
-exists" below.
+Read-only. Expect `Safe to deploy.` A non-zero exit means **stop**: it names the
+missing migration. See §"Why the schema gate exists" below.
 
 ### 4. Deploy the migration
 
@@ -259,6 +335,14 @@ The three controls added in response:
 > The gate **fails closed on proven drift** but **fails open when the database
 > is unreachable**. Blocking every deploy on a transient network blip would
 > teach people to ignore the check, which is worse than not having one.
+
+### What was added afterwards: automation
+
+The gate detects drift. The pipeline in §"Deployment pipeline" prevents it —
+`prisma migrate deploy` now runs on every merge to `main`, followed by a
+verification step that waits for a genuinely healthy deployment and alerts if
+there isn't one. Merging a migration and deploying the code that needs it are
+the same action now.
 
 ### Checking drift in production
 
