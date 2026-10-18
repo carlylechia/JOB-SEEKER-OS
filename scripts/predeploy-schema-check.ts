@@ -17,11 +17,29 @@ import { checkSchemaDrift, explainDrift } from '@/lib/db/schema-guard';
 async function main() {
   const target = process.argv.includes('--production') ? 'production' : 'the target database';
 
+  /**
+   * `--report` describes without judging.
+   *
+   * The deploy pipeline uses this BEFORE migrating, where drift is expected
+   * and is the thing about to be fixed. Exiting non-zero there would fail the
+   * pipeline for the very thing it is about to resolve.
+   */
+  const reportOnly = process.argv.includes('--report');
+
   console.log(`\nChecking that ${target} matches this build...\n`);
 
   const report = await checkSchemaDrift();
 
   console.log(explainDrift(report));
+
+  if (reportOnly) {
+    console.log(
+      report.status === 'BEHIND'
+        ? `  ${report.pending.length} migration(s) pending — apply with \`prisma migrate deploy\`.\n`
+        : '  Nothing to apply.\n',
+    );
+    return;
+  }
 
   if (report.status === 'BEHIND') {
     console.error(

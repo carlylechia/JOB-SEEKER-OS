@@ -86,15 +86,10 @@ jobs:
       - name: Inspect schema drift
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: npx tsx -e "
-          import { checkSchemaDrift, explainDrift } from './src/lib/db/schema-guard';
-          checkSchemaDrift().then((r) => {
-            console.log(explainDrift(r));
-            if (r.status === 'AHEAD') {
-              console.log('  Note: the database has migrations this build does not contain.');
-            }
-          });
-        "
+        # Report-only: drift is EXPECTED here, and applying it is the next
+        # step. A script, not inline code — a multi-line quoted `run:` block
+        # is fragile YAML and this workflow is invalid if it does not parse.
+        run: npm run schema:report
 
       # ── Step 2: apply ─────────────────────────────────────────────────────
       # `migrate deploy` applies committed migrations only. It never generates a
