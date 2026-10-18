@@ -54,6 +54,16 @@ export const MATERIAL_MAX_PROFILE_CHARS = 5_000;
 export const MATERIAL_MAX_TEMPLATE_CHARS = 3_000;
 
 /**
+/**
+ * Ceiling on a saved structured resume sent as context.
+ *
+ * A built resume is the user's own composed document, so it is fair game when
+ * explicitly selected — but it is still bounded, because a long one would crowd
+ * out the job posting.
+ */
+export const MATERIAL_MAX_RESUME_CHARS = 4_000;
+
+/**
  * Ceiling on the draft text supplied when asking for a revision.
  */
 export const MATERIAL_MAX_SOURCE_DRAFT_CHARS = 8_000;

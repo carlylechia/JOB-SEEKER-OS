@@ -1040,5 +1040,5 @@ model ApplicationMaterial {
   @@index([userId, status])
   @@index([jobId])
   @@index([supersedesId])
-  @@index([userId, inputFingerprint])
+  @@unique([userId, type, inputFingerprint, schemaVersion])
 }
