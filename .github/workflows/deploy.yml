@@ -1,0 +1,139 @@
+name: Deploy
+
+# The deployment pipeline.
+#
+# WHY THIS EXISTS
+#
+# Vercel deploys code the moment it is merged. The database only changes when
+# something runs `prisma migrate deploy`. Those two facts create a window where
+# deployed code queries columns the database does not have, and on this
+# application that means every dashboard load returns a 500 — because the
+# dashboard reads JobLead on every request. That outage happened on 2026-10-18:
+# four migrations were merged and never applied.
+#
+# So merging a migration and deploying the code that needs it are now ONE action.
+#
+# THE ORDERING PROBLEM
+#
+# Vercel auto-deploys on push to main, so a naive "run migrations in CI" job
+# would RACE that build. The migration might land after the new code is already
+# serving traffic. Migrations take seconds; a Vercel build takes a minute or
+# two, so the race is usually won — but "usually" is not a guarantee, and this
+# bug has already taken the site down once.
+#
+# Two things close the gap:
+#
+#   1. `concurrency` below serialises deployments. Two rapid merges can never
+#      run two migrations against the database at once, which Prisma does not
+#      safely tolerate.
+#   2. The deploy is not trusted on its own. This workflow keeps verifying until
+#      `/api/health` reports a healthy, CURRENT schema, and alerts loudly if it
+#      never does. The health check re-reads the database on every request, so
+#      the moment the migration lands the deployment recovers by itself — the
+#      window is seconds, not hours.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: Why this manual run was triggered
+        required: true
+        type: string
+
+# Never cancel a deploy midway. A cancelled migration job is exactly the
+# half-finished state that causes this outage, so a newer push WAITS.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Migrate, then verify
+    runs-on: ubuntu-latest
+
+    # Optional: let this be gated by an approval rule in future.
+    # environment: production
+
+    steps:
+      - name: Check out the deployed commit
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Confirm the migration URL is configured
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL is not set. Add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          # Never print the URL — it carries the database password.
+          echo "DATABASE_URL is configured (${#DATABASE_URL} characters)."
+
+      # ── Step 1: see what the database is missing before touching it ────────
+      # Read-only. Prints the pending migrations so the job log records exactly
+      # what was about to change.
+      - name: Inspect schema drift
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx -e "
+          import { checkSchemaDrift, explainDrift } from './src/lib/db/schema-guard';
+          checkSchemaDrift().then((r) => {
+            console.log(explainDrift(r));
+            if (r.status === 'AHEAD') {
+              console.log('  Note: the database has migrations this build does not contain.');
+            }
+          });
+        "
+
+      # ── Step 2: apply ─────────────────────────────────────────────────────
+      # `migrate deploy` applies committed migrations only. It never generates a
+      # new one, and it never resets. That is why it is safe to run unattended.
+      - name: Apply pending migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx prisma migrate deploy
+
+      # ── Step 3: prove it worked, before trusting anything downstream ──────
+      - name: Verify the schema now matches this build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run schema:check
+
+      # ── Step 4: the build must not merely compile — it must serve ─────────
+      # Vercel is still building at this point. This waits for the deployment
+      # to actually answer, and fails the workflow if it never does, so a green
+      # tick always means a working site rather than a green build.
+      - name: Wait for the deployment to become healthy
+        env:
+          DEPLOY_URL: ${{ vars.PRODUCTION_URL }}
+          NEXT_PUBLIC_APP_URL: ${{ vars.PRODUCTION_URL }}
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DEPLOY_URL" ]; then
+            echo "::error::PRODUCTION_URL repository variable is not set."
+            exit 1
+          fi
+          npx tsx scripts/verify-deployment.ts --url "$DEPLOY_URL" --timeout 420 --interval 10
+
+      - name: Summarise
+        run: |
+          {
+            echo "### Deployment healthy"
+            echo ""
+            echo "- Commit: \`${{ github.sha }}\`"
+            echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              echo "- Manual trigger reason: ${{ inputs.reason }}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
