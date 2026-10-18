@@ -30,7 +30,6 @@ import {
   ResumeOptimizationAiError,
 } from './optimization/service';
 import { OPTIMIZATION_ERROR_MESSAGES, type OptimizationErrorCode } from './optimization/schema';
-import { PdfEngineNotReadyError } from './pdf';
 
 type Mapped = { code: ApiErrorCode; message: string; meta?: Record<string, unknown> };
 
@@ -109,7 +108,15 @@ function map(error: unknown): Mapped | null {
     };
   }
 
-  if (error instanceof PdfEngineNotReadyError) {
+  // Matched on the stable `code` rather than by importing the class. This module
+  // is imported by every resume route, and importing `pdf.ts` from here would
+  // drag pdf-lib and the font loader into routes that never touch a PDF. The
+  // error is still raised by `pdf.ts`; only the matching is decoupled.
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { code?: unknown }).code === 'PDF_ENGINE_NOT_READY'
+  ) {
     // A server fault, not the user's. Says so plainly rather than implying they
     // did something wrong.
     return { code: 'AI_UNAVAILABLE', message: 'Export is warming up. Please try again in a moment.' };
