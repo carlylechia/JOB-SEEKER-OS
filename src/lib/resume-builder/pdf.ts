@@ -26,7 +26,7 @@
  */
 
 import fs from 'node:fs';
-import { createRequire } from 'node:module';
+import path from 'node:path';
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { FontStyle, LayoutDocument, LayoutMetrics } from './layout';
@@ -34,30 +34,49 @@ import type { FontStyle, LayoutDocument, LayoutMetrics } from './layout';
 // ─── Font files ─────────────────────────────────────────────────────────────
 
 /**
- * Resolved at RUNTIME, through `createRequire`, with a variable specifier.
+ * The two Inter weights live IN THIS REPOSITORY, at
+ * `src/lib/resume-builder/fonts/`. Read them from the filesystem; see below for
+ * why they are not resolved out of `node_modules` any more.
  *
- * This is deliberate and slightly awkward, so the reason is recorded here:
- *
- *  - A LITERAL `require.resolve('….ttf')` makes webpack create a module for
- *    the font file and try to parse it as JavaScript. The production build fails
- *    with `Module parse failed: Unexpected character`.
- *  - `serverExternalPackages` does not help: it externalises packages reached
- *    through `require`, not a deep file reached through `require.resolve`.
- *  - A variable specifier defeats static analysis, so the bundler emits a
- *    "Critical dependency" warning and leaves the binary alone. The build
- *    succeeds and the file is read from disk exactly where Node put it.
- *
- * The alternative was committing ~690 KB of TTF binaries to the repository to
- * silence one cosmetic warning. The warning is the cheaper trade, and the
- * behaviour it describes — the fonts are runtime assets, not modules — is what
- * we actually want.
+ * Both are SIL Open Font License 1.1; the licence travels with them in
+ * `fonts/LICENSE.txt`, which the OFL requires.
  */
-const FONT_SPECIFIERS: Record<FontStyle, string> = {
-  regular: '@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf',
-  semibold: '@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf',
+const FONT_FILES: Record<FontStyle, string> = {
+  regular: 'Inter_400Regular.ttf',
+  semibold: 'Inter_600SemiBold.ttf',
 };
 
-const requireFromHere = createRequire(import.meta.url);
+/**
+ * Why a vendored file rather than `@expo-google-fonts/inter`.
+ *
+ * The fonts used to be fetched with `createRequire(import.meta.url).resolve()`
+ * and a variable specifier, on the reasoning that an unanalysable request would
+ * be left alone by the bundler and read off disk at runtime. That reasoning was
+ * wrong, and the export was broken in every built deployment while passing
+ * tests:
+ *
+ *  - Under `tsx` the specifier really did resolve, so every test passed.
+ *  - Under webpack the `createRequire` import was replaced with a stub whose
+ *    `resolve()` unconditionally throws `MODULE_NOT_FOUND`, and whose `keys()`
+ *    returns `[]` — the empty context module for a request it could not
+ *    analyse. The only symptom was the build's "Critical dependency" warning,
+ *    which the release notes recorded as cosmetic. It was the bug.
+ *  - Making the specifier LITERAL instead does not help either. It defeats the
+ *    warning but webpack then creates a module for the `.ttf` and tries to parse
+ *    it as JavaScript, and the production build fails with `Module parse failed:
+ *    Unexpected character`. Verified, not assumed.
+ *
+ * A literal `fs.readFileSync` of a file in the source tree is something the
+ * bundler and the Vercel file tracer CAN see, which is the property the previous
+ * approach lacked. `tests/resume-pdf.test.ts` guards the shape of this module so
+ * the stub pattern cannot be reintroduced.
+ *
+ * Resolved from `process.cwd()`, which is the deployment root for `next start`
+ * and for Vercel's Node runtime, and the project root under `tsx`. The error
+ * below lists what was tried rather than surfacing a bare ENOENT, because the
+ * failure mode this replaces was one that only appeared in production.
+ */
+const FONT_DIR = path.join(process.cwd(), 'src', 'lib', 'resume-builder', 'fonts');
 
 let fontBytesCache: Record<FontStyle, Uint8Array> | null = null;
 
@@ -72,9 +91,26 @@ function loadFontBytes(): Record<FontStyle, Uint8Array> {
   if (fontBytesCache) return fontBytesCache;
 
   const loaded = {} as Record<FontStyle, Uint8Array>;
+  const missing: string[] = [];
+
   for (const style of ['regular', 'semibold'] as FontStyle[]) {
-    loaded[style] = new Uint8Array(fs.readFileSync(requireFromHere.resolve(FONT_SPECIFIERS[style])));
+    const file = path.join(FONT_DIR, FONT_FILES[style]);
+    try {
+      loaded[style] = new Uint8Array(fs.readFileSync(file));
+    } catch {
+      missing.push(file);
+    }
   }
+
+  if (missing.length > 0) {
+    throw new Error(
+      `PDF export could not load its font files from ${FONT_DIR}. ` +
+        `Missing: ${missing.join(', ')}. ` +
+        'These ship in the repository; a missing file means the deployment did ' +
+        'not include them.',
+    );
+  }
+
   fontBytesCache = loaded;
   return loaded;
 }
