@@ -21,8 +21,8 @@ import {
   RESUME_MAX_PDF_PAGES,
   RESUME_MAX_UNCOMPRESSED_BYTES,
   RESUME_MAX_ZIP_EXPANSION_RATIO,
-  RESUME_IMAGE_ONLY_TEXT_FLOOR,
   RESUME_MIN_USABLE_CHARS,
+  RESUME_MEANINGFUL_CHAR_FLOOR,
   formatFromFilename,
   refusalForFilename,
   type ResumeFormat,
@@ -129,13 +129,25 @@ export function detectResumeFormat(
     );
   }
 
-  // No binary signature. Accept as plain text only if it really decodes as text.
-  if (formatFromFilename(filename) === 'txt' || isProbablyText(bytes)) {
-    if (decodeText(bytes) !== null) return { ok: true, format: 'txt' };
-  }
-
+  const declaredFormat = formatFromFilename(filename);
   const refusal = refusalForFilename(filename);
   if (refusal) return fail('UNSUPPORTED_FORMAT', refusal);
+
+  // No binary signature, but the bytes really are text.
+  //
+  // The extension must agree. A `.pdf` or `.docx` containing readable text is a
+  // mismatch — a renamed script, a mail file saved with the wrong suffix — and
+  // accepting it would mean storing one thing as another and analysing the
+  // wrong document. The user is told what actually happened instead.
+  if (isProbablyText(bytes) && decodeText(bytes) !== null) {
+    if (declaredFormat === 'txt') return { ok: true, format: 'txt' };
+    if (declaredFormat === null) return { ok: true, format: 'txt' };
+    return fail(
+      'UNSUPPORTED_FORMAT',
+      `That file does not look like a ${declaredFormat.toUpperCase()}. It may have been renamed — upload the original document.`,
+    );
+  }
+
   return fail('UNSUPPORTED_FORMAT');
 }
 
@@ -303,10 +315,10 @@ async function extractPdfText(bytes: Uint8Array): Promise<ResumeTextResult> {
   const normalized = normalizeResumeText(raw ?? '');
   const wasTruncated = totalPages > RESUME_MAX_PDF_PAGES;
 
-  if (normalized.length < RESUME_MIN_USABLE_CHARS) {
+  if (countMeaningfulChars(normalized) < RESUME_MEANINGFUL_CHAR_FLOOR) {
     // Distinguish "scanned image with no text layer" from "a genuinely blank
     // document", because the fix is different and only the user can apply it.
-    if (countMeaningfulChars(normalized) <= RESUME_IMAGE_ONLY_TEXT_FLOOR) {
+    if (countMeaningfulChars(normalized) <= RESUME_MEANINGFUL_CHAR_FLOOR / 2) {
       return fail('IMAGE_ONLY_PDF');
     }
     return fail('NO_TEXT_FOUND');

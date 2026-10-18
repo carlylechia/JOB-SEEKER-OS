@@ -28,7 +28,6 @@ import { UsageLimitExceededError, consumeUsage } from '@/lib/billing/usage';
 import { logImportantError, logImportantInfo } from '@/lib/observability';
 import { hasPrismaUniqueViolation } from '@/lib/db-helpers';
 import {
-  AiNotConfiguredError,
   AiProviderError,
   resolveResumeAiProvider,
   type ResumeAiProvider,
@@ -200,6 +199,11 @@ async function claimExtractionRow(params: {
     return { row: existing, claimed: false };
   }
 
+  // A COMPLETED row is NOT re-claimed here. Overwriting it to PROCESSING would
+  // destroy the very result the caller is about to reuse, and would lose the
+  // stored extraction if the request then failed. Callers check for a reusable
+  // result before claiming; reaching this point means genuinely re-running.
+
   // FAILED rows are retried in place, and stale PROCESSING rows are taken over,
   // so the same document version never accumulates one row per attempt.
   const updated = await prisma.resumeExtraction.update({
@@ -272,13 +276,22 @@ export async function runResumeExtraction(
   }
 
   // 2 + 4. Resolve a document the caller owns, then load it.
-  const document = options.resumeId
-    ? (await prisma.resumeDocument.findFirst({
-        where: { id: options.resumeId, userId },
-      }) as ResumeDocumentRecord | null)
-    : await getPrimaryResumeDocument(userId);
-
-  if (!document) throw new ResumeNoDocumentError();
+  //
+  // A requested id that is missing, or that belongs to someone else, raises
+  // ResumeDocumentNotFoundError — a 404 identical in shape to a document that
+  // genuinely does not exist. Only "you have not uploaded anything yet" gets
+  // the softer ResumeNoDocumentError, because that is a real, actionable state
+  // for this user rather than a probe.
+  let document: ResumeDocumentRecord | null;
+  if (options.resumeId) {
+    document = await prisma.resumeDocument.findFirst({
+      where: { id: options.resumeId, userId },
+    });
+    if (!document) throw new ResumeDocumentNotFoundError();
+  } else {
+    document = await getPrimaryResumeDocument(userId);
+    if (!document) throw new ResumeNoDocumentError();
+  }
 
   await logImportantInfo({
     event: 'resume_parse_started',
@@ -312,27 +325,32 @@ export async function runResumeExtraction(
   // Hash the text we are about to send, not the bytes: an identical resume that
   // was re-exported produces the same hash and reuses the cached result.
   const contentHash = hashResumeText(extracted.text);
+
+  // Reuse is checked BEFORE the row is claimed. Claiming flips the row to
+  // PROCESSING, so checking afterwards would destroy the very result being
+  // reused and lose it if this request then failed.
+  if (!options.force) {
+    const reusable = await findExtraction({ resumeId: document.id, contentHash });
+    if (reusable?.status === 'COMPLETED' && reusable.data) {
+      await logImportantInfo({
+        event: 'resume_parse_reused',
+        userId,
+        route,
+        context: { resumeId: document.id, extractionId: reusable.id },
+      });
+      return {
+        outcome: 'REUSED',
+        extraction: toSummary(reusable),
+        data: reusable.data as CareerExtraction,
+      };
+    }
+  }
+
   const { row, claimed } = await claimExtractionRow({
     userId,
     resumeId: document.id,
     contentHash,
   });
-
-  // A completed result for this exact document version is reusable. This is the
-  // rule that stops "analyse my resume" costing money every time it is pressed.
-  if (row.status === 'COMPLETED' && row.data && !options.force) {
-    await logImportantInfo({
-      event: 'resume_parse_reused',
-      userId,
-      route,
-      context: { resumeId: document.id, extractionId: row.id },
-    });
-    return {
-      outcome: 'REUSED',
-      extraction: toSummary(row),
-      data: row.data as CareerExtraction,
-    };
-  }
 
   // Another request for this exact document version is mid-flight. Refusing is
   // what prevents two identical expensive calls racing each other.
@@ -348,22 +366,34 @@ export async function runResumeExtraction(
     : `resume-extract:${row.id}`;
 
   let creditsConsumed = 0;
-  try {
-    const usage = await consumeUsage(userId, AI_RESUME_PARSER_FEATURE, 1, {
-      limit: entitlements.limits.aiCredits,
-      idempotencyKey,
+  if (entitlements.isAdmin) {
+    // Admins hold the platform's credentials, not a customer subscription, so
+    // their usage is recorded as zero. This is the existing exemption, applied
+    // consistently rather than at the gate only.
+    await logImportantInfo({
+      event: 'resume_parse_admin_bypass',
+      userId,
+      route,
+      context: { resumeId: document.id, extractionId: row.id },
     });
-    creditsConsumed = usage.consumed;
-  } catch (error) {
-    if (error instanceof UsageLimitExceededError) {
-      await logImportantInfo({
-        event: 'resume_parse_usage_denied',
-        userId,
-        route,
-        context: { feature: AI_RESUME_PARSER_FEATURE, limit: error.limit, used: error.used },
+  } else {
+    try {
+      const usage = await consumeUsage(userId, AI_RESUME_PARSER_FEATURE, 1, {
+        limit: entitlements.limits.aiCredits,
+        idempotencyKey,
       });
+      creditsConsumed = usage.consumed;
+    } catch (error) {
+      if (error instanceof UsageLimitExceededError) {
+        await logImportantInfo({
+          event: 'resume_parse_usage_denied',
+          userId,
+          route,
+          context: { feature: AI_RESUME_PARSER_FEATURE, limit: error.limit, used: error.used },
+        });
+      }
+      throw error;
     }
-    throw error;
   }
 
   // 7. Provider call. No transaction is open and no row lock is held.
@@ -458,9 +488,9 @@ async function failureFor(extractionId: string, error: unknown): Promise<RunExtr
     extraction: row ? toSummary(row) : null,
     code,
     message: EXTRACTION_ERROR_MESSAGES[code],
-    retryable:
-      !(error instanceof AiNotConfiguredError) &&
-      (error instanceof AiProviderError ? error.retryable : true),
+    // Taken from the error itself rather than recomputed here, so the value the
+    // UI is told matches the value the provider boundary decided on.
+    retryable: error instanceof AiProviderError ? error.retryable : true,
   };
 }
 

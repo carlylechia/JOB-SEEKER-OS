@@ -167,8 +167,19 @@ export const professionalLinkSchema = z.object({
  * empty, and every scalar may be `null` — "not in the resume" is a valid,
  * expected outcome, not an error.
  */
-export const careerExtractionSchema = z.object({
-  schemaVersion: z.number(),
+/**
+ * STRICT, not merely typed.
+ *
+ * Zod's default is to strip unknown keys, which would silently discard an
+ * unexpected field a provider emitted. Here an unexpected field is an error,
+ * because a response containing a key we do not recognise means the contract
+ * has drifted — and silently dropping it would let a future, subtler version of
+ * the same problem through. This also means a response carrying `plan`,
+ * `userId` or `tools` cannot validate, which the test suite asserts.
+ */
+export const careerExtractionSchema = z
+  .object({
+    schemaVersion: z.number(),
 
   // ── A. Basic profile ──────────────────────────────────────────────────────
   fullName: shortText.nullable(),
@@ -205,7 +216,8 @@ export const careerExtractionSchema = z.object({
    * missing. Rendered as warnings, never silently swallowed.
    */
   warnings: z.array(shortText).max(20),
-});
+  })
+  .strict();
 
 export type CareerExtraction = z.infer<typeof careerExtractionSchema>;
 

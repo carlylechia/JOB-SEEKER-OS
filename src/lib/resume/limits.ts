@@ -24,8 +24,19 @@ export const RESUME_MAX_FILE_BYTES = 5 * 1024 * 1024;
  */
 export const RESUME_MAX_EXTRACTED_CHARS = 24_000;
 
-/** Floor below which extracted text is treated as "no usable content". */
-export const RESUME_MIN_USABLE_CHARS = 120;
+/**
+ * Floor below which extracted text is treated as "no usable content".
+ *
+ * Kept low on purpose. A genuinely sparse resume is a valid resume, and
+ * refusing to read one because it is short would be worse than returning
+ * whatever it does contain. The check that actually catches a blank or scanned
+ * document is `RESUME_MEANINGFUL_CHAR_FLOOR`, measured on letters and digits
+ * rather than whitespace and punctuation.
+ */
+export const RESUME_MIN_USABLE_CHARS = 40;
+
+/** Letters and digits required before we believe a document is readable. */
+export const RESUME_MEANINGFUL_CHAR_FLOOR = 20;
 
 /**
  * Page cap for PDF parsing. A 40-page PDF is not a resume, and pdf.js is the

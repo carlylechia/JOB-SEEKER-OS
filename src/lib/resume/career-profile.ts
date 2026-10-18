@@ -409,8 +409,14 @@ export async function applyReviewedExtraction(params: {
   if (credentials.length === 0) counts.sectionsLeftUntouched.push('credentials');
 
   await prisma.$transaction(async (tx) => {
-    const profile = await tx.userProfile.findUnique({ where: { userId } });
-    if (!profile) throw new ProfileVersionConflictError();
+    // A user who uploaded a resume during onboarding always has a profile, but
+    // one created purely through a resume document might not. Create it rather
+    // than reporting a version conflict that no user action could resolve.
+    const profile = await tx.userProfile.upsert({
+      where: { userId },
+      create: { userId, careerProfileVersion: submission.expectedProfileVersion },
+      update: {},
+    });
 
     // Optimistic concurrency: only the tab holding this version may write.
     const updated = await tx.userProfile.updateMany({
