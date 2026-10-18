@@ -67,6 +67,7 @@ export async function PATCH(request: Request, { params }: Params) {
         salaryMax: job.salaryMax ?? null,
         currency: job.currency,
         notes: job.notes,
+        jobDescription: job.jobDescription || null,
         status: job.status,
         dateApplied: job.dateApplied ? new Date(job.dateApplied) : null,
         nextFollowUp: job.nextFollowUp ? new Date(job.nextFollowUp) : null,

@@ -102,6 +102,11 @@ export type JobLead = {
   salaryMax?: number;
   currency: string;
   notes: string;
+  /**
+   * The pasted job description. Distinct from `notes`: this is the employer's
+   * text, which the analysis path treats as untrusted input.
+   */
+  jobDescription: string;
   status: JobStatus;
   dateFound: string;
   dateApplied?: string;
@@ -127,6 +132,7 @@ export type JobFormValues = {
   salaryMax: string;
   currency: string;
   notes: string;
+  jobDescription: string;
   status: JobStatus;
   nextFollowUp: string;
   coreStackMatch: number;

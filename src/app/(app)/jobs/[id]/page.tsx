@@ -9,6 +9,7 @@ import { PriorityBadge } from "@/components/shared/priority-badge";
 import { ScoreBadge } from "@/components/shared/score-badge";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useJobs } from "@/hooks/use-job-data";
+import { JobIntelligencePanel } from "@/components/jobs/job-intelligence-panel";
 import { checklistCompletion } from "@/lib/scoring";
 import { Checklist, Contact, JobFormValues, JobStatus } from "@/types";
 
@@ -229,6 +230,14 @@ export default function JobDetailsPage() {
                     {job.salaryMax ? ` - ${job.salaryMax}` : ""} {job.currency}
                   </div>
                 </div>
+                {job.jobDescription ? (
+                  <div className="sm:col-span-2">
+                    <div className="muted">Job description</div>
+                    <div className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap text-sm text-muted">
+                      {job.jobDescription}
+                    </div>
+                  </div>
+                ) : null}
                 <div>
                   <div className="muted">Date found</div>
                   <div>{job.dateFound}</div>
@@ -326,6 +335,10 @@ export default function JobDetailsPage() {
             </div>
           </div>
           <div className="space-y-6">
+            {/* AI Job Intelligence sits directly under the score breakdown so
+                the deterministic score and the AI's explanation of it are read
+                together. The score itself is unchanged and still authoritative. */}
+            <JobIntelligencePanel jobId={job.id} />
             <div className="card-pad">
               <h3 className="text-lg font-semibold">Score breakdown</h3>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">

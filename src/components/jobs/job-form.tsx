@@ -19,6 +19,7 @@ function toFormValues(job?: JobLead, initialValues?: Partial<JobFormValues>): Jo
     salaryMax: initialValues?.salaryMax ?? (job?.salaryMax ? String(job.salaryMax) : ''),
     currency: initialValues?.currency ?? job?.currency ?? 'USD',
     notes: initialValues?.notes ?? job?.notes ?? '',
+    jobDescription: initialValues?.jobDescription ?? job?.jobDescription ?? '',
     status: initialValues?.status ?? job?.status ?? 'LEAD',
     nextFollowUp: initialValues?.nextFollowUp ?? job?.nextFollowUp ?? '',
     coreStackMatch: initialValues?.coreStackMatch ?? job?.score.coreStackMatch ?? 3,
@@ -139,7 +140,8 @@ export function JobForm({
               <div><label className="muted">Maximum salary</label><input className="input mt-1" type="number" min="0" value={values.salaryMax} onChange={(e) => update('salaryMax', e.target.value)} /></div>
               <div><label className="muted">Currency</label><input className="input mt-1" value={values.currency} onChange={(e) => update('currency', e.target.value.toUpperCase())} maxLength={6} /></div>
             </div>
-            <div className="mt-4"><label className="muted">Notes</label><textarea className="input mt-1 min-h-32" value={values.notes} onChange={(e) => update('notes', e.target.value)} placeholder="Why this role, risks, referral notes, stack clues, or tailoring reminders..." /></div>
+            <div className="mt-4"><label className="muted">Job description</label><textarea className="input mt-1 min-h-40" value={values.jobDescription} onChange={(e) => update('jobDescription', e.target.value)} placeholder="Paste the posting here. This is what AI job analysis reads — it is kept separate from your own notes." /><p className="mt-1 text-xs text-muted">Used by AI job analysis to work out what the role actually asks for. Your own notes stay separate.</p></div>
+            <div className="mt-4"><label className="muted">Notes</label><textarea className="input mt-1 min-h-32" value={values.notes} onChange={(e) => update('notes', e.target.value)} placeholder="Why this role, risks, referral notes, or tailoring reminders..." /></div>
           </div>
         </div>
 

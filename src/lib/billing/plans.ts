@@ -144,11 +144,20 @@ export const FEATURE_ENTITLEMENTS: Record<
     released: false,
     description: 'Improve your resume for a specific job description.',
   },
+  /**
+   * The paid operation behind AI Job Intelligence: explaining how a specific
+   * job matches one specific user's profile.
+   *
+   * Defined since the monetization launch and shipped by this release. The
+   * analysis is metered through the shared `aiCredits` budget alongside resume
+   * parsing — one AI allowance, not several competing ones.
+   */
   AI_JOB_ANALYSIS: {
     plans: ['PRO', 'PREMIUM'],
     label: 'AI job analysis',
-    released: false,
-    description: 'Break down a role and surface what matters most.',
+    released: true,
+    description:
+      'Understand why a role fits you — strengths, gaps, and what to confirm before you apply.',
   },
   AI_COVER_LETTER: {
     plans: ['PRO', 'PREMIUM'],

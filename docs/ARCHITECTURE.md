@@ -397,3 +397,32 @@ matter architecturally:
 | Prompt injection | The document is fenced and labelled as data, the model gets **no tools**, and nothing it returns is trusted — every value is re-checked against the source text before it is stored. |
 | Evidence | The model's self-reported confidence is discarded. A claim is `SUPPORTED` only if its snippet can actually be found in the resume. |
 | Retention | Raw resume text is **never persisted**. Verification runs before the extraction is stored, which is what makes that possible. |
+
+---
+
+## 14. AI Job Intelligence
+
+Added by the Job Intelligence release. It reuses the same entitlement resolver,
+the same `consumeUsage` advisory lock, the same `aiCredits` budget, the same
+observability helpers and the same provider seam. It introduces one new table
+and one additive column, and it changes no scoring rule.
+
+Full detail — pipeline, verification rules, caching, configuration — is in
+[`docs/JOB_INTELLIGENCE.md`](JOB_INTELLIGENCE.md). The points that matter
+architecturally:
+
+| Concern | Decision |
+| --- | --- |
+| The boundary | **The AI explains the matching engine; it never replaces it.** `calculateFitScore`, `calculateFitTier`, `titleMatchesAny` and `inferScoreComponents` are untouched. |
+| No score field | There is no numeric score anywhere in the model's output schema. A response carrying `fitScore` fails Zod validation, and there is a test for it. |
+| Deterministic facts injected | Remote, location, eligibility, time zone and compensation are computed in TypeScript, handed to the model as read-only facts, and **re-applied over its answer**. The model explains them; it cannot change them. |
+| Category derivation | The tier sets the floor; a hard block (geography or time zone scored zero) sets the ceiling. A tier-A job is never a "low match"; a blocked job is never a "strong match". Defined once, in `categories.ts`. |
+| Title relationship | `titleMatchesAny` is unchanged. A new advisory classifier explains relatedness and can only ever **agree or downgrade** — `clampRelationship()` caps a model answer at `RELATED_ROLE` when the engine rejected the title. |
+| Evidence | Every excerpt attributed to the posting is re-quoted against the actual text. A quote that cannot be found is dropped. Nothing invented reaches the database. |
+| Capability claims | A claim that the user has a skill is re-checked against their real profile rows. Absence from a profile is reported as *absence of evidence*, never as *absence of capability*. |
+| Salary | Integer comparison only. A missing salary is `NOT_STATED_BY_EMPLOYER`, never zero. Two currencies are `NOT_COMPARABLE` — no exchange rate is ever invented. |
+| Personalisation | The confirmed career profile, then saved work history, then preferences, then verified scalars. **The raw resume is never re-parsed** for job analysis. |
+| Job description | A new nullable `JobLead.jobDescription`, separate from `notes`. `notes` holds ingestion-generated clue strings and is not a dependable record of what the employer wrote. |
+| Personal ownership | `JobIntelligenceAnalysis` belongs to `(userId, jobId)` and cascades on both. A personalised verdict is never written onto a job record other users can see. |
+| Cache | `@@unique([userId, jobId, inputFingerprint, schemaVersion])` is simultaneously the cache key and the concurrency lock. The fingerprint covers job text, career-profile version, matching preferences and both contract versions — never `updatedAt`. |
+| Prompt injection | The posting is fenced and labelled as data, the model gets **no tools**, deterministic facts are re-applied, and every claim is re-verified. The analysis model cannot apply to jobs, contact employers, write rows, or change a subscription. |

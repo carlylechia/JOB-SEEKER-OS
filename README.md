@@ -44,6 +44,17 @@ teChia Jobs gives users one place to:
 
 Full behaviour, limits, configuration and troubleshooting: [docs/RESUME_INTELLIGENCE.md](docs/RESUME_INTELLIGENCE.md).
 
+### AI Job Intelligence (Pro)
+
+- open any job in your workspace and see *why* it fits you, not just a score
+- dimension-by-dimension breakdown: title, seniority, required and preferred skills, experience, education, location, remote work, eligibility, time zone, compensation
+- every important claim traces back to a short quote from the posting, your career profile, or your preferences
+- says plainly what it does not know, and why, instead of guessing
+- practical next steps — what to confirm with the employer, what to emphasise, what to fix in your profile
+- your existing fit score and tier are unchanged and still drive ranking; the AI explains them rather than replacing them
+
+Full behaviour, limits, configuration and troubleshooting: [docs/JOB_INTELLIGENCE.md](docs/JOB_INTELLIGENCE.md).
+
 ### Intake and onboarding
 
 - multi-step onboarding flow with autosaved progress
