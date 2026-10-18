@@ -48,6 +48,7 @@ import {
   RESUME_STORAGE_FETCH_TIMEOUT_MS,
 } from './limits';
 import { prepareTextForProvider } from './normalise';
+import { verifyCareerExtraction } from './verify';
 import {
   EXTRACTION_ERROR_MESSAGES,
   EXTRACTION_SCHEMA_VERSION,
@@ -377,7 +378,13 @@ export async function runResumeExtraction(
 
   let data: CareerExtraction;
   try {
-    data = await provider.extract(prepared.text);
+    const raw = await provider.extract(prepared.text);
+    // Re-validated and re-checked against the document before anything is
+    // stored: evidence levels are corrected here, dates are normalised, URLs
+    // are reduced to http/https, and empty rows are dropped. This is what makes
+    // the stored extraction safe to show a user as "supported by resume" — and
+    // it is why the raw resume text never has to be persisted.
+    data = verifyCareerExtraction(raw, extracted.text);
   } catch (error) {
     await markFailed(row.id, error);
     await logImportantError({
