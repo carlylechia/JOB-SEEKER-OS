@@ -69,26 +69,45 @@ npm run build
 Take a managed snapshot (Vercel Postgres / Neon / Supabase). Confirm a restore
 path exists **before** continuing.
 
-### 3. Deploy the migration
+### 3. Verify the schema matches this build
+
+```bash
+DATABASE_URL="<production-url>" npm run schema:check
+```
+
+This compares the migrations committed here against the ones actually applied
+to the target database. It only reads — it never migrates.
+
+Expect `Safe to deploy.` A non-zero exit means **stop**: it names the missing
+migration and refuses to let a broken deploy through. See §"Why the schema gate
+exists" below.
+
+### 4. Deploy the migration
 
 Run from a trusted machine, not from a preview build:
 
 ```bash
 DATABASE_URL="<production-url>" npm run prisma:migrate:deploy
 DATABASE_URL="<production-url>" npm run prisma:migrate:status
+DATABASE_URL="<production-url>" npm run schema:check   # must now say CURRENT
 ```
 
 Expect `Database schema is up to date!`.
 
 **Do not** use `prisma db push` in production. **Do not** run `migrate reset`.
 
-### 4. Deploy the application
+> **Order matters.** Merge and deploy the *code* only after this step succeeds.
+> Vercel deploys code the instant it is merged; the database does not move on
+> its own. Migrating afterwards leaves a window where the deployed code queries
+> columns that do not exist yet.
+
+### 5. Deploy the application
 
 Push to `main`. `buildCommand` is `npm run build:vercel`, which runs
 `prisma generate && next build`. It intentionally does **not** migrate, so a
 preview build cannot mutate the production database.
 
-### 5. Bootstrap the first admin
+### 6. Bootstrap the first admin
 
 ```bash
 DATABASE_URL="<production-url>" npm run admin:bootstrap -- owner@yourdomain.com
@@ -102,7 +121,7 @@ DATABASE_URL="<production-url>" npm run monetization:status
 
 Confirm `Admins` is at least `1`. Do **not** enable monetization without an admin.
 
-### 6. Preview the initialization
+### 7. Preview the initialization
 
 ```bash
 DATABASE_URL="<production-url>" npm run monetization:initialize -- --dry-run
@@ -110,7 +129,7 @@ DATABASE_URL="<production-url>" npm run monetization:initialize -- --dry-run
 
 Read the summary. Confirm the trial plan exists and the user count looks right.
 
-### 7. Initialize monetization
+### 8. Initialize monetization
 
 ```bash
 DATABASE_URL="<production-url>" npm run monetization:initialize
@@ -119,7 +138,7 @@ DATABASE_URL="<production-url>" npm run monetization:initialize
 This establishes the **immutable** launch timestamp and the 14-day existing-user
 trial window. Re-running is safe and will not move the window.
 
-### 8. Verify trial assignments
+### 9. Verify trial assignments
 
 ```bash
 DATABASE_URL="<production-url>" npm run monetization:status
@@ -128,7 +147,7 @@ DATABASE_URL="<production-url>" npm run monetization:status
 Spot-check a real account in the admin dashboard: it should show `Pro Trial`
 with a trial end exactly 14 days after the launch timestamp.
 
-### 9. Verify the end-to-end flow
+### 10. Verify the end-to-end flow
 
 1. Sign in as a test user → `/settings/billing` shows the trial countdown.
 2. Request a Pro upgrade.
@@ -137,7 +156,7 @@ with a trial end exactly 14 days after the launch timestamp.
 5. Confirm the user's plan is now `Pro`.
 6. Confirm the user received an in-app notification and queued email.
 
-### 10. Confirm cron
+### 11. Confirm cron
 
 Vercel Cron runs `/api/cron/maintenance` nightly at 03:00 UTC. Verify
 `CRON_SECRET` is set, then trigger manually to confirm it works:
@@ -146,7 +165,7 @@ Vercel Cron runs `/api/cron/maintenance` nightly at 03:00 UTC. Verify
 curl -H "Authorization: Bearer $CRON_SECRET" https://yourdomain.com/api/cron/maintenance
 ```
 
-### 11. Verify Resume Intelligence
+### 12. Verify Resume Intelligence
 
 Only relevant if you are shipping the Resume Intelligence release.
 
@@ -163,7 +182,7 @@ Only relevant if you are shipping the Resume Intelligence release.
 A disabled key is safe: uploads and downloads keep working and analysis returns
 a clear message. Confirm that behaviour rather than assuming it.
 
-### 12. Verify Job Intelligence
+### 13. Verify Job Intelligence
 
 Only relevant if you are shipping the AI Job Intelligence release.
 
@@ -185,7 +204,7 @@ Only relevant if you are shipping the AI Job Intelligence release.
 A disabled key is safe: job scoring is untouched and analysis returns a clear
 message. Confirm that rather than assuming it.
 
-### 13. Monitor
+### 14. Monitor
 
 Watch during the first 24 hours:
 
@@ -206,6 +225,63 @@ Watch during the first 24 hours:
   honouring the structured-output contract
 
 ---
+
+## Why the schema gate exists
+
+On **2026-10-18** three migrations were merged and their code deployed, but
+`prisma migrate deploy` was never run against production. The deployed build
+queried `"jobDescription"` on a `JobLead` table that did not have that column,
+so every dashboard load returned:
+
+```
+Application error: a server-side exception has occurred
+Digest: 2120643861
+```
+
+Nothing in the toolchain caught it, which is the actual lesson:
+
+| Check | Why it missed it |
+|---|---|
+| `npm run typecheck` | Static. It checks code, never the database. |
+| `npm test` | Runs against a local database that is always current. |
+| `prisma generate` | Validates the schema against the *client*, not the server. |
+| The browser message | Names no table and no column. Slow to diagnose from a ticket. |
+
+The three controls added in response:
+
+1. **`npm run schema:check`** — compares committed migrations against applied
+   ones and exits non-zero on proven drift. It only reads; it never migrates.
+2. **`GET /api/health`** — reports schema status without a session, returning
+   `503` when the schema is behind. Drift is diagnosable in seconds.
+3. **Runbook order** — the schema check is now step 3, before migration and
+   deploy, so "forgot the migration" is a failed command rather than an outage.
+
+> The gate **fails closed on proven drift** but **fails open when the database
+> is unreachable**. Blocking every deploy on a transient network blip would
+> teach people to ignore the check, which is worse than not having one.
+
+### Checking drift in production
+
+```bash
+curl -s https://job-seeker-os.vercel.app/api/health | jq
+```
+
+```json
+{
+  "status": "degraded",
+  "schema": { "status": "BEHIND", "pendingMigrations": ["20261018125251_job_intelligence"] }
+}
+```
+
+`status: ok` means the deployed code and the database agree. No secrets and no
+user data are exposed.
+
+### The `0_init` baseline
+
+Production records a `0_init` migration predating this repository's history.
+The guard ignores anything sorting before the earliest migration we own, so
+that baseline does not produce a permanent false "database is ahead" warning.
+A permanently-warning check is a check people learn to ignore.
 
 ## Rollout checklist
 
