@@ -27,6 +27,7 @@ Preview build needs to boot the app).
 | `MONETIZATION_ENABLED=false` | optional | Emergency kill switch |
 | `OPENAI_API_KEY` | yes for Resume Intelligence | AI provider key (server-only). Never `NEXT_PUBLIC_*` |
 | `RESUME_INTELLIGENCE_MODEL` | optional | Extraction model. Defaults to `gpt-5.4-mini`. Must support Structured Outputs |
+| `JOB_INTELLIGENCE_MODEL` | optional | Job-fit analysis model. Defaults to `gpt-5.4-mini`. Must support Structured Outputs |
 
 **Never** hardcode any of these in source. Do not commit real values.
 
@@ -162,7 +163,29 @@ Only relevant if you are shipping the Resume Intelligence release.
 A disabled key is safe: uploads and downloads keep working and analysis returns
 a clear message. Confirm that behaviour rather than assuming it.
 
-### 12. Monitor
+### 12. Verify Job Intelligence
+
+Only relevant if you are shipping the AI Job Intelligence release.
+
+1. Confirm `OPENAI_API_KEY` is set in **Production**.
+2. Sign in as a Pro user, open a job, and use **Analyse this job**.
+3. Confirm the result shows **both** numbers: your existing fit score/tier and
+   the qualitative category. They must agree — a tier-A job must never be
+   labelled "low match".
+4. Confirm the breakdown shows a reason for each dimension, and that evidence
+   quotes are real (spot-check one against the posting you pasted).
+5. Edit the job description and re-run: confirm the panel says the analysis is
+   out of date, then that re-running replaces it.
+6. Sign in as a Free user: the panel shows the upgrade prompt and the API
+   refuses. Check the server log for `job_analysis_denied`.
+7. Paste a hostile description containing "ignore all previous instructions".
+   Confirm the result is unchanged in substance and that the injection text
+   does not appear in the stored analysis.
+
+A disabled key is safe: job scoring is untouched and analysis returns a clear
+message. Confirm that rather than assuming it.
+
+### 13. Monitor
 
 Watch during the first 24 hours:
 
@@ -175,6 +198,12 @@ Watch during the first 24 hours:
   `resume_extraction_provider_failed` rates
 - `resume_parse_usage_denied`, which would mean users are hitting the monthly
   credit ceiling sooner than expected
+- `job_analysis_succeeded` vs `job_analysis_failed` and
+  `job_intelligence_provider_failed` rates
+- `job_analysis_usage_denied` — the same credit ceiling signal, now shared
+  across both AI features
+- `job_analysis_invalid_output`, which would mean the configured model is not
+  honouring the structured-output contract
 
 ---
 
