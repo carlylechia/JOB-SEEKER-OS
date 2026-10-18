@@ -75,3 +75,12 @@ export const JOB_INTELLIGENCE_MAX_REQUIREMENTS = 30;
  * not cause false negatives.
  */
 export const JOB_INTELLIGENCE_MIN_EVIDENCE_CHARS = 12;
+
+/**
+ * Maximum length of a stored evidence excerpt.
+ *
+ * Quotes have to stay short enough to read comfortably next to a claim, and
+ * long enough to be recognisable. Anything longer is truncated rather than
+ * dropped, because a truncated quote is still evidence.
+ */
+export const JOB_INTELLIGENCE_MAX_EVIDENCE_CHARS = 300;
