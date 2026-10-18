@@ -150,16 +150,34 @@ future provider with custom billing periods slot in without a redesign.
 
 ### Concurrency
 
-`consumeUsage()` performs check-and-increment inside a transaction that holds
-a `SELECT … FOR UPDATE` row lock. A naive read → check → write lets a user
-bypass a limit by firing parallel requests; the lock serialises them.
+`consumeUsage()` performs check-and-increment inside a transaction that holds a
+**PostgreSQL transaction-scoped advisory lock** keyed on
+`(userId, featureKey, periodStart)`. A naive read → check → write lets a user
+bypass a limit by firing parallel requests.
+
+A row lock alone is not sufficient here: `SELECT … FOR UPDATE` only locks rows
+that already exist, so the very first burst of requests in an empty period would
+each read zero and all pass. A test caught exactly that — 6 of 10 parallel
+requests passing a limit of 5. An advisory lock exists whether or not any row
+does, and is released automatically on commit or rollback.
 
 This is verified by a test that fires 10 concurrent requests at a limit of 5
 and asserts exactly 5 succeed.
 
 Units are generic (`feature` + `units`) rather than hardwiring "1 request = 1
-credit", so job analysis and interview generation can be priced differently
-later.
+credit", so resume optimisation, job analysis and interview generation can be
+priced differently later.
+
+An `idempotencyKey` on each row means a retry of the same operation is recorded
+once, not twice.
+
+> **Open question.** `PLAN_LIMITS` defines a single `aiCredits` figure per plan,
+> while `consumeUsage` meters **per feature key**. Today a feature's ceiling is
+> therefore reached by usage of that feature, and the `aiCreditsRemaining` value
+> sent to the UI is the plan's figure rather than a computed remainder. This is
+> pre-existing behaviour across all AI features; the Resume Builder release did
+> not change it and records the discrepancy in
+> [`RESUME_BUILDER.md` §12](RESUME_BUILDER.md#12-usage-accounting).
 
 ---
 
@@ -429,3 +447,37 @@ architecturally:
 | Personal ownership | `JobIntelligenceAnalysis` belongs to `(userId, jobId)` and cascades on both. A personalised verdict is never written onto a job record other users can see. |
 | Cache | `@@unique([userId, jobId, inputFingerprint, schemaVersion])` is simultaneously the cache key and the concurrency lock. The fingerprint covers job text, career-profile version, matching preferences and both contract versions — never `updatedAt`. |
 | Prompt injection | The posting is fenced and labelled as data, the model gets **no tools**, deterministic facts are re-applied, and every claim is re-verified. The analysis model cannot apply to jobs, contact employers, write rows, or change a subscription. |
+
+---
+
+## 15. Resume Builder & Job-Specific Optimisation
+
+Added by the Resume Builder release. Like Job Intelligence, it reuses the
+entitlement resolver, the `consumeUsage` advisory lock, the observability
+helpers and the provider seam. It introduces two new tables and changes no
+existing one.
+
+Full detail — data model, templates, PDF pipeline, verification rules,
+configuration — is in
+[`docs/RESUME_BUILDER.md`](RESUME_BUILDER.md). The architectural points:
+
+| Concern | Decision |
+| --- | --- |
+| Two kinds of resume | `ResumeDocument` is an **uploaded file** and keeps every existing consumer. `StructuredResume` is a document the user **builds**. Folding editable content into `ResumeDocument` would make "which file did this extraction come from?" unanswerable. |
+| Content as JSONB | The document is edited, validated, versioned and exported as one unit, and is never queried by an inner field. Everything that *is* queried — owner, target job, lineage — is a real indexed column. |
+| Versioning | **Independent documents, not snapshot rows.** A variant is its own row that deep-copies the source and regenerates every entry id, so editing or deleting one cannot reach the other and there is nothing to reconstruct. |
+| Optimistic concurrency | `revision`, compared inside the conditional write rather than around it — the same mechanism and intent as `UserProfile.careerProfileVersion`. |
+| The profile is a source | Creating a resume copies confirmed values verbatim and writes nothing back. Editing or deleting a resume never touches the career profile. |
+| Preview equals export | One layout engine emits absolutely-positioned blocks in PDF points; the PDF renderer and the HTML preview are two renderers of that same list. Preview drift is structurally impossible rather than managed. |
+| Server-only PDF | `pdf-lib` and `fontkit` appear in no client chunk — verified against the production build output. The preview consumes layout blocks over JSON. |
+| Templates are data | Eight fields in `templates.ts` are the complete vocabulary of template difference. No hook, no registration, no way for a template to introduce markup. |
+| Accents are keys | A user submits an accent **key** from a five-entry palette, never a colour. There is no code path from a request body to a colour value. |
+| The model proposes | The model has **no tools** and returns a closed set of operations naming one place in the document. It cannot read files, call the network, change state, or write anything. |
+| Staleness | `inputFingerprint` covers resume text, revision, job text, job `updatedAt`, profile context and fit score. Recomputed on every read, so a proposal is labelled stale the moment anything moves — and applying stale advice is refused, not warned about. |
+| Anti-fabrication | Enforced in `verify.ts`, not requested in a prompt. Numeric, acronym and proper-noun tokens must already exist in the candidate's resume or career profile. **The job description licenses nothing**: a number in a posting is the employer's result, not the candidate's. |
+| Partial application | Operations are applied highest index first, so a removal cannot shift the indices of the ones still to come. The revision check and the write are one conditional update inside a transaction. |
+| User edits are re-checked | "Edit before accepting" runs the **same** anti-fabrication pass as the model's own text, and a refusal says why specifically rather than "choose at least one suggestion". |
+| Rejections are visible | Operations the server refused are stored with a reason and counted in the review UI. Silently returning a shorter list is less trustworthy than saying what was removed and why. |
+| No new entitlement | `RESUME_BUILDER` and `RESUME_OPTIMIZATION` already existed as defined-but-unreleased keys and are simply shipped. PDF export has no key of its own: a built resume cannot exist without the builder, so a separate gate would be an invented restriction. |
+| Export is stateless | Generated per request from the authorised document and streamed. Nothing is stored, so there is no public URL and nothing to leak. No provider call, so it costs no credit. |
+| Private responses | Every authenticated response is `private, no-store, must-revalidate`; the export adds `attachment`, `sandbox` and `nosniff`, with a filename derived from the server-known name. |

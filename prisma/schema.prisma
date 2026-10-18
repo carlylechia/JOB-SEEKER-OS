@@ -50,6 +50,8 @@ model User {
   resumeExtractions         ResumeExtraction[]  @relation("ExtractionOwner")
   confirmedCareerRecords    CareerRecordSource[]
   jobAnalyses               JobIntelligenceAnalysis[]
+  structuredResumes         StructuredResume[]
+  resumeOptimizations       ResumeOptimization[]
 
   @@index([createdAt])
   @@index([emailVerificationToken])
@@ -158,6 +160,10 @@ model JobLead {
   updatedAt           DateTime  @updatedAt
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   analyses            JobIntelligenceAnalysis[]
+  /// Resumes tailored towards this specific role. Deleting the job clears the
+  /// association; the resume itself survives, because a resume is not owned by
+  /// the job it was written for.
+  targetedResumes     StructuredResume[] @relation("StructuredResumeTargetJob")
 
   @@index([userId, status])
   @@index([userId, company])
@@ -727,5 +733,143 @@ model JobIntelligenceAnalysis {
 
   @@unique([userId, jobId, inputFingerprint, schemaVersion])
   @@index([userId, jobId, createdAt])
+  @@index([userId, status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RESUME BUILDER
+//
+// `ResumeDocument` above is an UPLOADED FILE: a pointer to a stored PDF/DOCX
+// plus its size and sniffed format. It is what the parse pipeline, the
+// onboarding step and the profile download all read, and this release does not
+// change any of that.
+//
+// `StructuredResume` is a different thing: a document the user BUILDS. It is
+// editable, template-driven, exportable to PDF, and independently owned by the
+// user. Keeping the two apart is deliberate. Folding editable content into
+// `ResumeDocument` would make "which file did this extraction come from?"
+// unanswerable and would break every existing upload flow.
+//
+// VERSIONING IS BY INDEPENDENT DOCUMENT, NOT BY SNAPSHOT ROW. A tailored
+// variant is its own row that deep-copies the source content at the moment it
+// is created and then diverges. There is no shared mutable state, so editing a
+// variant can never touch the master, deleting a variant can never touch the
+// master, and there is nothing to reconstruct.
+//
+// `content` is JSON, and that is the right shape here rather than a set of
+// child tables: the document is edited, validated, versioned and rendered as
+// ONE unit, never queried by an inner field. Everything that genuinely needs a
+// relational query — who owns it, which job it targets, which resume it came
+// from — is a real column and a real index.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model StructuredResume {
+  id     String @id @default(cuid())
+  userId String
+  /// User-editable display name, e.g. "Frontend Engineer — Acme".
+  name   String
+
+  /// The validated structured document (see `src/lib/resume-builder/schema.ts`).
+  /// Written only by the server after Zod validation; a client cannot store an
+  /// arbitrary shape here.
+  content Json
+
+  /// Presentation only. Templates never change what the content means.
+  templateKey String @default("classic-ats")
+  /// Key from the approved accent palette in `templates.ts`. Not a raw colour.
+  accentKey   String @default("gold")
+  /// 0 = compact, 1 = comfortable, 2 = relaxed. Bounded server-side.
+  density     Int    @default(1)
+
+  /// Section keys the user has chosen to hide, e.g. ['certifications'].
+  /// Presentation only — the content is still stored and still exportable.
+  hiddenSections String[]
+
+  /// Optimistic-concurrency counter. A save carries the revision it was built
+  /// from; a mismatch is rejected with 409 rather than silently clobbering a
+  /// newer edit. Same mechanism, and the same intent, as
+  /// `UserProfile.careerProfileVersion`.
+  revision Int @default(1)
+
+  /// The job this resume is tailored to. `SetNull` so deleting a job keeps the
+  /// user's written work.
+  targetJobId String?
+
+  /// The resume this one was duplicated or tailored from. Self-relation so a
+  /// variant can always name its own origin. `SetNull` for the same reason.
+  sourceResumeId String?
+
+  /// How this document came into existence, for provenance:
+  /// PROFILE | BLANK | DUPLICATE | OPTIMIZATION.
+  origin String @default("BLANK")
+
+  /// `UserProfile.careerProfileVersion` at the moment this resume was populated
+  /// from the profile. Recorded so the UI can tell the user their profile has
+  /// moved on since this resume was created — it is never used to write back.
+  sourceProfileVersion Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetJob     JobLead?      @relation("StructuredResumeTargetJob", fields: [targetJobId], references: [id], onDelete: SetNull)
+  sourceResume  StructuredResume?  @relation("StructuredResumeVariants", fields: [sourceResumeId], references: [id], onDelete: SetNull)
+  variants      StructuredResume[] @relation("StructuredResumeVariants")
+  optimizations ResumeOptimization[]
+
+  @@index([userId, updatedAt])
+  @@index([userId, targetJobId])
+  @@index([sourceResumeId])
+}
+
+/// One AI run that proposed changes to one resume for one job.
+///
+/// Same shape and the same two jobs as `JobIntelligenceAnalysis`:
+/// the unique index on (userId, resumeId, jobId, inputFingerprint,
+/// schemaVersion) is BOTH the cache key that stops a user paying twice for the
+/// same proposal AND the lock that stops two identical requests triggering two
+/// provider calls.
+///
+/// `baseRevision` is the `StructuredResume.revision` the model actually saw. A
+/// proposal whose resume has since been edited is detected as stale at read and
+/// at apply time, so suggestions can never be written onto a different document
+/// from the one they were generated against.
+model ResumeOptimization {
+  id       String @id @default(cuid())
+  userId   String
+  resumeId String
+  jobId    String
+  /// Contract version this result conforms to. Bumping it invalidates old rows.
+  schemaVersion Int
+  /// Bumped when the PROMPT changes but the output shape does not.
+  promptVersion Int  @default(1)
+  /// SHA-256 over the normalised resume content, target job and career profile.
+  inputFingerprint String
+  /// `StructuredResume.revision` the model was given.
+  baseRevision Int
+  status String @default("PROCESSING")
+  /// The verified, bounded proposal. Stored as JSON because it is versioned,
+  /// variable-shaped data and every operation in it has been re-checked against
+  /// the real resume before being written.
+  data Json?
+  /// Only a machine-readable code. User-facing copy lives in
+  /// OPTIMIZATION_ERROR_MESSAGES, never in the database.
+  errorCode String?
+  provider  String?
+  model     String?
+  creditsConsumed Int @default(0)
+  /// True when the job description or the career profile was too thin to
+  /// analyse properly, so the review UI can say so rather than implying the
+  /// proposal saw everything.
+  thinInputs Boolean @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  completedAt DateTime?
+
+  resume StructuredResume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, resumeId, jobId, inputFingerprint, schemaVersion])
+  @@index([userId, resumeId, createdAt])
   @@index([userId, status])
 }

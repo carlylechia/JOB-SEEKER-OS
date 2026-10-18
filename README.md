@@ -55,6 +55,22 @@ Full behaviour, limits, configuration and troubleshooting: [docs/RESUME_INTELLIG
 
 Full behaviour, limits, configuration and troubleshooting: [docs/JOB_INTELLIGENCE.md](docs/JOB_INTELLIGENCE.md).
 
+### Resume Builder & Job-Specific Optimisation (Pro)
+
+- build a structured resume from your confirmed career profile, from a blank page, or by copying an existing one
+- edit every section as structured fields — roles, bullets, education, skills, projects, certifications, languages, awards — with reordering
+- three professional templates, all rendering the same content, so switching template can never change what your resume says
+- a preview that **is** the export: the same layout blocks at the same coordinates, so nothing is different in the file you download
+- download a real, text-selectable PDF with a single click. No credits, no limits, works on every plan
+- keep several versions — a master resume plus one tailored variant per role — and edit each independently; the master is never overwritten
+- pick one of your own jobs and get specific, evidence-backed suggestions for that resume and that job
+- every suggestion shows the original text, the proposal, why it helps, the requirement it addresses and a verbatim quote behind it
+- accept, dismiss or edit each suggestion on its own. Accepting one never applies the others
+- **the anti-fabrication rule is enforced, not promised.** A rewrite that introduces a figure, technology or credential your resume does not contain is removed before you ever see it — and you are told how many were removed and why. Where a bullet would be stronger with a number you have not given, you get a question, not a made-up figure
+- suggestions go out of date the moment you edit the resume or the job, and stale advice cannot be applied
+
+Full behaviour, architecture, limits and troubleshooting: [docs/RESUME_BUILDER.md](docs/RESUME_BUILDER.md).
+
 ### Intake and onboarding
 
 - multi-step onboarding flow with autosaved progress
@@ -226,6 +242,18 @@ OPENAI_API_KEY="sk-xxxxxxxxx"
 ```
 
 No test needs an API key: the test suite injects a fake provider.
+
+For the Resume Builder's job-specific optimisation, the same key is used — one AI
+allowance across every AI feature, not several competing ones.
+
+```env
+# Optional. Must support Structured Outputs. Defaults to gpt-4.1-mini, the same
+# model as job intelligence and chosen for the same reason.
+# RESUME_OPTIMIZATION_MODEL="gpt-4.1-mini"
+```
+
+PDF export needs **no configuration at all**. Fonts ship with the application and
+are embedded server-side at export time; nothing is stored.
 
 Optional:
 

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   Bell,
   Briefcase,
+  FileBadge,
   KanbanSquare,
   LayoutDashboard,
   LogOut,
@@ -26,6 +27,7 @@ const mobileLinks = [
   { href: '/contacts', label: 'Contacts', icon: Users },
   { href: '/profile', label: 'Profile', icon: UserCircle2 },
   { href: '/career-profile', label: 'Career Profile', icon: Sparkles },
+  { href: '/resumes', label: 'Resumes', icon: FileBadge },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
