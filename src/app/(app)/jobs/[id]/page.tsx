@@ -36,6 +36,7 @@ export default function JobDetailsPage() {
   const { getJob, updateJob, deleteJob, patchStatus, patchFollowUp, rescoreJob, addContact, removeContact, updateChecklist, titleOptions, createTitle, isLoading } = useJobs();
   const [isEditing, setIsEditing] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [creatingPack, setCreatingPack] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
   const [contactForm, setContactForm] = useState<Omit<Contact, 'id'>>({ name: '', company: '', title: '', relationshipType: 'RECRUITER', outreachDate: '', notes: '' });
   const [savingContact, setSavingContact] = useState(false);
@@ -102,6 +103,26 @@ export default function JobDetailsPage() {
       setShowContactForm(false);
     } finally {
       setSavingContact(false);
+    }
+  }
+
+  async function createPack(context: string) {
+    if (!job) return;
+    try {
+      const res = await fetch('/api/interview-prep', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.id, context }),
+      });
+      if (!res.ok) {
+        const json = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+        alert(json.error?.message ?? 'Could not create the preparation pack.');
+        return;
+      }
+      const json = (await res.json()) as { pack: { id: string } };
+      router.push(`/interview-prep/${json.pack.id}`);
+    } catch {
+      alert('Could not create the preparation pack. Please try again.');
     }
   }
 
@@ -457,8 +478,45 @@ export default function JobDetailsPage() {
             <div className="card-pad">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">Prep pack</h3>
-                <Link href="/prep" className="btn-secondary text-sm">Open prep editor</Link>
+                <div className="flex items-center gap-2">
+                  <Link href="/prep" className="btn-secondary text-sm">Open prep editor</Link>
+                  <button
+                    type="button"
+                    className="btn-primary text-sm"
+                    onClick={() => setCreatingPack((p) => !p)}
+                  >
+                    {creatingPack ? 'Creating…' : 'Create AI prep pack'}
+                  </button>
+                </div>
               </div>
+              {creatingPack && (
+                <div className="mt-3 space-y-2">
+                  <p className="muted text-xs mb-1">Prepare with job-specific questions generated from this role and your career profile.</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="btn-secondary text-xs flex-1"
+                      onClick={() => { setCreatingPack(false); void createPack('BALANCED'); }}
+                    >
+                      Balanced pack
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary text-xs flex-1"
+                      onClick={() => { setCreatingPack(false); void createPack('TECHNICAL'); }}
+                    >
+                      Technical focus
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary text-xs flex-1"
+                      onClick={() => { setCreatingPack(false); void createPack('BEHAVIORAL'); }}
+                    >
+                      Behavioral focus
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="space-y-3 text-sm">
                 <div>
                   <span className="text-muted">Why this role: </span>
