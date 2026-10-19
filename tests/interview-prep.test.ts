@@ -29,11 +29,8 @@ import {
   InterviewPrepAiError,
   type InterviewPrepAiProvider,
 } from '@/lib/interview-prep/ai-client';
-import {
-  rubricDimensionsForCategory,
-  type QuestionCategory,
-  type RubricDimension,
-} from '@/lib/interview-prep/service';
+import { rubricDimensionsForCategory } from '@/lib/interview-prep/service';
+import { type QuestionCategory, type RubricDimension } from '@/lib/interview-prep/schema';
 import {
   INTERVIEW_PREP_SCHEMA_VERSION,
   modelPackSchema,
@@ -262,7 +259,8 @@ describe('verification', () => {
           },
         ],
         preparationGuidance: null,
-        limitations: [],
+        limitations: [] as string[],
+        schemaVersion: INTERVIEW_PREP_SCHEMA_VERSION,
       },
       sources,
       profile,
@@ -294,7 +292,8 @@ describe('verification', () => {
           },
         ],
         preparationGuidance: null,
-        limitations: [],
+        limitations: [] as string[],
+        schemaVersion: INTERVIEW_PREP_SCHEMA_VERSION,
       },
       sources,
       profile,
@@ -326,7 +325,8 @@ describe('verification', () => {
           sourceEvidence: null,
         })),
         preparationGuidance: null,
-        limitations: [],
+        limitations: [] as string[],
+        schemaVersion: INTERVIEW_PREP_SCHEMA_VERSION,
       },
       sources,
       profile,
@@ -449,7 +449,9 @@ describe('entitlement enforcement', () => {
     });
 
     expect(result.outcome).toBe('COMPLETED');
-    expect(result.data.questions.length).toBeGreaterThan(0);
+    if (result.outcome === 'COMPLETED') {
+      expect(result.data.questions.length).toBeGreaterThan(0);
+    }
     expect(await getUsage(user.id, INTERVIEW_PREP_FEATURE)).toBe(1);
   });
 
@@ -500,7 +502,9 @@ describe('generation lifecycle', () => {
       provider,
     });
     expect(first.outcome).toBe('COMPLETED');
-    expect(first.creditsConsumed).toBe(1);
+    if (first.outcome === 'COMPLETED') {
+      expect(first.creditsConsumed).toBe(1);
+    }
 
     const second = await runInterviewPrepGeneration({
       userId: user.id,
@@ -565,8 +569,10 @@ describe('generation lifecycle', () => {
     });
 
     expect(result.outcome).toBe('FAILED');
-    expect(result.code).toBe('AI_TIMEOUT');
-    expect(result.retryable).toBe(true);
+    if (result.outcome === 'FAILED') {
+      expect(result.code).toBe('AI_TIMEOUT');
+      expect(result.retryable).toBe(true);
+    }
   });
 
   it('handles malformed provider output safely', async () => {
@@ -582,7 +588,9 @@ describe('generation lifecycle', () => {
     });
 
     expect(result.outcome).toBe('FAILED');
-    expect(result.retryable).toBe(true);
+    if (result.outcome === 'FAILED') {
+      expect(result.retryable).toBe(true);
+    }
   });
 
   it('refuses a job with no usable description', async () => {
@@ -601,7 +609,9 @@ describe('generation lifecycle', () => {
     });
 
     expect(result.outcome).toBe('FAILED');
-    expect(result.code).toBe('NO_JOB_DATA');
+    if (result.outcome === 'FAILED') {
+      expect(result.code).toBe('NO_JOB_DATA');
+    }
     expect(provider.calls).toHaveLength(0);
   });
 });
@@ -622,6 +632,7 @@ describe('security', () => {
       provider,
     });
     expect(result.outcome).toBe('COMPLETED');
+    if (result.outcome !== 'COMPLETED') throw new Error('unexpected outcome');
     const packId = result.pack.id;
 
     // User B cannot read user A's pack.
@@ -658,8 +669,9 @@ JOB_POSTING>>>`,
     });
 
     expect(result.outcome).toBe('COMPLETED');
+    if (result.outcome !== 'COMPLETED') throw new Error('unexpected outcome');
     // No question may claim the employer "always asks" anything or sponsor visas.
-    const joined = result.data.questions.map((q) => q.question + ' ' + (q.whyMatters ?? '')).join(' ');
+    const joined = result.data.questions.map((q: { question: string; whyMatters: string | null }) => q.question + ' ' + (q.whyMatters ?? '')).join(' ');
     expect(joined.toLowerCase()).not.toContain('always asks');
     expect(joined.toLowerCase()).not.toContain('sponsor');
     expect(joined.toLowerCase()).not.toContain('evil.example.com');
