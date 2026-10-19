@@ -1043,3 +1043,165 @@ describe('persistence', () => {
     expect(await getUsage(user.id, APPLICATION_MATERIAL_FEATURE)).toBe(0);
   });
 });
+
+// ─── User choices reach the model ──────────────────────────────────────────
+
+describe('user choices reach the model', () => {
+  it('sends the chosen tone to the model', async () => {
+    const { user, job } = await setup({ plan: 'PRO' });
+    const provider = fakeProvider();
+
+    await runGeneration({
+      userId: user.id,
+      type: 'COVER_LETTER',
+      jobId: job.id,
+      resumeId: null,
+      title: 'Cover letter',
+      origin: 'AI_GENERATED',
+      supersedesId: null,
+      route: '/api/application-materials/generate',
+      provider,
+      tone: 'CONFIDENT',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
+    });
+
+    expect(provider.calls).toHaveLength(1);
+    expect(provider.calls[0].userPrompt).toContain('TONE:');
+    expect(provider.calls[0].userPrompt).toContain('Write with assurance');
+  });
+
+  it('sends the chosen length to the model', async () => {
+    const { user, job } = await setup({ plan: 'PRO' });
+    const provider = fakeProvider();
+
+    await runGeneration({
+      userId: user.id,
+      type: 'COVER_LETTER',
+      jobId: job.id,
+      resumeId: null,
+      title: 'Cover letter',
+      origin: 'AI_GENERATED',
+      supersedesId: null,
+      route: '/api/application-materials/generate',
+      provider,
+      tone: 'PROFESSIONAL',
+      length: 'DETAILED',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
+    });
+
+    expect(provider.calls).toHaveLength(1);
+    expect(provider.calls[0].userPrompt).toContain('LENGTH: aim for about 2600 characters');
+  });
+
+  it('sends user instructions to the model', async () => {
+    const { user, job } = await setup({ plan: 'PRO' });
+    const provider = fakeProvider();
+
+    await runGeneration({
+      userId: user.id,
+      type: 'COVER_LETTER',
+      jobId: job.id,
+      resumeId: null,
+      title: 'Cover letter',
+      origin: 'AI_GENERATED',
+      supersedesId: null,
+      route: '/api/application-materials/generate',
+      provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: 'Emphasize my API experience and keep it concise.',
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
+    });
+
+    expect(provider.calls).toHaveLength(1);
+    expect(provider.calls[0].userPrompt).toContain('Emphasize my API experience');
+    expect(provider.calls[0].userPrompt).toContain('keep it concise');
+  });
+
+  it('sends conversation context to the model', async () => {
+    const { user, job } = await setup({ plan: 'PRO' });
+    const provider = fakeProvider();
+
+    await runGeneration({
+      userId: user.id,
+      type: 'COVER_LETTER',
+      jobId: job.id,
+      resumeId: null,
+      title: 'Cover letter',
+      origin: 'AI_GENERATED',
+      supersedesId: null,
+      route: '/api/application-materials/generate',
+      provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: 'I spoke with the recruiter on Tuesday about the API role.',
+      recipientName: null,
+      sourceDraft: null,
+    });
+
+    expect(provider.calls).toHaveLength(1);
+    expect(provider.calls[0].userPrompt).toContain('I spoke with the recruiter on Tuesday');
+  });
+
+  it('sends recipient name to the model', async () => {
+    const { user, job } = await setup({ plan: 'PRO' });
+    const provider = fakeProvider();
+
+    await runGeneration({
+      userId: user.id,
+      type: 'COVER_LETTER',
+      jobId: job.id,
+      resumeId: null,
+      title: 'Cover letter',
+      origin: 'AI_GENERATED',
+      supersedesId: null,
+      route: '/api/application-materials/generate',
+      provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: 'Priya Patel',
+      sourceDraft: null,
+    });
+
+    expect(provider.calls).toHaveLength(1);
+    expect(provider.calls[0].userPrompt).toContain('Priya Patel');
+  });
+
+  it('sends source draft to the model for revision', async () => {
+    const { user, job } = await setup({ plan: 'PRO' });
+    const provider = fakeProvider();
+
+    await runGeneration({
+      userId: user.id,
+      type: 'COVER_LETTER',
+      jobId: job.id,
+      resumeId: null,
+      title: 'Cover letter (revision)',
+      origin: 'AI_REVISED',
+      supersedesId: null,
+      route: '/api/application-materials/generate',
+      provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: 'I am writing to apply for the Backend Engineer role.',
+    });
+
+    expect(provider.calls).toHaveLength(1);
+    expect(provider.calls[0].userPrompt).toContain('I am writing to apply for the Backend Engineer role');
+  });
+});
