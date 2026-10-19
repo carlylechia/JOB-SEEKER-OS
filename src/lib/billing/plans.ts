@@ -180,7 +180,8 @@ export const FEATURE_ENTITLEMENTS: Record<
     plans: ['PRO', 'PREMIUM'],
     label: 'AI cover letters',
     released: true,
-    description: 'Draft tailored cover letters for each application.',
+    description:
+      'Draft tailored cover letters and application messages for each opportunity, grounded in your own career profile.',
   },
   AI_INTERVIEW_PREP: {
     plans: ['PRO', 'PREMIUM'],

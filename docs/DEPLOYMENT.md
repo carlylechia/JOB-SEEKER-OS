@@ -42,6 +42,18 @@ Preview build needs to boot the app).
 > **Preview safety.** `MONETIZATION_ENABLED=false` in the Preview environment
 > guarantees preview builds can never start real trials.
 
+> **PDF fonts are build artifacts, not environment variables.** The two Inter
+> weights are committed at `src/lib/resume-builder/fonts/` and read through a
+> literal path. No env var configures them, and nothing needs to be installed for
+> export to work.
+>
+> **Do not resolve fonts through `require.resolve`.** A variable specifier is
+> replaced by webpack with a stub that throws `MODULE_NOT_FOUND`, and a literal
+> one makes the bundler parse the `.ttf` as JavaScript and fail the build. Both
+> were shipped once and produced a warning that looked cosmetic. The unit suite
+> cannot catch either — it runs under `tsx`, which resolves for real — so
+> **verify PDF export against a production build**, not against `npm run dev`.
+
 ---
 
 ## Runtime baseline
@@ -285,9 +297,15 @@ message. Confirm that rather than assuming it.
 
 Only relevant if you are shipping the Resume Builder release.
 
-**No new environment variable is required.** PDF export embeds fonts that ship
-with the application, so it works with no configuration at all. Job-specific
-optimisation uses the existing `OPENAI_API_KEY`.
+**No new environment variable is required.** PDF export embeds fonts committed
+at `src/lib/resume-builder/fonts/`, so it works with no configuration at all.
+Job-specific optimisation uses the existing `OPENAI_API_KEY`.
+
+> **Check PDF export against the deployed build, and check it first.** This
+> release shipped a font-resolution bug that passed every test and every
+> `next build`, and failed only in a running production server — `npm run dev`
+> and `npm test` both resolve fonts correctly and cannot see it. Steps 4 and 5
+> below are the ones that catch that class of fault.
 
 1. Sign in as a **Pro** user and open **Resumes**. Confirm the builder is
    available and that the plan limit is shown before you hit it.
@@ -299,6 +317,11 @@ optimisation uses the existing `OPENAI_API_KEY`.
 4. **Download PDF.** Confirm the browser downloads a file rather than opening a
    viewer, that its size is roughly 300–400 KB (two embedded font faces), and
    that selecting and copying text from it works — including an accented name.
+   **Do this on the deployed build.** A font that failed to load reports
+   `Cannot find module '@expo-google-fonts/…'` or
+   `PDF export could not load its font files from …`; treat either as a release
+   blocker, and check the fonts are in the deployment rather than re-testing
+   locally, since `npm run dev` will pass regardless.
 5. Click **Optimise for this job**. Confirm the review shows the original text,
    the proposal, a reason, the posting requirement, a verbatim quote and a
    confidence level. Accept **one** suggestion, leave the rest, and apply.
@@ -425,7 +448,7 @@ A permanently-warning check is a check people learn to ignore.
 [ ] All required env vars set in Vercel
 [ ] RESEND_FROM domain verified in the Resend dashboard
 [ ] BLOB_READ_WRITE_TOKEN present (private resume storage)
-[ ] PDF export verified end to end (no configuration required — check it anyway)
+[ ] PDF export verified end to end against a PRODUCTION build (`next build && next start`), not `npm run dev` — the test suite runs under `tsx` and cannot detect a bundler resolution failure
 [ ] CRON_SECRET set (>= 16 chars)
 [ ] Admin account bootstrapped and /admin verified
 [ ] monetization:initialize --dry-run reviewed

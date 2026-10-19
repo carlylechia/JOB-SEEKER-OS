@@ -71,6 +71,27 @@ Full behaviour, limits, configuration and troubleshooting: [docs/JOB_INTELLIGENC
 
 Full behaviour, architecture, limits and troubleshooting: [docs/RESUME_BUILDER.md](docs/RESUME_BUILDER.md).
 
+### AI Cover Letters & Application Materials (Pro)
+
+- cover letters, recruiter outreach, LinkedIn connection notes, application
+  follow-ups, status checks and interview thank-you messages, each built from
+  your confirmed career profile and the real job details — never generic filler
+- every personal fact traces back to a source you control; numbers, employers
+  and qualifications the model cannot verify are removed from the draft and
+  surfaced for you to review before you send
+- drafts are saved, versioned and revisable; a regeneration never overwrites a
+  draft you have already read
+- works from a saved template or a blank page, links to any job in your
+  pipeline, and exports to plain text or PDF
+- nothing is sent automatically: you always review, copy or download before
+  using the material outside teChia Jobs
+- server-side entitlement enforcement via the existing `AI_COVER_LETTER`
+  feature key; usage is metered through the shared AI credits budget. Copy,
+  download and manual editing never consume a credit
+
+Full behaviour, architecture, limits and troubleshooting:
+[docs/APPLICATION_MATERIALS.md](docs/APPLICATION_MATERIALS.md).
+
 ### Intake and onboarding
 
 - multi-step onboarding flow with autosaved progress

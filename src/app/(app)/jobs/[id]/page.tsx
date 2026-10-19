@@ -152,6 +152,12 @@ export default function JobDetailsPage() {
                 Open listing
               </Link>
             ) : null}
+            <Link
+              href={`/application-materials/new?job=${job.id}`}
+              className="btn-secondary"
+            >
+              Create cover letter
+            </Link>
             <button
               className="btn-secondary"
               type="button"
