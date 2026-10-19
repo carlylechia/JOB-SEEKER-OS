@@ -908,6 +908,10 @@ model CoverLetter {
   content            String
   /// Subject line, e.g. "Application for Backend Engineer — [name]". Optional.
   subject            String?
+  /// Salutation, e.g. "Dear Hiring Team,". Optional; defaults are applied at render time.
+  salutation         String?
+  /// Sign-off, e.g. "Sincerely,". Optional; defaults are applied at render time.
+  signOff            String?
   status             String   @default("DRAFT") // DRAFT | GENERATED | SENT | ARCHIVED
   /// Contract version this letter conforms to.
   schemaVersion      Int      @default(1)
@@ -919,6 +923,13 @@ model CoverLetter {
   /// Version within this (user, job) pair. 1 for the first letter; incremented
   /// when the inputs change enough to justify a new version.
   version            Int      @default(1)
+  /// Claims the letter makes, each tied to evidence. Re-checked server-side
+  /// before storing; rendered so the user can see what the letter asserts.
+  keyClaims          Json?
+  /// Honest input gaps: missing description, thin profile, no matching
+  /// experience. Surfaced so the user can fill them in rather than receiving a
+  /// fabricated letter.
+  limitations        String[]
   /// True when the job description or career profile was too thin for a
   /// specific letter, so the UI can say so rather than implying full coverage.
   thinInputs         Boolean  @default(false)
