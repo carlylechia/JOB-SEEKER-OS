@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Briefcase, LayoutDashboard, Users, KanbanSquare, Target, FileText, FileBadge, Settings, UserCircle2, CreditCard, Shield, Sparkles } from 'lucide-react';
+import { Briefcase, LayoutDashboard, Users, KanbanSquare, Target, FileText, FileBadge, Mail, Settings, UserCircle2, CreditCard, Shield, Sparkles } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
 
 const items = [
@@ -16,6 +16,7 @@ const items = [
   { href: '/profile', label: 'Profile', icon: UserCircle2 },
   { href: '/career-profile', label: 'Career Profile', icon: Sparkles },
   { href: '/resumes', label: 'Resumes', icon: FileBadge },
+  { href: '/application-materials', label: 'Application materials', icon: Mail },
   { href: '/settings', label: 'Settings', icon: Settings },
   { href: '/settings/billing', label: 'Plan & Billing', icon: CreditCard },
 ];

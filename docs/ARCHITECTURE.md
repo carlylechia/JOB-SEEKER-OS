@@ -481,3 +481,28 @@ configuration — is in
 | No new entitlement | `RESUME_BUILDER` and `RESUME_OPTIMIZATION` already existed as defined-but-unreleased keys and are simply shipped. PDF export has no key of its own: a built resume cannot exist without the builder, so a separate gate would be an invented restriction. |
 | Export is stateless | Generated per request from the authorised document and streamed. Nothing is stored, so there is no public URL and nothing to leak. No provider call, so it costs no credit. |
 | Private responses | Every authenticated response is `private, no-store, must-revalidate`; the export adds `attachment`, `sandbox` and `nosniff`, with a filename derived from the server-known name. |
+
+## 16. AI Cover Letters & Application Materials
+
+Added by the AI Application Materials release. Like Resume Builder and Job
+Intelligence, it reuses the entitlement resolver, the `consumeUsage` advisory
+lock, the observability helpers and the provider seam. It introduces one new
+table and changes no existing one.
+
+Full detail — data model, templates, PDF pipeline, verification rules,
+configuration — is in [`docs/APPLICATION_MATERIALS.md`](APPLICATION_MATERIALS.md).
+The architectural points:
+
+| Concern | Decision |
+| --- | --- |
+| One table for everything | `ApplicationMaterial` covers cover letters, recruiter messages, connection notes, follow-ups, status checks and thank-you notes. `type` is a real enum column, not a string convention. |
+| Privacy by structure | `userId` is required and every read scopes by it. A material is **never** written onto a shared `JobLead`, so it cannot leak through public job data no matter what happens in the UI. |
+| Lineage | `jobId`, `resumeId` and `templateId` are optional `SetNull` foreign keys — a recruiter message legitimately has no job, and deleting a job never destroys the user's writing. |
+| Versioning | Chained through `supersedesId` rather than mutating in place; `revision` numbers each draft and `editVersion` implements optimistic concurrency (409 on mismatch). |
+| Greeting and sign-off | Server-derived from real values. The model never writes them, so an invented recipient is structurally impossible. |
+| Anti-fabrication | Enforced in `verify.ts`: excerpts are re-quoted against real source text, every number must exist in the candidate's records, and employer/title/credential claims must name a known organisation. Unsupported sentences are removed and listed for review. |
+| No tools | The provider has no file, network or database access. Prompt injection is a wording problem. |
+| Entitlement | Ships the existing `AI_COVER_LETTER` key (already in `plans.ts`, flipped to `released: true`). No new plan, limit, usage table or parallel quota. Usage draws on the shared `aiCredits` budget, reserved before the provider call under the advisory lock with an idempotency key. |
+| Copy/download | Never consume a credit. PDF export reuses the resume builder's `pdf-lib` renderer — no second PDF stack. |
+| No sending | Drafts only. Nothing is emailed, messaged or submitted. |
+
