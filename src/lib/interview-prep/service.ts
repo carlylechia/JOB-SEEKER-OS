@@ -228,6 +228,7 @@ async function claimPackRow(params: {
           context: params.context,
           inputFingerprint: params.inputFingerprint,
           status: 'GENERATING',
+          limitations: [],
         },
       });
       return { row: created, claimed: true };
