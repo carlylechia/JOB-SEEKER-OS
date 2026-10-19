@@ -43,6 +43,7 @@ export default function JobDetailsPage() {
   const [savingFollowUp, setSavingFollowUp] = useState(false);
   const [checklistSaving, setChecklistSaving] = useState(false);
   const [rescoring, setRescoring] = useState(false);
+  const [creatingCoverLetter, setCreatingCoverLetter] = useState(false);
 
   const job = getJob(params.id);
 
@@ -90,6 +91,29 @@ export default function JobDetailsPage() {
       await rescoreJob(job!.id);
     } finally {
       setRescoring(false);
+    }
+  }
+
+  async function createCoverLetter() {
+    if (!job) return;
+    setCreatingCoverLetter(true);
+    try {
+      const res = await fetch('/api/cover-letters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.id }),
+      });
+      if (!res.ok) {
+        const json = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+        alert(json.error?.message ?? 'Could not create the cover letter.');
+        return;
+      }
+      const json = (await res.json()) as { letter: { id: string } };
+      router.push(`/cover-letters/${json.letter.id}`);
+    } catch {
+      alert('Could not create the cover letter. Please try again.');
+    } finally {
+      setCreatingCoverLetter(false);
     }
   }
 
@@ -451,7 +475,17 @@ export default function JobDetailsPage() {
             <div className="card-pad">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">Prep pack</h3>
-                <Link href="/prep" className="btn-secondary text-sm">Open prep editor</Link>
+                <div className="flex items-center gap-2">
+                  <Link href="/prep" className="btn-secondary text-sm">Open prep editor</Link>
+                  <button
+                    type="button"
+                    className="btn-primary text-sm"
+                    onClick={createCoverLetter}
+                    disabled={creatingCoverLetter}
+                  >
+                    {creatingCoverLetter ? 'Creating…' : 'Create cover letter'}
+                  </button>
+                </div>
               </div>
               <div className="space-y-3 text-sm">
                 <div>
