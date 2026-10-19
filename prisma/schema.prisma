@@ -52,6 +52,7 @@ model User {
   jobAnalyses               JobIntelligenceAnalysis[]
   structuredResumes         StructuredResume[]
   resumeOptimizations       ResumeOptimization[]
+  coverLetters              CoverLetter[]
 
   @@index([createdAt])
   @@index([emailVerificationToken])
@@ -164,6 +165,8 @@ model JobLead {
   /// association; the resume itself survives, because a resume is not owned by
   /// the job it was written for.
   targetedResumes     StructuredResume[] @relation("StructuredResumeTargetJob")
+  /// Tailored cover letters for this job.
+  coverLetters        CoverLetter[]
 
   @@index([userId, status])
   @@index([userId, company])
@@ -872,4 +875,63 @@ model ResumeOptimization {
   @@unique([userId, resumeId, jobId, inputFingerprint, schemaVersion])
   @@index([userId, resumeId, createdAt])
   @@index([userId, status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COVER LETTERS & APPLICATION MATERIALS (Pro Release 5)
+//
+// A cover letter belongs to one user and targets one of their jobs. It is a
+// persuasive document the user sends to an employer, so quality matters more
+// than volume: one specific, evidence-backed letter is worth more than a dozen
+// generic templates with the company name swapped in.
+//
+// One row per (user, job, input fingerprint): the unique index doubles as the
+// lock that stops two identical generation requests from running (and being
+// charged) at once, and a changed fingerprint creates a new versioned row so
+// previous letters are preserved as history rather than silently overwritten.
+//
+// The raw resume is never sent to the provider — only a bounded summary of the
+// user's confirmed career profile (built by Resume Intelligence). Every claim
+// in the generated letter is re-checked server-side against the resume,
+// profile and job description before anything is stored.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// One tailored cover letter for one job.
+model CoverLetter {
+  id                 String   @id @default(cuid())
+  userId             String
+  jobId              String
+  /// User-visible title, e.g. "Northwind — Backend Engineer cover letter".
+  title              String
+  /// The generated letter text. The user may edit it before sending; edits are
+  /// stored as a new version rather than overwriting the generation.
+  content            String
+  /// Subject line, e.g. "Application for Backend Engineer — [name]". Optional.
+  subject            String?
+  status             String   @default("DRAFT") // DRAFT | GENERATED | SENT | ARCHIVED
+  /// Contract version this letter conforms to.
+  schemaVersion      Int      @default(1)
+  /// Prompt version used to generate the letter.
+  promptVersion      Int      @default(1)
+  /// SHA-256 over the normalised inputs (job, profile, resume). Changed inputs
+  /// produce a new fingerprint and a new versioned row.
+  inputFingerprint   String
+  /// Version within this (user, job) pair. 1 for the first letter; incremented
+  /// when the inputs change enough to justify a new version.
+  version            Int      @default(1)
+  /// True when the job description or career profile was too thin for a
+  /// specific letter, so the UI can say so rather than implying full coverage.
+  thinInputs         Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job     JobLead   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([userId, jobId])
+  @@index([userId, status, updatedAt])
+  @@index([jobId, updatedAt])
+  /// One letter per user, job and input fingerprint: the unique index doubles
+  /// as the duplicate-generation lock.
+  @@unique([userId, jobId, inputFingerprint])
 }
