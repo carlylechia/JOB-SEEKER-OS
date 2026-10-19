@@ -270,6 +270,12 @@ describe('entitlement enforcement', () => {
         supersedesId: null,
         route: '/api/application-materials/generate',
         provider,
+        tone: 'PROFESSIONAL',
+        length: 'STANDARD',
+        instructions: null,
+        conversation: null,
+        recipientName: null,
+        sourceDraft: null,
       }),
     ).rejects.toBeInstanceOf(PlanRequiredError);
 
@@ -292,6 +298,12 @@ describe('entitlement enforcement', () => {
         supersedesId: null,
         route: '/api/application-materials/generate',
         provider,
+        tone: 'PROFESSIONAL',
+        length: 'STANDARD',
+        instructions: null,
+        conversation: null,
+        recipientName: null,
+        sourceDraft: null,
       });
 
       expect((result as { outcome: string }).outcome).not.toBe('FAILED');
@@ -328,6 +340,12 @@ describe('entitlement enforcement', () => {
       supersedesId: null,
       route: '/api/application-materials/generate',
       provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
     });
 
     expect((result as { outcome: string }).outcome).not.toBe('FAILED');
@@ -365,6 +383,12 @@ describe('entitlement enforcement', () => {
         supersedesId: null,
         route: '/api/application-materials/generate',
         provider,
+        tone: 'PROFESSIONAL',
+        length: 'STANDARD',
+        instructions: null,
+        conversation: null,
+        recipientName: null,
+        sourceDraft: null,
       }),
     ).rejects.toBeInstanceOf(PlanRequiredError);
 
@@ -389,6 +413,12 @@ describe('generation', () => {
       supersedesId: null,
       route: '/api/application-materials/generate',
       provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
     });
 
     expect((result as RunGenerationResult).outcome).toBe('COMPLETED');
@@ -430,6 +460,12 @@ describe('generation', () => {
         supersedesId: null,
         route: '/api/application-materials/generate',
         provider,
+        tone: 'PROFESSIONAL',
+        length: 'STANDARD',
+        instructions: null,
+        conversation: null,
+        recipientName: null,
+        sourceDraft: null,
       }),
     ).rejects.toBeInstanceOf(JobNotFoundError);
   });
@@ -462,6 +498,12 @@ describe('generation', () => {
       supersedesId: null,
       route: '/api/application-materials/generate',
       provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
     });
 
     const material = (result as { material: { content: string; warnings: string[] } }).material;
@@ -487,6 +529,12 @@ describe('generation', () => {
       supersedesId: null,
       route: '/api/application-materials/generate',
       provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
     });
 
     const material = (result as { material: { warnings: string[] } }).material;
@@ -507,6 +555,12 @@ describe('generation', () => {
       supersedesId: null,
       route: '/api/application-materials/generate',
       provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
     });
 
     expect((result as RunGenerationResult).outcome).toBe('COMPLETED');
@@ -528,6 +582,12 @@ describe('generation', () => {
       supersedesId: null,
       route: '/api/application-materials/generate',
       provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
     });
 
     // Should either fail with NOT_APPLIED_YET or produce a draft flagged as missing context.
@@ -566,6 +626,12 @@ describe('generation', () => {
       supersedesId: null,
       route: '/api/application-materials/generate',
       provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
     });
 
     expect((result as RunGenerationResult).outcome).toBe('COMPLETED');
@@ -607,6 +673,12 @@ describe('generation', () => {
       supersedesId: null,
       route: '/api/application-materials/generate',
       provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
     });
 
     const material = (result as { material: { content: string; unsupported: string[] } }).material;
@@ -635,6 +707,12 @@ describe('generation', () => {
       supersedesId: null,
       route: '/api/application-materials/generate',
       provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
     });
 
     const material = (result as { material: { content: string } }).material;
@@ -657,6 +735,12 @@ describe('generation', () => {
       supersedesId: null,
       route: '/api/application-materials/generate',
       provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
     });
 
     const failed = result as Extract<RunGenerationResult, { outcome: 'FAILED' }>;
@@ -678,6 +762,12 @@ describe('generation', () => {
       supersedesId: null,
       route: '/api/application-materials/generate',
       provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
     });
 
     const second = await runGeneration({
@@ -690,6 +780,12 @@ describe('generation', () => {
       supersedesId: null,
       route: '/api/application-materials/generate',
       provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
     });
 
     const reused = second as Extract<RunGenerationResult, { outcome: 'REUSED' }>;
@@ -714,6 +810,12 @@ describe('generation', () => {
         supersedesId: null,
         route: '/api/application-materials/generate',
         provider,
+        tone: 'PROFESSIONAL',
+        length: 'STANDARD',
+        instructions: null,
+        conversation: null,
+        recipientName: null,
+        sourceDraft: null,
       }),
       runGeneration({
         userId: user.id,
@@ -725,6 +827,12 @@ describe('generation', () => {
         supersedesId: null,
         route: '/api/application-materials/generate',
         provider,
+        tone: 'PROFESSIONAL',
+        length: 'STANDARD',
+        instructions: null,
+        conversation: null,
+        recipientName: null,
+        sourceDraft: null,
       }),
     ]);
 
@@ -750,6 +858,12 @@ describe('generation', () => {
       supersedesId: null,
       route: '/api/application-materials/generate',
       provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
     });
 
     expect((result as RunGenerationResult).outcome).toBe('FAILED');

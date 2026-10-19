@@ -37,6 +37,7 @@ import {
   buildMaterialContext,
   type MaterialContext,
 } from './context';
+import { resolveLength, resolveTone, type MaterialLength, type Tone } from './materials';
 import {
   MATERIAL_ERROR_MESSAGES,
   MATERIAL_SCHEMA_VERSION,
@@ -126,6 +127,18 @@ export type RunGenerationOptions = {
   route: string;
   /** Injected by tests; production always resolves the configured provider. */
   provider?: ApplicationMaterialAiProvider;
+  /** Tone the user chose, resolved against what is allowed for this type. */
+  tone: string;
+  /** Length the user chose, resolved against what is allowed for this type. */
+  length: string;
+  /** Free-text style guidance from the user. Never adds facts. */
+  instructions: string | null;
+  /** A pasted conversation the user supplied as context. */
+  conversation: string | null;
+  /** A named recipient, only when meaningful for this type. */
+  recipientName: string | null;
+  /** The current draft text, when this is a revision. */
+  sourceDraft: string | null;
 };
 
 type MaterialRow = {
@@ -402,7 +415,14 @@ export async function runGeneration(
 
   let model: ModelMaterial;
   try {
-    const promptInputs = buildPromptInputs(context);
+    const promptInputs = buildPromptInputs(context, {
+      tone: resolveTone(context.type, options.tone),
+      length: resolveLength(context.type, options.length),
+      instructions: options.instructions ?? null,
+      conversation: options.conversation ?? null,
+      recipientName: options.recipientName ?? null,
+      sourceDraft: options.sourceDraft ?? null,
+    });
     const response = await provider.write({
       systemPrompt: MATERIAL_SYSTEM_PROMPT,
       userPrompt: buildMaterialPrompt(promptInputs),
@@ -479,21 +499,31 @@ async function materialFromRow(row: MaterialRow): Promise<MaterialResult> {
   return data;
 }
 
-function buildPromptInputs(context: MaterialContext): PromptInputs {
+function buildPromptInputs(
+  context: MaterialContext,
+  userChoices: {
+    tone: Tone;
+    length: MaterialLength;
+    instructions: string | null;
+    conversation: string | null;
+    recipientName: string | null;
+    sourceDraft: string | null;
+  },
+): PromptInputs {
   return {
     type: context.type as any,
-    tone: 'PROFESSIONAL',
-    length: 'STANDARD',
+    tone: userChoices.tone,
+    length: userChoices.length,
     candidateFacts: context.candidate.profileText,
     jobBlock: context.job ? buildJobBlock(context.job) : null,
     applicationBlock: buildApplicationBlock(context.application),
     resumeBlock: context.resume ? context.resume.text : null,
     intelligenceBlock: context.intelligence ? buildIntelligenceBlock(context.intelligence) : null,
-    instructionsBlock: null,
-    conversationBlock: null,
+    instructionsBlock: userChoices.instructions,
+    conversationBlock: userChoices.conversation,
     templateBlock: null,
-    sourceDraftBlock: null,
-    recipientName: null,
+    sourceDraftBlock: userChoices.sourceDraft,
+    recipientName: userChoices.recipientName,
     missingInputs: context.missingInputs,
     thinJob: Boolean(context.job && !context.job.hasDescription),
   };
