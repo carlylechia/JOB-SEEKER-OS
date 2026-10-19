@@ -182,6 +182,29 @@ production.
 No new secrets. Reuses `OPENAI_API_KEY` (server-side only). Optional:
 `APPLICATION_MATERIALS_MODEL` (defaults to `gpt-4.1-mini`).
 
+## User-controlled generation parameters
+
+When generating a draft, the user chooses:
+
+- **Tone** (`PROFESSIONAL | CONFIDENT | WARM | CONCISE | FORMAL`) — changes
+  *how* the draft is written, never *what* is claimed. Confidence comes from
+  specificity, not from overstating.
+- **Length** (`SHORT | STANDARD | DETAILED`) — target character budget for the
+  body text, specific to each material type.
+- **Instructions** — free-text style guidance. These are style/emphasis only;
+  they can never add a fact that isn't in the candidate's verified records.
+- **Conversation** — a pasted exchange the user supplies as context. Treated as
+  unverified data; the model may refer to it but never assert that it happened.
+- **Recipient name** — only used when the user supplies it from a saved contact
+  or their own outreach. Never invented.
+- **Source draft** — when revising, the current draft text is sent so the model
+  improves it rather than starting from scratch.
+
+These are sent to the model with every generation request. Tone and length are
+validated against what is allowed for the selected material type; instructions,
+conversation, recipient name and source draft are bounded by length and treated
+as untrusted user input.
+
 ---
 
 ## Testing
@@ -207,3 +230,10 @@ copy/download/edit).
 3. The `AI_COVER_LETTER` entitlement is already present in `plans.ts`; set
    `released: true` (done in this release) so Pro/Premium users can access it.
    No seed or backfill is required.
+
+## Job details page integration
+
+The job details page (`/jobs/[id]`) lists existing cover letters and
+application materials for that job, with type, status, generation status,
+subject and updated date. A "Create material" link pre-selects the target job,
+so users can generate a cover letter directly from a job they are viewing.

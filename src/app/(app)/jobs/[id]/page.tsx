@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { JobForm } from "@/components/jobs/job-form";
 import { PageHeader } from "@/components/shared/page-header";
 import { PriorityBadge } from "@/components/shared/priority-badge";
@@ -44,11 +44,33 @@ export default function JobDetailsPage() {
   const [savingFollowUp, setSavingFollowUp] = useState(false);
   const [checklistSaving, setChecklistSaving] = useState(false);
   const [rescoring, setRescoring] = useState(false);
+  const [materials, setMaterials] = useState<Array<{ id: string; type: string; title: string; subject: string | null; status: string; generationStatus: string; createdAt: string; updatedAt: string }>>([]);
+  const [materialsLoading, setMaterialsLoading] = useState(false);
 
   const job = getJob(params.id);
 
   if (isLoading) return <div className="card-pad">Loading job…</div>;
   if (!job) return <div className="card-pad">Job not found.</div>;
+
+  const jobId = job.id;
+
+  async function loadMaterials() {
+    setMaterialsLoading(true);
+    try {
+      const res = await fetch(`/api/application-materials?jobId=${jobId}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const json = await res.json();
+      setMaterials(json.materials || []);
+    } catch {
+      // non-fatal
+    } finally {
+      setMaterialsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadMaterials();
+  }, [jobId]);
 
   async function handleUpdate(values: JobFormValues) {
     if (job) {
@@ -539,6 +561,41 @@ export default function JobDetailsPage() {
                   <span className="badge bg-surface-sunken text-ink ml-1">{job.prepPack.prepStatus}</span>
                 </div>
               </div>
+            </div>
+            <div className="card-pad">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Cover letters &amp; materials</h3>
+                <Link href={`/application-materials/new?job=${job.id}`} className="btn-secondary text-sm">Create material</Link>
+              </div>
+              {materialsLoading ? (
+                <div className="text-xs text-muted animate-pulse">Loading materials…</div>
+              ) : materials.length === 0 ? (
+                <div className="text-xs text-muted">
+                  No cover letters or application materials for this role yet. Create one from your job details.
+                </div>
+              ) : (
+                <div className="space-y-2 text-sm">
+                  {materials.map((m) => (
+                    <div key={m.id} className="rounded-xl border border-line p-3 flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/application-materials/${m.id}`} className="text-ink font-medium hover:text-accent-text">
+                          {m.title}
+                        </Link>
+                        <div className="mt-0.5 text-xs text-muted">
+                          {m.type.replace('_', ' ')} · {m.status.charAt(0) + m.status.slice(1).toLowerCase()}
+                          {m.subject && ` · "${m.subject}"`}
+                        </div>
+                        <div className="mt-0.5 text-xs text-muted">
+                          {new Date(m.updatedAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <span className={`badge text-xs ${m.generationStatus === 'COMPLETED' ? 'bg-success/15 text-success-text' : m.generationStatus === 'FAILED' ? 'bg-danger/15 text-danger-text' : 'bg-surface-sunken text-ink'}`}>
+                        {m.generationStatus.charAt(0) + m.generationStatus.slice(1).toLowerCase()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

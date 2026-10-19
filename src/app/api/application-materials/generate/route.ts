@@ -92,6 +92,12 @@ export async function POST(request: Request) {
           force: data.force === true,
           route: ROUTE,
           provider: resolveApplicationMaterialAiProvider(),
+          tone: data.tone ?? 'PROFESSIONAL',
+          length: data.length ?? 'STANDARD',
+          instructions: data.instructions ?? null,
+          conversation: data.conversation ?? null,
+          recipientName: data.recipientName ?? null,
+          sourceDraft: data.sourceDraft ?? null,
         });
       } catch (error) {
         return applicationMaterialErrorResponse(error, request);
