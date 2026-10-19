@@ -52,6 +52,8 @@ model User {
   jobAnalyses               JobIntelligenceAnalysis[]
   structuredResumes         StructuredResume[]
   resumeOptimizations       ResumeOptimization[]
+  prepPacks                 InterviewPrepPack[]
+  practiceAttempts          InterviewPracticeAttempt[]
 
   @@index([createdAt])
   @@index([emailVerificationToken])
@@ -164,6 +166,8 @@ model JobLead {
   /// association; the resume itself survives, because a resume is not owned by
   /// the job it was written for.
   targetedResumes     StructuredResume[] @relation("StructuredResumeTargetJob")
+  /// Structured interview preparation packs for this job.
+  prepPacks           InterviewPrepPack[]
 
   @@index([userId, status])
   @@index([userId, company])
@@ -872,4 +876,114 @@ model ResumeOptimization {
   @@unique([userId, resumeId, jobId, inputFingerprint, schemaVersion])
   @@index([userId, resumeId, createdAt])
   @@index([userId, status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INTERVIEW INTELLIGENCE & PREPARATION PACKS (Pro Release 6)
+//
+// A preparation pack belongs to one user and targets one of their jobs.
+// Questions are relational records so each one can be edited, reordered,
+// versioned and practiced individually. Practice attempts are relational so
+// history survives question refreshes and a user can reopen a pack and see
+// their previous work.
+//
+// The existing `JobLead.prepPack` JSON column (free-form talking points) is
+// left untouched: this is the structured, AI-powered counterpart, and the two
+// surfaces link through the job record rather than duplicating one another.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// The interview contexts a pack can prepare for. Stored as a string so the
+/// set can grow without a schema change; the application validates the value.
+model InterviewPrepPack {
+  id                 String   @id @default(cuid())
+  userId             String
+  jobId              String
+  /// User-visible title, e.g. "Northwind — Backend Engineer (recruiter screen)".
+  title              String
+  /// Selected preparation context. BALANCED means no specific stage was known.
+  context            String
+  status             String   @default("ACTIVE") // ACTIVE | ARCHIVED
+  /// Contract version this pack's question set conforms to.
+  schemaVersion      Int      @default(1)
+  /// Prompt version used to generate the current question set.
+  promptVersion      Int      @default(1)
+  /// SHA-256 over the normalised inputs (job, profile, resume, context).
+  /// Changed inputs produce a new fingerprint and mark the pack stale.
+  inputFingerprint   String
+  /// Cached progress snapshot, kept in sync on write and recomputed on read.
+  questionCount      Int      @default(0)
+  practicedCount     Int      @default(0)
+  feedbackCount      Int      @default(0)
+  lastPracticedAt    DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job     JobLead                  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  questions InterviewQuestion[]   @relation("PackQuestions")
+  attempts InterviewPracticeAttempt[] @relation("PackAttempts")
+
+  @@index([userId, jobId])
+  @@index([userId, status, updatedAt])
+  @@index([jobId, updatedAt])
+}
+
+/// One question inside a pack. Versioned rows let a refresh retire the old
+/// set without detaching the practice attempts that used it.
+model InterviewQuestion {
+  id              String   @id @default(cuid())
+  packId          String
+  /// Version within this pack. 1 for the first generated set; incremented on
+  /// every refresh so attempts stay attached to the version they used.
+  version         Int      @default(1)
+  ordinal         Int      @default(0)
+  category        String   // TECHNICAL_FUNDAMENTALS | BEHAVIORAL | ... (see schema.ts)
+  difficulty      String   // FOUNDATION | APPLIED | ADVANCED
+  competency      String   // e.g. "React component lifecycle", "Conflict resolution"
+  question        String
+  whyMatters      String?
+  relatedRequirement String?
+  /// Grounded suggestion from the user's own profile, or null when none exists.
+  relevantExperience String?
+  prepNotes       String?
+  /// STAR | TECHNICAL | ARCHITECTURE | null (no framework forced).
+  answerStructure String?
+  /// IDs of follow-up questions generated from this one, bounded in quantity.
+  followUpQuestionIds String[]
+  sourceType      String   // GENERATED | MANUAL | EDITED
+  /// Reference to the job requirement or profile field that justifies this question.
+  sourceEvidence  String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  pack InterviewPrepPack @relation("PackQuestions", fields: [packId], references: [id], onDelete: Cascade)
+  attempts InterviewPracticeAttempt[] @relation("QuestionAttempts")
+
+  @@index([packId, ordinal])
+  @@index([packId, isActive])
+  @@index([packId, version])
+}
+
+/// One saved attempt at answering one question version.
+model InterviewPracticeAttempt {
+  id               String   @id @default(cuid())
+  userId           String
+  packId           String
+  questionId       String
+  /// The InterviewQuestion.version this attempt was made against.
+  questionVersion  Int
+  answer           String
+  /// Structured feedback produced by the evaluation step (rubric, notes, etc.).
+  feedback         Json?
+  rubricKey        String?
+  attemptNumber    Int      @default(1)
+  createdAt        DateTime @default(now())
+
+  user     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pack     InterviewPrepPack       @relation("PackAttempts", fields: [packId], references: [id], onDelete: Cascade)
+  question InterviewQuestion     @relation("QuestionAttempts", fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, packId])
+  @@index([packId, questionId])
+  @@index([userId, createdAt])
 }
