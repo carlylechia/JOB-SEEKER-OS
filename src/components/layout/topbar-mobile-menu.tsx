@@ -9,6 +9,7 @@ import {
   KanbanSquare,
   LayoutDashboard,
   LogOut,
+  Mail,
   Menu,
   Settings,
   Sparkles,
@@ -27,8 +28,12 @@ const mobileLinks = [
   { href: '/contacts', label: 'Contacts', icon: Users },
   { href: '/profile', label: 'Profile', icon: UserCircle2 },
   { href: '/career-profile', label: 'Career Profile', icon: Sparkles },
+  { href: '/prep', label: 'Prep Packs', icon: FileBadge },
+  { href: '/templates', label: 'Templates', icon: FileBadge },
   { href: '/resumes', label: 'Resumes', icon: FileBadge },
+  { href: '/application-materials', label: 'Application materials', icon: Mail },
   { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/settings/billing', label: 'Plan & Billing', icon: Settings },
 ];
 
 export function TopbarMobileMenu({ label }: { label: string }) {
