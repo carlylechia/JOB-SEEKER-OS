@@ -910,6 +910,10 @@ model InterviewPrepPack {
   /// SHA-256 over the normalised inputs (job, profile, resume, context).
   /// Changed inputs produce a new fingerprint and mark the pack stale.
   inputFingerprint   String
+  /// Short generation guidance and honest limitations, stored so a reopened
+  /// pack still shows them without regenerating.
+  preparationGuidance String?
+  limitations         String[]
   /// Cached progress snapshot, kept in sync on write and recomputed on read.
   questionCount      Int      @default(0)
   practicedCount     Int      @default(0)
@@ -926,6 +930,10 @@ model InterviewPrepPack {
   @@index([userId, jobId])
   @@index([userId, status, updatedAt])
   @@index([jobId, updatedAt])
+  /// One pack per user, job and input fingerprint: the unique index doubles
+  /// as the lock that stops two identical generation requests from running
+  /// (and being charged) at once.
+  @@unique([userId, jobId, inputFingerprint])
 }
 
 /// One question inside a pack. Versioned rows let a refresh retire the old

@@ -9,6 +9,8 @@ CREATE TABLE "InterviewPrepPack" (
     "schemaVersion" INTEGER NOT NULL DEFAULT 1,
     "promptVersion" INTEGER NOT NULL DEFAULT 1,
     "inputFingerprint" TEXT NOT NULL,
+    "preparationGuidance" TEXT,
+    "limitations" TEXT[] NOT NULL,
     "questionCount" INTEGER NOT NULL DEFAULT 0,
     "practicedCount" INTEGER NOT NULL DEFAULT 0,
     "feedbackCount" INTEGER NOT NULL DEFAULT 0,
@@ -76,6 +78,9 @@ ALTER TABLE "InterviewPracticeAttempt" ADD CONSTRAINT "InterviewPracticeAttempt_
 
 -- AddForeignKey
 ALTER TABLE "InterviewPracticeAttempt" ADD CONSTRAINT "InterviewPracticeAttempt_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES "InterviewQuestion"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- CreateIndex
+CREATE UNIQUE INDEX "InterviewPrepPack_userId_jobId_inputFingerprint_key" ON "InterviewPrepPack"("userId", "jobId", "inputFingerprint");
 
 -- CreateIndex
 CREATE INDEX "InterviewPrepPack_userId_jobId_idx" ON "InterviewPrepPack"("userId", "jobId");
