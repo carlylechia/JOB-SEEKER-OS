@@ -54,6 +54,7 @@ model User {
   resumeOptimizations       ResumeOptimization[]
   prepPacks                 InterviewPrepPack[]
   practiceAttempts          InterviewPracticeAttempt[]
+  applicationMaterials      ApplicationMaterial[]
 
   @@index([createdAt])
   @@index([emailVerificationToken])
@@ -168,6 +169,7 @@ model JobLead {
   targetedResumes     StructuredResume[] @relation("StructuredResumeTargetJob")
   /// Structured interview preparation packs for this job.
   prepPacks           InterviewPrepPack[]
+  applicationMaterials ApplicationMaterial[]
 
   @@index([userId, status])
   @@index([userId, company])
@@ -192,6 +194,9 @@ model FollowUpTemplate {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, type])
+  /// A generated material always names the template it came from, so a
+  /// material can be traced back without the template ever being modified.
+  applicationMaterials ApplicationMaterial[]
 }
 
 model JobTitle {
@@ -820,6 +825,7 @@ model StructuredResume {
   sourceResume  StructuredResume?  @relation("StructuredResumeVariants", fields: [sourceResumeId], references: [id], onDelete: SetNull)
   variants      StructuredResume[] @relation("StructuredResumeVariants")
   optimizations ResumeOptimization[]
+  applicationMaterials ApplicationMaterial[]
 
   @@index([userId, updatedAt])
   @@index([userId, targetJobId])
@@ -994,4 +1000,132 @@ model InterviewPracticeAttempt {
   @@index([userId, packId])
   @@index([packId, questionId])
   @@index([userId, createdAt])
+}
+
+enum ApplicationMaterialType {
+  COVER_LETTER
+  RECRUITER_OUTREACH
+  LINKEDIN_CONNECTION
+  APPLICATION_FOLLOW_UP
+  APPLICATION_STATUS_CHECK
+  INTERVIEW_THANK_YOU
+}
+
+enum ApplicationMaterialStatus {
+  DRAFT
+  READY
+  ARCHIVED
+}
+
+enum ApplicationMaterialOrigin {
+  AI_GENERATED
+  AI_REVISED
+  TEMPLATE_DERIVED
+  MANUAL
+}
+
+model ApplicationMaterial {
+  id     String @id @default(cuid())
+  userId String
+
+  type   ApplicationMaterialType
+  status ApplicationMaterialStatus @default(DRAFT)
+  origin ApplicationMaterialOrigin @default(AI_GENERATED)
+
+  /// User-editable display name, e.g. "Cover letter — Northwind".
+  title String
+
+  /// The letter or message itself. What the user edits, copies and exports.
+  /// Preserves line breaks; bounded server-side on every write.
+  content String @db.Text
+
+  /// Optional subject line. Null for materials that have no subject, such as a
+  /// LinkedIn connection note.
+  subject String?
+
+  // ── Provenance ────────────────────────────────────────────────────────────
+  // Nullable throughout: a recruiter message legitimately has no job, and
+  // forcing a job association would be inventing a relationship that does not
+  // exist. What IS stored is always resolved against rows this user owns.
+
+  /// The saved job this material is for. `SetNull`: deleting a job must not
+  /// destroy the user's written work.
+  jobId String?
+
+  /// The tailored resume used as context, when one was selected.
+  resumeId String?
+
+  /// The stored template this was generated from, so a material can always
+  /// name its origin without the template itself ever being modified.
+  templateId String?
+
+  /// This material's own revision number within its chain. Starts at 1.
+  revision Int @default(1)
+
+  /// The revision this one replaced. Null on a first draft.
+  /// `SetNull`: deleting an old revision leaves its successors intact.
+  supersedesId String?
+
+  /// Real application facts at generation time (stage, applied date, next
+  /// follow-up). Snapshotted so a later status change does not rewrite history
+  /// about what the letter could honestly say when it was written.
+  jobStage       String?
+  appliedAt      DateTime?
+  nextFollowUpAt DateTime?
+
+  // ── Generation record ─────────────────────────────────────────────────────
+
+  /// Contract version this result conforms to. Bumping it invalidates reuse.
+  schemaVersion Int @default(1)
+
+  /// Bumped when the PROMPT changes but the output shape does not.
+  promptVersion Int @default(1)
+
+  /// SHA-256 over the normalised inputs that produced this row. A completed
+  /// row is reusable only while this still matches.
+  inputFingerprint String
+
+  /// Server run state. Distinct from `status`: a failed generation leaves a row
+  /// the user can delete, and says nothing about their draft's lifecycle.
+  generationStatus String @default("PROCESSING")
+
+  /// Verified claims, evidence, review notes and warnings. JSON because it is
+  /// versioned and variable-shaped, and because the model contributed to it
+  /// only after re-checking against the real sources.
+  generationMeta Json?
+
+  /// Only a machine-readable code; user-facing copy lives in
+  /// MATERIAL_ERROR_MESSAGES and never in the database.
+  errorCode String?
+
+  provider String?
+  model    String?
+
+  creditsConsumed Int @default(0)
+
+  /// True when job text or profile context was cut before generation, so the
+  /// review UI can say so rather than implying full coverage.
+  thinInputs Boolean @default(false)
+
+  /// Incremented on every manual save. The client echoes the value it loaded;
+  /// a mismatch means the draft changed underneath them and the write is
+  /// rejected with 409 rather than silently clobbering it.
+  editVersion Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job        JobLead?           @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  resume     StructuredResume?  @relation(fields: [resumeId], references: [id], onDelete: SetNull)
+  template   FollowUpTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  supersedes ApplicationMaterial?  @relation("ApplicationMaterialRevisions", fields: [supersedesId], references: [id], onDelete: SetNull)
+  revisions  ApplicationMaterial[] @relation("ApplicationMaterialRevisions")
+
+  @@index([userId, updatedAt])
+  @@index([userId, type, updatedAt])
+  @@index([userId, status])
+  @@index([jobId])
+  @@index([supersedesId])
+  @@unique([userId, type, inputFingerprint, schemaVersion])
 }
