@@ -80,6 +80,9 @@ export const FEATURE_KEYS = [
   'PRIORITY_QUEUE',
   'ADVANCED_PREPARATION',
   'LINKEDIN_ENRICHMENT',
+  'AI_CAREER_COACH',
+  'AI_DAILY_ACTION_PLAN',
+  'AI_WEEKLY_CAREER_REVIEW',
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -232,6 +235,24 @@ export const FEATURE_ENTITLEMENTS: Record<
     label: 'LinkedIn enrichment',
     released: false,
     description: 'Enrich leads with additional profile context.',
+  },
+  AI_CAREER_COACH: {
+    plans: ['PRO', 'PREMIUM'],
+    label: 'AI career coach',
+    released: true,
+    description: 'Personalized career coaching grounded in your job search.',
+  },
+  AI_DAILY_ACTION_PLAN: {
+    plans: ['FREE', 'PRO', 'PREMIUM'],
+    label: 'Daily action plan',
+    released: true,
+    description: 'Deterministic daily priorities from your real job-search data.',
+  },
+  AI_WEEKLY_CAREER_REVIEW: {
+    plans: ['PRO', 'PREMIUM'],
+    label: 'Weekly career review',
+    released: true,
+    description: 'A grounded weekly summary of your job-search progress.',
   },
 };
 
