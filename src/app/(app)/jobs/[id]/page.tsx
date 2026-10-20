@@ -48,29 +48,32 @@ export default function JobDetailsPage() {
   const [materialsLoading, setMaterialsLoading] = useState(false);
 
   const job = getJob(params.id);
+  const jobId = job?.id;
+
+  useEffect(() => {
+    if (!jobId) return;
+    let cancelled = false;
+    async function loadMaterials() {
+      setMaterialsLoading(true);
+      try {
+        const res = await fetch(`/api/application-materials?jobId=${jobId}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!cancelled) setMaterials(json.materials || []);
+      } catch {
+        // non-fatal
+      } finally {
+        if (!cancelled) setMaterialsLoading(false);
+      }
+    }
+    void loadMaterials();
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
 
   if (isLoading) return <div className="card-pad">Loading job…</div>;
   if (!job) return <div className="card-pad">Job not found.</div>;
-
-  const jobId = job.id;
-
-  async function loadMaterials() {
-    setMaterialsLoading(true);
-    try {
-      const res = await fetch(`/api/application-materials?jobId=${jobId}`, { cache: 'no-store' });
-      if (!res.ok) return;
-      const json = await res.json();
-      setMaterials(json.materials || []);
-    } catch {
-      // non-fatal
-    } finally {
-      setMaterialsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void loadMaterials();
-  }, [jobId]);
 
   async function handleUpdate(values: JobFormValues) {
     if (job) {
@@ -582,7 +585,7 @@ export default function JobDetailsPage() {
                           {m.title}
                         </Link>
                         <div className="mt-0.5 text-xs text-muted">
-                          {m.type.replace('_', ' ')} · {m.status.charAt(0) + m.status.slice(1).toLowerCase()}
+                          {(m.type || '').replace('_', ' ')} · {m.status ? m.status.charAt(0) + m.status.slice(1).toLowerCase() : ''}
                           {m.subject && ` · "${m.subject}"`}
                         </div>
                         <div className="mt-0.5 text-xs text-muted">
@@ -590,7 +593,7 @@ export default function JobDetailsPage() {
                         </div>
                       </div>
                       <span className={`badge text-xs ${m.generationStatus === 'COMPLETED' ? 'bg-success/15 text-success-text' : m.generationStatus === 'FAILED' ? 'bg-danger/15 text-danger-text' : 'bg-surface-sunken text-ink'}`}>
-                        {m.generationStatus.charAt(0) + m.generationStatus.slice(1).toLowerCase()}
+                        {m.generationStatus ? m.generationStatus.charAt(0) + m.generationStatus.slice(1).toLowerCase() : ''}
                       </span>
                     </div>
                   ))}

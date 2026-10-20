@@ -56,11 +56,11 @@ export function mapDbJob(job: DbJob): JobLead {
     dateApplied: toDateString(job.dateApplied),
     nextFollowUp: toDateString(job.nextFollowUp),
     priorityFlag: job.priorityFlag as JobLead['priorityFlag'],
-    score: job.score as JobLead['score'],
-    checklist: job.checklist as JobLead['checklist'],
-    contacts: job.contacts as JobLead['contacts'],
-    interviews: job.interviews as JobLead['interviews'],
-    prepPack: job.prepPack as JobLead['prepPack'],
+    score: (job.score ?? { fitScore: 0, fitTier: 'C', breakdown: {} }) as JobLead['score'],
+    checklist: (job.checklist ?? {}) as JobLead['checklist'],
+    contacts: (job.contacts ?? []) as JobLead['contacts'],
+    interviews: (job.interviews ?? []) as JobLead['interviews'],
+    prepPack: (job.prepPack ?? {}) as JobLead['prepPack'],
   };
 }
 
