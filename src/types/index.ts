@@ -181,6 +181,29 @@ export type QueueTask = {
   dueDate?: string;
 };
 
+export type CareerAction = {
+  id: string;
+  userId: string;
+  actionType: string;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: number;
+  dueDate: string | null;
+  estimatedMinutes: number | null;
+  sourceType: string;
+  sourceId: string | null;
+  relatedJobId: string | null;
+  relatedResumeId: string | null;
+  relatedPrepPackId: string | null;
+  origin: string;
+  snoozedUntil: string | null;
+  completedAt: string | null;
+  dismissedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type EnrichedContact = Contact & {
   jobId: string;
   jobTitle: string;
