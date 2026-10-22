@@ -36,6 +36,8 @@
  */
 
 import { prisma } from '@/lib/prisma';
+import { getResume } from '@/lib/resume-builder/documents';
+import type { ResumeContent } from '@/lib/resume-builder/schema';
 import {
   MATERIAL_MAX_JOB_CHARS,
   MATERIAL_MAX_PROFILE_CHARS,
@@ -112,6 +114,14 @@ export type ResumeFacts = {
   stale: boolean;
   /** Profile version this resume was built from, for the staleness check. */
   sourceProfileVersion: number | null;
+  /** Candidate claims that can be verified against this explicitly selected resume. */
+  evidence: {
+    numbers: string[];
+    organisationNames: string[];
+    jobTitles: string[];
+    technologies: string[];
+    skillNames: string[];
+  };
 };
 
 export type MaterialContext = {
@@ -443,8 +453,8 @@ export function resolveApplicationContext(job: JobFacts | null): ApplicationCont
 /**
  * Load a saved resume the caller OWNS.
  *
- * `null` when the id does not resolve to one of their resumes, so a client
- * cannot borrow another user's tailored version as grounding context.
+ * A missing or foreign id raises the same not-found error, so a client cannot
+ * borrow another user's tailored version as grounding context.
  */
 export async function buildResumeFacts(
   userId: string,
@@ -453,29 +463,45 @@ export async function buildResumeFacts(
 ): Promise<ResumeFacts | null> {
   if (!resumeId) return null;
 
-  const resume = await prisma.structuredResume.findFirst({
-    where: { id: resumeId, userId },
-    select: {
-      id: true,
-      name: true,
-      content: true,
-      sourceProfileVersion: true,
-      updatedAt: true,
-    },
-  });
-
-  if (!resume) return null;
-
+  const resume = await getResume({ userId, resumeId });
   const text = flattenResumeContent(resume.content);
+  const boundedText = text.slice(0, MATERIAL_MAX_RESUME_CHARS);
 
   return {
     id: resume.id,
     name: resume.name,
-    text: text.slice(0, MATERIAL_MAX_RESUME_CHARS),
+    text: boundedText,
     truncated: text.length > MATERIAL_MAX_RESUME_CHARS,
     stale:
       resume.sourceProfileVersion !== null && resume.sourceProfileVersion < profileVersion,
     sourceProfileVersion: resume.sourceProfileVersion,
+    evidence: resumeEvidence(resume.content, boundedText),
+  };
+}
+
+function resumeEvidence(content: ResumeContent, text: string): ResumeFacts['evidence'] {
+  const visibleValues = (values: Array<string | null | undefined>) =>
+    [...new Set(values.filter((value): value is string => Boolean(value)))].filter((value) =>
+      text.toLocaleLowerCase().includes(value.toLocaleLowerCase()),
+    );
+
+  return {
+    numbers: collectNumbers(text),
+    organisationNames: visibleValues([
+      ...content.experiences.map((entry) => entry.company),
+      ...content.education.map((entry) => entry.institution),
+      ...content.credentials.flatMap((entry) => [entry.name, entry.issuer]),
+      ...content.projects.map((entry) => entry.name),
+    ]),
+    jobTitles: visibleValues([
+      ...content.experiences.map((entry) => entry.jobTitle),
+      ...content.projects.map((entry) => entry.role),
+    ]),
+    technologies: visibleValues([
+      ...content.experiences.flatMap((entry) => entry.technologies),
+      ...content.projects.flatMap((entry) => entry.technologies),
+    ]),
+    skillNames: visibleValues(content.skills.map((entry) => entry.name)),
   };
 }
 
@@ -494,11 +520,19 @@ function flattenResumeContent(content: unknown): string {
   const basics = doc.basics;
   if (typeof basics === 'object' && basics !== null) {
     const record = basics as Record<string, unknown>;
-    pushLine(lines, 'Headline', tidy(record.headline as string | null | undefined, 200));
-    pushLine(lines, 'Summary', tidy(record.summary as string | null | undefined, 600));
+    if (typeof record.headline === 'string') {
+      pushLine(lines, 'Headline', tidy(record.headline, 200));
+    }
+  }
+  if (typeof doc.summary === 'string') {
+    pushLine(lines, 'Summary', tidy(doc.summary, 600));
   }
 
-  const appendSection = (label: string, rows: unknown, fields: Array<[string, (v: unknown) => string | null]>) => {
+  const appendSection = (
+    label: string,
+    rows: unknown,
+    fields: Array<[string, (value: unknown, record: Record<string, unknown>) => string | null]>,
+  ) => {
     if (!Array.isArray(rows) || rows.length === 0) return;
     lines.push(`--- ${label} ---`);
     for (const row of rows.slice(0, 10)) {
@@ -506,7 +540,7 @@ function flattenResumeContent(content: unknown): string {
       const record = row as Record<string, unknown>;
       const parts: string[] = [];
       for (const [key, format] of fields) {
-        const value = format(record[key] as string | null | undefined);
+        const value = format(record[key], record);
         if (value) parts.push(`${key}: ${value}`);
       }
       if (parts.length) lines.push(`- ${parts.join(' | ')}`);
@@ -528,18 +562,42 @@ function flattenResumeContent(content: unknown): string {
   appendSection('Experience', doc.experiences, [
     ['role', (v) => asText(v, 120)],
     ['company', (v) => asText(v, 120)],
-    ['dates', (v) => asText(v, 80)],
-    ['highlights', (v) => asText(v, 600)],
+    ['location', (v) => asText(v, 120)],
+    [
+      'dates',
+      (_, record) => {
+        const start = asText(record.startDate, 40);
+        const end = record.isCurrent === true ? 'Present' : asText(record.endDate, 40);
+        return [start, end].filter(Boolean).join(' – ') || null;
+      },
+    ],
+    ['responsibilities', (v) => asText(v, 600)],
+    ['achievements', (v) => asText(v, 600)],
+    ['technologies', (v) => asText(v, 300)],
   ]);
   appendSection('Projects', doc.projects, [
     ['name', (v) => asText(v, 120)],
+    ['role', (v) => asText(v, 120)],
     ['description', (v) => asText(v, 400)],
+    ['technologies', (v) => asText(v, 300)],
+    ['results', (v) => asText(v, 400)],
   ]);
   appendSection('Education', doc.education, [
     ['qualification', (v) => asText(v, 120)],
     ['institution', (v) => asText(v, 120)],
+    ['field of study', (v) => asText(v, 120)],
+    ['details', (v) => asText(v, 300)],
   ]);
-  appendSection('Skills', doc.skills, [['name', (v) => asText(v, 120)]]);
+  appendSection('Skills', doc.skills, [
+    ['name', (v) => asText(v, 120)],
+    ['category', (v) => asText(v, 120)],
+  ]);
+  appendSection('Credentials', doc.credentials, [
+    ['name', (v) => asText(v, 120)],
+    ['issuer', (v) => asText(v, 120)],
+    ['proficiency', (v) => asText(v, 120)],
+    ['details', (v) => asText(v, 300)],
+  ]);
 
   return lines.join('\n');
 }
@@ -575,6 +633,18 @@ export async function buildMaterialContext(
     params.resumeId,
     candidate.careerProfileVersion,
   );
+  const candidateWithResume = resume
+    ? {
+        ...candidate,
+        numbers: [...new Set([...candidate.numbers, ...resume.evidence.numbers])],
+        organisationNames: [
+          ...new Set([...candidate.organisationNames, ...resume.evidence.organisationNames]),
+        ],
+        jobTitles: [...new Set([...candidate.jobTitles, ...resume.evidence.jobTitles])],
+        technologies: [...new Set([...candidate.technologies, ...resume.evidence.technologies])],
+        skillNames: [...new Set([...candidate.skillNames, ...resume.evidence.skillNames])],
+      }
+    : candidate;
 
   // A valid completed analysis is useful context for what the role asks for.
   // It is labelled as the model's own reading throughout, and it can never be
@@ -627,7 +697,7 @@ export async function buildMaterialContext(
 
   return {
     type: params.type,
-    candidate,
+    candidate: candidateWithResume,
     job,
     application,
     resume,

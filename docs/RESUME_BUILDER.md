@@ -21,6 +21,11 @@ The career profile is where the facts come from. The builder is a reusable,
 editable representation of those facts. Optimisation proposes changes to ONE
 resume for ONE job. Nothing is ever applied without a click.
 
+The uploaded-file path is intentionally explicit: analyse the stored upload in
+Career Profile, review and confirm the extracted facts, then create a structured
+resume from that confirmed profile. This keeps a raw file and unreviewed AI
+extraction out of the editable resume and optimisation paths.
+
 ---
 
 ## 2. Data model

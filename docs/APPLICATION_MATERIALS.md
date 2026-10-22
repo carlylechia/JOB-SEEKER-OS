@@ -51,6 +51,12 @@ The raw resume file is never sent — only the structured, user-reviewed profile
 or an explicitly selected built resume. Contact details, account identifiers
 and other users' data are never included.
 
+The material editor lets the user explicitly choose a saved structured resume.
+When selected, its text is sent as labelled context and its own numbers,
+employers, titles, skills and technologies are included in the server-side
+claim checks. Without a selection, generation uses the confirmed career
+profile only.
+
 ---
 
 ## Anti-fabrication safeguards
@@ -91,6 +97,10 @@ Materials are stored in the `ApplicationMaterial` table, owned by `userId`.
   chains stay meaningful.
 - `jobId`, `resumeId` and `templateId` are optional and `SetNull` on deletion,
   so deleting a job, resume or template never destroys the user's writing.
+- Reuse is keyed by the full generation input, including user instructions,
+  tone, length, selected resume content, job facts and application context.
+  Changing those inputs produces a fresh draft rather than returning a stale
+  one.
 - Private material is never written onto a shared `JobLead` and never exposed
   through public job APIs.
 

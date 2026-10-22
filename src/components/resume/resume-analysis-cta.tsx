@@ -3,10 +3,9 @@
 /**
  * Resume analysis CTA.
  *
- * Lives on the Profile page next to the stored resume, which is where a user
- * already goes to manage that document. It is an addition to the existing
- * upload flow, not a replacement: upload, download and replace behave exactly
- * as they did before.
+ * Lives beside the stored resume on Profile and Career Profile. It is an
+ * addition to the existing upload flow, not a replacement: upload, download
+ * and replace behave exactly as they did before.
  *
  * All copy about what happens to the user's resume is truthful about the
  * configured provider. There is no claim here that we do not actually make.

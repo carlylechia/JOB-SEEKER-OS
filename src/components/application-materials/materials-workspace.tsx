@@ -10,7 +10,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { PageHeader } from '@/components/shared/page-header';
-import { useTheme } from '@/components/shared/theme-provider';
 import Link from 'next/link';
 import {
   MATERIAL_TYPES,
@@ -37,9 +36,14 @@ type SerialisedMaterial = {
 
 async function fetchMaterials(): Promise<SerialisedMaterial[]> {
   const res = await fetch('/api/application-materials', { cache: 'no-store' });
-  if (!res.ok) return [];
   const json = await res.json().catch(() => ({}));
-  return Array.isArray(json.materials) ? json.materials : [];
+  if (!res.ok) {
+    throw new Error(json.error?.message ?? 'Could not load your materials.');
+  }
+  if (!Array.isArray(json.materials)) {
+    throw new Error('The materials service returned an unexpected response.');
+  }
+  return json.materials;
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -61,7 +65,7 @@ export default function ApplicationMaterialsPage() {
   const [materials, setMaterials] = useState<SerialisedMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { theme, toggleTheme } = useTheme();
+  const [showArchived, setShowArchived] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -82,6 +86,7 @@ export default function ApplicationMaterialsPage() {
 
   const active = materials.filter((m) => m.status !== 'ARCHIVED');
   const archived = materials.filter((m) => m.status === 'ARCHIVED');
+  const visibleMaterials = showArchived ? archived : active;
 
   if (isLoading) {
     return (
@@ -105,40 +110,53 @@ export default function ApplicationMaterialsPage() {
       />
 
       {error && (
-        <div className="rounded-xl border border-danger/25 bg-danger/[0.07] px-4 py-3 text-sm text-danger-text">
-          {error}
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger/25 bg-danger/[0.07] px-4 py-3 text-sm text-danger-text"
+          role="alert"
+        >
+          <p>{error}</p>
+          <button type="button" className="btn-secondary text-xs" onClick={() => void load()}>
+            Try again
+          </button>
         </div>
       )}
 
       <section className="card-pad">
         <div className="flex items-center justify-between gap-2 mb-4">
-          <h2 className="text-lg font-semibold text-ink">Your drafts</h2>
+          <h2 className="text-lg font-semibold text-ink">
+            {showArchived ? 'Archived materials' : 'Your drafts'}
+          </h2>
           {archived.length > 0 && (
             <button
               type="button"
               className="btn-secondary text-xs"
-              onClick={() => {
-                // placeholder: toggle archived view
-              }}
+              aria-expanded={showArchived}
+              onClick={() => setShowArchived((visible) => !visible)}
             >
-              {archived.length} archived
+              {showArchived ? 'Show drafts' : `${archived.length} archived`}
             </button>
           )}
         </div>
 
-        {active.length === 0 ? (
+        {visibleMaterials.length === 0 ? (
           <div className="card-pad text-center py-12">
-            <div className="text-muted">No drafts yet.</div>
+            <div className="text-muted">
+              {showArchived ? 'No archived materials.' : 'No drafts yet.'}
+            </div>
             <p className="muted text-sm mt-2">
-              Create a cover letter or outreach message from a job or template.
+              {showArchived
+                ? 'Archived materials will appear here.'
+                : 'Create a cover letter or outreach message from a job or template.'}
             </p>
-            <Link href="/application-materials/new" className="btn-primary mt-4 inline-block">
-              Create your first material
-            </Link>
+            {!showArchived && (
+              <Link href="/application-materials/new" className="btn-primary mt-4 inline-block">
+                Create your first material
+              </Link>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
-            {active.map((material) => {
+            {visibleMaterials.map((material) => {
               const meta = MATERIAL_TYPE_META[material.type as MaterialType];
               return (
                 <div

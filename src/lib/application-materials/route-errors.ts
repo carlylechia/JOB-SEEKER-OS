@@ -16,6 +16,7 @@ import {
   DuplicateGenerationInFlightError,
   JobNotFoundError,
 } from './service';
+import { StructuredResumeNotFoundError } from '@/lib/resume-builder/documents';
 import { MATERIAL_ERROR_MESSAGES, type MaterialErrorCode } from './schema';
 
 type Mapped = { code: ApiErrorCode; message: string; meta?: Record<string, unknown> };
@@ -39,6 +40,10 @@ function map(error: unknown): Mapped | null {
 
   if (error instanceof JobNotFoundError) {
     return { code: 'NOT_FOUND', message: 'Job not found.' };
+  }
+
+  if (error instanceof StructuredResumeNotFoundError) {
+    return { code: 'NOT_FOUND', message: 'The selected resume could not be found.' };
   }
 
   if (error instanceof DuplicateGenerationInFlightError) {

@@ -37,6 +37,8 @@ import {
 } from '@/lib/application-materials/verify';
 import type { ModelMaterial } from '@/lib/application-materials/schema';
 import { buildMaterialContext } from '@/lib/application-materials/context';
+import { createResume, updateResume } from '@/lib/resume-builder/documents';
+import { typicalContent } from './resume-builder-fixtures';
 
 const userIds: string[] = [];
 
@@ -249,6 +251,37 @@ describe('material type definitions', () => {
   it('knows which types are application-grounded', () => {
     expect(APPLIED_STATUSES).toContain('APPLIED');
     expect(APPLIED_STATUSES).not.toContain('LEAD');
+  });
+});
+
+describe('selected resume context', () => {
+  it('uses the selected resume as evidence when verifying generated claims', async () => {
+    const { user, job } = await setup();
+    const resume = await createResume({
+      userId: user.id,
+      input: { from: 'BLANK' },
+      limit: null,
+    });
+    await updateResume({
+      userId: user.id,
+      resumeId: resume.id,
+      input: { expectedRevision: resume.revision, content: typicalContent() },
+    });
+
+    const context = await buildMaterialContext({
+      userId: user.id,
+      type: 'COVER_LETTER',
+      jobId: job.id,
+      resumeId: resume.id,
+      profileVersion: 3,
+    });
+
+    expect(context.resume?.text).toContain('payment and data platforms');
+    expect(context.resume?.text).toContain('Acme Payments Ltd');
+    expect(context.candidate.numbers).toContain('38%');
+    expect(context.candidate.organisationNames).toContain('Acme Payments Ltd');
+    expect(context.candidate.jobTitles).toContain('Senior Backend Engineer');
+    expect(context.candidate.skillNames).toContain('Kafka');
   });
 });
 
@@ -748,7 +781,7 @@ describe('generation', () => {
     expect(failed.retryable).toBe(true);
   });
 
-  it('reuses a completed draft instead of calling the provider twice', async () => {
+  it('reuses identical inputs but regenerates when user instructions change', async () => {
     const { user, job } = await setup({ plan: 'PRO' });
     const provider = fakeProvider();
 
@@ -791,6 +824,26 @@ describe('generation', () => {
     const reused = second as Extract<RunGenerationResult, { outcome: 'REUSED' }>;
     expect(reused.outcome).toBe('REUSED');
     expect(provider.calls).toHaveLength(1);
+
+    const changed = await runGeneration({
+      userId: user.id,
+      type: 'COVER_LETTER',
+      jobId: job.id,
+      resumeId: null,
+      title: 'Cover letter',
+      origin: 'AI_GENERATED',
+      supersedesId: null,
+      route: '/api/application-materials/generate',
+      provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: 'Keep the wording warm and concise.',
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
+    });
+    expect(changed.outcome).toBe('COMPLETED');
+    expect(provider.calls).toHaveLength(2);
   });
 
   it('refuses duplicate concurrent requests for the same input', async () => {

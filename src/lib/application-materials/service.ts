@@ -314,22 +314,27 @@ export async function runGeneration(
   //    so two identical requests never diverge.
   const fingerprintInput = {
     type: context.type,
-    candidateVersion: context.candidate.careerProfileVersion,
+    candidate: {
+      version: context.candidate.careerProfileVersion,
+      fullName: context.candidate.fullName,
+      profileText: context.candidate.profileText,
+    },
     job: context.job
       ? {
           id: context.job.id,
-          company: context.job.company,
-          title: context.job.title,
-          description: context.job.description,
-          updatedAt: context.job.updatedAt.toISOString(),
+          revision: context.job.updatedAt.toISOString(),
+          facts: context.job,
         }
       : null,
     application: context.application,
-    resume: context.resume ? { id: context.resume.id, name: context.resume.name } : null,
-    intelligence: context.intelligence ? { category: context.intelligence.category } : null,
-    tone: 'PROFESSIONAL',
-    length: 'STANDARD',
-    instructions: '',
+    resume: context.resume,
+    intelligence: context.intelligence,
+    tone: options.tone,
+    length: options.length,
+    instructions: options.instructions,
+    conversation: options.conversation,
+    recipientName: options.recipientName,
+    sourceDraft: options.sourceDraft,
   };
   const inputFingerprint = await hashInputs(fingerprintInput);
 

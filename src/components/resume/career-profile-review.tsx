@@ -160,8 +160,8 @@ export function CareerProfileReview({ extractionId }: { extractionId: string }) 
         <AlertTriangle className="mx-auto h-8 w-8 text-warn" aria-hidden="true" />
         <p className="text-sm text-ink">{message}</p>
         <div className="flex justify-center gap-3">
-          <Link href="/profile" className="btn-secondary text-xs">
-            Back to profile
+          <Link href="/career-profile" className="btn-secondary text-xs">
+            View saved profile
           </Link>
           <button type="button" className="btn-primary text-xs" onClick={() => window.location.reload()}>
             Try again
@@ -660,8 +660,8 @@ export function CareerProfileReview({ extractionId }: { extractionId: string }) 
               Saved — {confirmedCount} item{confirmedCount === 1 ? '' : 's'} added to your career
               profile.
             </p>
-            <Link href="/profile" className="btn-secondary text-xs">
-              Back to profile
+            <Link href="/career-profile" className="btn-secondary text-xs">
+              View saved profile
             </Link>
           </div>
         ) : (

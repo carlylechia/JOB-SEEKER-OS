@@ -25,11 +25,11 @@ import {
   LENGTHS,
   TONE_LABELS,
   LENGTH_LABELS,
-  APPLIED_STATUSES,
 } from '@/lib/application-materials/materials';
 import { downloadHeaders } from '@/lib/application-materials/download';
 
 type JobOption = { id: string; title: string; company: string; status: string };
+type ResumeOption = { id: string; name: string };
 
 type EditorMode = 'create' | 'edit';
 
@@ -60,13 +60,19 @@ async function fetchJobs(): Promise<JobOption[]> {
     }));
 }
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return '';
-  return new Date(value).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+async function fetchResumes(): Promise<ResumeOption[]> {
+  const res = await fetch('/api/resumes', { cache: 'no-store' });
+  if (!res.ok) throw new Error('Could not load your saved resumes.');
+  const json = await res.json();
+  return Array.isArray(json.resumes)
+    ? json.resumes.filter(
+        (resume: unknown): resume is ResumeOption =>
+          typeof resume === 'object' &&
+          resume !== null &&
+          typeof (resume as ResumeOption).id === 'string' &&
+          typeof (resume as ResumeOption).name === 'string',
+      )
+    : [];
 }
 
 export default function MaterialEditor() {
@@ -76,6 +82,9 @@ export default function MaterialEditor() {
   const [mode, setMode] = useState<EditorMode>(modeFromUrl);
   const [jobs, setJobs] = useState<JobOption[]>([]);
   const [jobsLoading, setJobsLoading] = useState(true);
+  const [resumes, setResumes] = useState<ResumeOption[]>([]);
+  const [resumesLoading, setResumesLoading] = useState(true);
+  const [resumeLoadError, setResumeLoadError] = useState<string | null>(null);
 
   const [form, setForm] = useState<FormValues>({
     type: 'COVER_LETTER',
@@ -134,7 +143,14 @@ export default function MaterialEditor() {
     })();
   }, []);
 
-  // When the type changes, reset job/resume if the new type doesn't need a job.
+  useEffect(() => {
+    void fetchResumes()
+      .then(setResumes)
+      .catch(() => setResumeLoadError('Could not load your saved resumes. You can still generate without one.'))
+      .finally(() => setResumesLoading(false));
+  }, []);
+
+  // When the type changes, reset the job if the new type doesn't need one.
   useEffect(() => {
     if (!supportsJob) setForm((prev) => ({ ...prev, jobId: null }));
   }, [form.type, supportsJob]);
@@ -320,8 +336,6 @@ export default function MaterialEditor() {
     setResult(null);
   };
 
-  const canGenerate = Boolean(form.instructions || form.jobId || form.sourceDraft || true);
-
   const typeItems = MATERIAL_TYPES.map((t) => {
     const m = MATERIAL_TYPE_META[t];
     return {
@@ -464,6 +478,45 @@ export default function MaterialEditor() {
               </p>
             </div>
           )}
+
+          <div className="col-span-2">
+            <label className="text-sm font-medium text-ink block mb-1" htmlFor="material-resume">
+              Resume to use (optional)
+            </label>
+            {resumesLoading ? (
+              <div className="text-xs text-muted">Loading resumes…</div>
+            ) : (
+              <select
+                id="material-resume"
+                className="input"
+                value={form.resumeId ?? ''}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, resumeId: event.target.value || null }))
+                }
+              >
+                <option value="">Use my confirmed career profile</option>
+                {resumes.map((resume) => (
+                  <option key={resume.id} value={resume.id}>
+                    {resume.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            {resumeLoadError ? (
+              <p className="mt-1 text-xs text-danger-text">{resumeLoadError}</p>
+            ) : resumes.length === 0 && !resumesLoading ? (
+              <p className="muted mt-1 text-xs">
+                Build a resume from your confirmed career profile to use its exact wording here.{' '}
+                <Link href="/resumes" className="underline underline-offset-2">
+                  Open resumes
+                </Link>
+              </p>
+            ) : (
+              <p className="muted mt-1 text-xs">
+                When selected, this resume is included as additional evidence for the draft.
+              </p>
+            )}
+          </div>
 
           <div className="col-span-2">
             <label className="text-sm font-medium text-ink block mb-1">

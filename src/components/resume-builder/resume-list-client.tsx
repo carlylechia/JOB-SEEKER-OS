@@ -269,6 +269,15 @@ export function ResumeListClient({ initialResumes, careerProfile, access }: Prop
                 </span>
               </span>
             </label>
+            {!careerProfile?.confirmed && (
+              <p className="px-3 text-xs text-muted">
+                Already uploaded a resume?{' '}
+                <Link href="/career-profile" className="font-medium text-ink underline underline-offset-2">
+                  Analyse and confirm it
+                </Link>{' '}
+                to start from those facts.
+              </p>
+            )}
 
             <label
               className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${

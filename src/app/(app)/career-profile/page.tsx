@@ -1,6 +1,5 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { FileText } from 'lucide-react';
 
 import { requireUser } from '@/lib/authz';
@@ -10,13 +9,15 @@ import { CareerProfileReview } from '@/components/resume/career-profile-review';
 import { PlanRequiredCard } from '@/components/billing/plan-required-card';
 import { CAREER_PROFILE_FEATURE } from '@/lib/resume/service';
 import { RESUME_FORMATS } from '@/lib/resume/limits';
+import { getCareerProfile } from '@/lib/resume/career-profile';
+import { ResumeAnalysisCta } from '@/components/resume/resume-analysis-cta';
 
 /**
- * Career profile review.
+ * Career profile overview and extraction review.
  *
- * Server-rendered: the shell, the entitlement decision and the "which
- * extraction should I open" choice all happen here, so a visitor with no
- * JavaScript still gets a real answer rather than a spinner.
+ * Server-rendered: the shell, entitlement decision, saved profile and
+ * extraction choice all happen here, so a visitor with no JavaScript still
+ * gets a real answer rather than a spinner.
  */
 export const dynamic = 'force-dynamic';
 
@@ -30,10 +31,7 @@ export default async function CareerProfilePage({
 
   const [entitlements, profile, documents, latestExtraction] = await Promise.all([
     getEntitlements(user.id),
-    prisma.userProfile.findUnique({
-      where: { userId: user.id },
-      select: { careerProfileConfirmedAt: true },
-    }),
+    getCareerProfile(user.id),
     prisma.resumeDocument.findMany({
       where: { userId: user.id },
       orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
@@ -88,6 +86,70 @@ export default async function CareerProfilePage({
     );
   }
 
+  if (profile?.careerProfileConfirmedAt && !requested) {
+    return (
+      <div className="space-y-6 pb-4">
+        <div>
+          <h1 className="title">Your career profile</h1>
+          <p className="muted mt-1">
+            Your confirmed career history is saved and ready to reuse in tailored resumes and
+            application materials.
+          </p>
+        </div>
+
+        <section className="card-pad space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-ink">Work experience</h2>
+              <p className="muted mt-1">
+                {profile.experiences.length} roles · {profile.skills.length} skills ·{' '}
+                {profile.education.length} qualifications
+              </p>
+            </div>
+            <Link href="/resumes" className="btn-primary text-xs">
+              Build a resume
+            </Link>
+          </div>
+
+          {profile.experiences.length > 0 ? (
+            <ul className="divide-y divide-line">
+              {profile.experiences.slice(0, 5).map((experience) => (
+                <li key={experience.id} className="py-3 first:pt-0 last:pb-0">
+                  <p className="text-sm font-medium text-ink">
+                    {experience.jobTitle}
+                    {experience.company ? ` · ${experience.company}` : ''}
+                  </p>
+                  <p className="muted mt-1 text-xs">
+                    {[experience.startDate, experience.isCurrent ? 'Present' : experience.endDate]
+                      .filter(Boolean)
+                      .join(' – ')}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted text-sm">No work experience has been added yet.</p>
+          )}
+
+          {profile.skills.length > 0 && (
+            <div>
+              <h3 className="mb-2 text-xs font-medium text-ink-2">Skills</h3>
+              <ul className="flex flex-wrap gap-2">
+                {profile.skills.slice(0, 20).map((skill) => (
+                  <li key={skill.id} className="rounded-full bg-surface-sunken px-2.5 py-1 text-xs text-ink-2">
+                    {skill.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+
+        <ResumeAnalysisCta hasResume={documents.length > 0} />
+      </div>
+    );
+  }
+
   if (documents.length === 0) {
     return (
       <div className="space-y-6">
@@ -126,10 +188,8 @@ export default async function CareerProfilePage({
           <p className="muted mx-auto mt-1 max-w-sm">
             Pick a resume and run an analysis. It usually takes under a minute.
           </p>
-          <Link href="/profile" className="btn-primary mt-4 text-xs">
-            Analyse a resume
-          </Link>
         </div>
+        <ResumeAnalysisCta hasResume />
       </div>
     );
   }
