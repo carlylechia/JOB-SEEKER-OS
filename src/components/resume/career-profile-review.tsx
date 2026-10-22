@@ -21,6 +21,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   AlertTriangle,
@@ -65,6 +66,7 @@ type FieldKey = 'keep' | 'replace' | 'clear';
 type Phase = 'loading' | 'ready' | 'saving' | 'saved' | 'error';
 
 export function CareerProfileReview({ extractionId }: { extractionId: string }) {
+  const router = useRouter();
   const [data, setData] = useState<ReviewResponse | null>(null);
   const [submission, setSubmission] = useState<ReviewSubmission | null>(null);
   const [phase, setPhase] = useState<Phase>('loading');
@@ -139,6 +141,9 @@ export function CareerProfileReview({ extractionId }: { extractionId: string }) 
       // Cleared on success so a later failure cannot strand stale edits, and a
       // failure leaves the user's work on screen to retry.
       setPhase('saved');
+      // Show the persisted profile immediately so the user can see that their
+      // career profile was actually saved, rather than being left on the review.
+      router.push('/career-profile');
     } catch {
       setPhase('error');
       setMessage('We could not reach the server. Your edits are still here — try again.');

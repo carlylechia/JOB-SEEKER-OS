@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { PageHeader } from '@/components/shared/page-header';
 import {
@@ -78,8 +78,14 @@ async function fetchResumes(): Promise<ResumeOption[]> {
 export default function MaterialEditor() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const modeFromUrl = searchParams.get('id') ? 'edit' : 'create';
-  const [mode, setMode] = useState<EditorMode>(modeFromUrl);
+  const routeParams = useParams<{ id?: string }>();
+  const materialIdFromUrl =
+    (typeof routeParams?.id === 'string' && routeParams.id) || searchParams.get('id') || null;
+  const [mode, setMode] = useState<EditorMode>(materialIdFromUrl ? 'edit' : 'create');
+
+  useEffect(() => {
+    if (materialIdFromUrl) setMode('edit');
+  }, [materialIdFromUrl]);
   const [jobs, setJobs] = useState<JobOption[]>([]);
   const [jobsLoading, setJobsLoading] = useState(true);
   const [resumes, setResumes] = useState<ResumeOption[]>([]);
@@ -157,41 +163,46 @@ export default function MaterialEditor() {
 
   // When in edit mode, load the existing material.
   useEffect(() => {
-    if (mode === 'edit' && searchParams.get('id')) {
-      void (async () => {
-        try {
-          const res = await fetch(`/api/application-materials/${searchParams.get('id')}`, {
-            cache: 'no-store',
+    if (mode !== 'edit' || !materialIdFromUrl) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/application-materials/${materialIdFromUrl}`, {
+          cache: 'no-store',
+        });
+        if (cancelled) return;
+        if (res.ok) {
+          const json = await res.json();
+          if (cancelled) return;
+          setForm((prev) => ({
+            ...prev,
+            type: json.type as MaterialType,
+            jobId: json.jobId ?? null,
+            resumeId: json.resumeId ?? null,
+          }));
+          setResult({
+            content: json.content,
+            subject: json.subject,
+            greeting: '',
+            senderName: '',
+            signOff: '',
+            warnings: [],
+            missingInformation: [],
+            unsupported: [],
+            claims: [],
           });
-          if (res.ok) {
-            const json = await res.json();
-            setForm((prev) => ({
-              ...prev,
-              type: json.type as MaterialType,
-              jobId: json.jobId ?? null,
-              resumeId: json.resumeId ?? null,
-            }));
-            setResult({
-              content: json.content,
-              subject: json.subject,
-              greeting: '',
-              senderName: '',
-              signOff: '',
-              warnings: [],
-              missingInformation: [],
-              unsupported: [],
-              claims: [],
-            });
-            setMaterialId(json.id);
-            setEditVersion(json.editVersion ?? 1);
-            setSaved(true);
-          }
-        } catch {
-          // non-fatal
+          setMaterialId(json.id);
+          setEditVersion(json.editVersion ?? 1);
+          setSaved(true);
         }
-      })();
-    }
-  }, [mode, searchParams.get('id')]);
+      } catch {
+        // non-fatal
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, materialIdFromUrl]);
 
   const handleGenerate = useCallback(async () => {
     setError(null);
