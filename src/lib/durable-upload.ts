@@ -4,6 +4,17 @@ import { del, put } from '@vercel/blob';
 
 type AssetKind = 'resume' | 'avatar';
 
+export class ResumeBlobStoreConfigurationError extends Error {
+  readonly status = 503;
+
+  constructor() {
+    super(
+      'Resume storage is linked to a public Vercel Blob store. Switch BLOB_READ_WRITE_TOKEN to a private Blob store and redeploy; resumes cannot be uploaded publicly.',
+    );
+    this.name = 'ResumeBlobStoreConfigurationError';
+  }
+}
+
 const ASSET_CONFIG: Record<AssetKind, { blobPrefix: string; localDir: string; localUrlPrefix: string }> = {
   resume: {
     blobPrefix: 'resumes',
@@ -95,10 +106,22 @@ export async function uploadUserAsset(params: {
 
   if (hasBlobToken()) {
     const pathname = `${config.blobPrefix}/${userId}/${Date.now()}-${safeOriginalBase}.${safeExt}`;
-    const blob = await put(pathname, file, {
-      access: BLOB_ACCESS[kind],
-      addRandomSuffix: false,
-    });
+    let blob;
+    try {
+      blob = await put(pathname, file, {
+        access: BLOB_ACCESS[kind],
+        addRandomSuffix: false,
+      });
+    } catch (error) {
+      if (
+        kind === 'resume' &&
+        error instanceof Error &&
+        /cannot use private access on a public store/i.test(error.message)
+      ) {
+        throw new ResumeBlobStoreConfigurationError();
+      }
+      throw error;
+    }
 
     await deleteStoredAsset(existingUrl);
     return blob.url;

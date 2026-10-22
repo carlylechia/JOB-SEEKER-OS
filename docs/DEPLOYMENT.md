@@ -21,7 +21,7 @@ Preview build needs to boot the app).
 | `EMAIL_REPLY_TO` | optional | Reply-to for transactional email |
 | `ADMIN_NOTIFICATION_EMAIL` | yes | Where new upgrade requests are notified |
 | `CRON_SECRET` | yes | Bearer token for `/api/cron/*` (min 16 chars) |
-| `BLOB_READ_WRITE_TOKEN` | yes | Vercel Blob (private resume storage) |
+| `BLOB_READ_WRITE_TOKEN` | yes | Token for a Vercel Blob store configured as private (resumes) |
 | `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET` | optional | LinkedIn sign-in |
 | `ALERT_WEBHOOK_URL` | optional | Discord alerting for important errors |
 | `MONETIZATION_ENABLED=false` | optional | Emergency kill switch |
@@ -41,6 +41,14 @@ Preview build needs to boot the app).
 
 > **Preview safety.** `MONETIZATION_ENABLED=false` in the Preview environment
 > guarantees preview builds can never start real trials.
+
+> **Resume storage must be private.** The resume upload route writes with
+> `access: "private"` and deliberately refuses to fall back to public storage.
+> Create or select a Vercel Blob store configured for private access, set
+> `BLOB_READ_WRITE_TOKEN` to that store's token in every target environment, and
+> redeploy. A token linked to a public Blob store fails resume uploads with an
+> actionable configuration error. Do not change resume uploads to public to
+> work around this: resume files contain personal data.
 
 > **PDF fonts are build artifacts, not environment variables.** The two Inter
 > weights are committed at `src/lib/resume-builder/fonts/` and read through a

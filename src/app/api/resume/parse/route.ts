@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { logImportantError } from '@/lib/observability';
 import { extractResumeProfile } from '@/lib/resume';
 import { prisma } from '@/lib/prisma';
-import { uploadUserAsset } from '@/lib/durable-upload';
+import { ResumeBlobStoreConfigurationError, uploadUserAsset } from '@/lib/durable-upload';
 import { recordResumeDocument } from '@/lib/resume/documents';
 import { detectResumeFormat } from '@/lib/resume/extract-text';
 import {
@@ -103,11 +103,18 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     await logImportantError({
-      event: 'resume_parse_failed',
+      event:
+        error instanceof ResumeBlobStoreConfigurationError
+          ? 'resume_blob_store_misconfigured'
+          : 'resume_parse_failed',
       userId: session.user.id,
       route: '/api/resume/parse',
       error,
     });
+
+    if (error instanceof ResumeBlobStoreConfigurationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
 
     return NextResponse.json({ error: 'Unable to parse resume' }, { status: 500 });
   }
