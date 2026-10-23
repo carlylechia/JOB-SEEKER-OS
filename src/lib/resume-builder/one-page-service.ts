@@ -87,6 +87,7 @@ export async function prepareOnePageProposal(params: {
     objective: params.input.objective,
     templateKey: params.input.templateKey ?? 'classic-ats',
     pageSize: params.input.pageSize ?? current.pageSize,
+    sectionOrder: current.sectionOrder,
     includedKeys: params.input.includedKeys,
     acceptedOperationIds: params.input.acceptedOperationIds,
     summaryOverride: params.input.summaryOverride,

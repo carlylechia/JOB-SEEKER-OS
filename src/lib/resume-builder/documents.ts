@@ -32,7 +32,9 @@ import {
   resumeContentSchema,
   type CreateResumeInput,
   type ResumeContent,
+  type ResumeSectionKey,
   type UpdateResumeInput,
+  normalizeResumeSectionOrder,
 } from './schema';
 import {
   DEFAULT_PAGE_SIZE,
@@ -120,6 +122,7 @@ export type StructuredResumeRecord = {
   accentKey: string;
   density: number;
   hiddenSections: string[];
+  sectionOrder: ResumeSectionKey[];
   revision: number;
   targetJobId: string | null;
   sourceResumeId: string | null;
@@ -144,6 +147,7 @@ type Row = {
   accentKey: string;
   density: number;
   hiddenSections: string[];
+  sectionOrder: string[];
   revision: number;
   targetJobId: string | null;
   sourceResumeId: string | null;
@@ -177,6 +181,7 @@ function toRecord(row: Row): StructuredResumeRecord {
     accentKey: isAccentKey(row.accentKey) ? row.accentKey : 'gold',
     density: row.density,
     hiddenSections: row.hiddenSections ?? [],
+    sectionOrder: normalizeResumeSectionOrder(row.sectionOrder),
     revision: row.revision,
     targetJobId: row.targetJobId,
     sourceResumeId: row.sourceResumeId,
@@ -198,6 +203,7 @@ const LIST_SELECT = {
   accentKey: true,
   density: true,
   hiddenSections: true,
+  sectionOrder: true,
   revision: true,
   targetJobId: true,
   sourceResumeId: true,
@@ -556,6 +562,7 @@ export async function createResume(params: {
   let sourceProfileVersion: number | null = null;
   let sourceResumeId: string | null = null;
   let pageSize = input.pageSize ?? DEFAULT_PAGE_SIZE;
+  let sectionOrder = normalizeResumeSectionOrder();
   let name = input.name?.trim() || 'Untitled resume';
 
   if (input.from === 'PROFILE') {
@@ -584,6 +591,7 @@ export async function createResume(params: {
     origin = 'DUPLICATE';
     sourceProfileVersion = source.sourceProfileVersion;
     pageSize = input.pageSize ?? source.pageSize;
+    sectionOrder = source.sectionOrder;
     if (!input.name) {
       name = `${source.name} (copy)`.slice(0, RESUME_MAX_NAME_LENGTH);
     }
@@ -605,6 +613,7 @@ export async function createResume(params: {
       accentKey: 'gold',
       density: 1,
       hiddenSections: [],
+      sectionOrder,
       revision: 1,
     },
     select: { ...LIST_SELECT, targetJob: { select: { id: true, title: true, company: true } } },
@@ -695,6 +704,7 @@ export async function createOnePageResume(params: {
       accentKey: 'charcoal',
       density: 0,
       hiddenSections: [],
+      sectionOrder: source.sectionOrder,
       revision: 1,
       origin: 'ONE_PAGE',
       sourceResumeId: source.id,
@@ -751,6 +761,7 @@ export async function updateResume(params: {
         : {}),
       ...(input.density !== undefined ? { density: input.density } : {}),
       ...(input.hiddenSections !== undefined ? { hiddenSections: input.hiddenSections } : {}),
+      ...(input.sectionOrder !== undefined ? { sectionOrder: input.sectionOrder } : {}),
       ...(input.targetJobId !== undefined
         ? { targetJobId: await resolveTargetJobId(userId, input.targetJobId) }
         : {}),

@@ -37,7 +37,9 @@
 
 import {
   RESUME_SECTION_KEYS,
+  normalizeResumeSectionOrder,
   type ResumeContent,
+  type ResumeSectionKey,
   type ResumeCredential,
   type ResumeEducation,
   type ResumeExperience,
@@ -111,6 +113,8 @@ export type LayoutTextRun = {
   style: FontStyle;
   size: number;
   color: string;
+  /** A validated contact link. Display text stays concise while the PDF remains clickable. */
+  href?: string;
 };
 
 export type LayoutRule = {
@@ -186,6 +190,7 @@ export type LayoutOptions = {
   pageSize?: PageSizeKey;
   margins?: PageMargins;
   hiddenSections?: readonly string[];
+  sectionOrder?: readonly string[];
 };
 
 // ─── Internal flow primitives ───────────────────────────────────────────────
@@ -608,21 +613,90 @@ function isCredentialEmpty(entry: ResumeCredential): boolean {
   return !entry.name;
 }
 
-/** Contact details, in the order a recruiter reads them. */
-export function contactLineFor(content: ResumeContent): string | null {
+type ContactSegment = { text: string; href?: string };
+
+/** Return concise labels for links while keeping phone and location readable. */
+function contactSegmentsFor(content: ResumeContent): ContactSegment[] {
   const { basics } = content;
-  const parts = [
-    basics.email,
-    basics.phone,
-    basics.location,
-    basics.linkedinUrl,
-    basics.portfolioUrl,
-    basics.websiteUrl,
-  ].filter((part): part is string => Boolean(part && part.trim()));
+  const parts: ContactSegment[] = [];
+  if (basics.email?.trim()) parts.push({ text: 'Email', href: `mailto:${basics.email.trim()}` });
+  if (basics.phone?.trim()) parts.push({ text: basics.phone.trim() });
+  if (basics.location?.trim()) parts.push({ text: basics.location.trim() });
+  if (basics.linkedinUrl?.trim()) parts.push({ text: 'LinkedIn', href: basics.linkedinUrl.trim() });
+  if (basics.portfolioUrl?.trim()) parts.push({ text: 'Portfolio', href: basics.portfolioUrl.trim() });
+  if (basics.websiteUrl?.trim()) parts.push({ text: 'Website', href: basics.websiteUrl.trim() });
+  return parts;
+}
+
+/** Contact details, in the order a recruiter reads them. Link targets stay clickable but are masked. */
+export function contactLineFor(content: ResumeContent): string | null {
+  const parts = contactSegmentsFor(content).map((part) => part.text);
   if (parts.length === 0) return null;
   // The separator is attached to each part so a line break can never strand a
   // lone "·" at the end of a line.
   return parts.map((part, index) => (index === parts.length - 1 ? part : `${part} ·`)).join(' ');
+}
+
+type MeasuredContactSegment = ContactSegment & { width: number };
+
+function wrapContactSegments(
+  segments: ContactSegment[],
+  maxWidth: number,
+  metrics: LayoutMetrics,
+  size: number,
+): MeasuredContactSegment[][] {
+  const lines: MeasuredContactSegment[][] = [[]];
+  let usedWidth = 0;
+  const separatorWidth = metrics.measure(' · ', 'regular', size);
+  for (const segment of segments) {
+    const width = metrics.measure(segment.text, 'regular', size);
+    const current = lines[lines.length - 1];
+    const nextWidth = current.length > 0 ? separatorWidth + width : width;
+    if (current.length > 0 && usedWidth + nextWidth > maxWidth) {
+      lines.push([]);
+      usedWidth = 0;
+    }
+    const line = lines[lines.length - 1];
+    line.push({ ...segment, width });
+    usedWidth += (line.length > 1 ? separatorWidth : 0) + width;
+  }
+  return lines.filter((line) => line.length > 0);
+}
+
+function contactFlowable(
+  segments: ContactSegment[],
+  size: number,
+  lineHeight: number,
+  metrics: LayoutMetrics,
+  maxWidth: number,
+  linkColor: string,
+): Flowable {
+  const lines = wrapContactSegments(segments, maxWidth, metrics, size);
+  const height = lines.length * lineHeight;
+  return {
+    height,
+    draw(page, y, x) {
+      lines.forEach((line, lineIndex) => {
+        let cursorX = x;
+        line.forEach((segment, index) => {
+          const text = `${index === 0 ? '' : ' · '}${segment.text}`;
+          const width = metrics.measure(text, 'regular', size);
+          page.blocks.push({
+            kind: 'TEXT',
+            x: cursorX,
+            y: y + lineIndex * lineHeight,
+            width,
+            text,
+            style: 'regular',
+            size,
+            color: segment.href ? linkColor : '#4A505A',
+            ...(segment.href ? { href: segment.href } : {}),
+          });
+          cursorX += width;
+        });
+      });
+    },
+  };
 }
 
 // ─── The engine ─────────────────────────────────────────────────────────────
@@ -650,7 +724,8 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
   const mutedInk = '#4A505A';
 
   const hidden = new Set(options.hiddenSections ?? []);
-  const visible = RESUME_SECTION_KEYS.filter((key) => !hidden.has(key));
+  const visible = new Set(RESUME_SECTION_KEYS.filter((key) => !hidden.has(key)));
+  const sectionOrder = normalizeResumeSectionOrder(options.sectionOrder);
 
   const unsupported = new Set<string>();
   const trackUnsupported = (value: string | null | undefined) => {
@@ -702,6 +777,7 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
   const basics = options.content.basics;
   const fullName = collapse(basics.fullName ?? '');
   const headline = collapse(basics.headline ?? '');
+  const contactSegments = contactSegmentsFor(options.content);
   const contacts = contactLineFor(options.content);
 
   if (template.nameBlockFill) {
@@ -716,8 +792,8 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
     const headlineLines = headline
       ? wrapText(headline, flow.contentWidth - 32, metrics, 'regular', body * 1.15)
       : [];
-    const contactLines = contacts
-      ? wrapText(contacts, flow.contentWidth - 32, metrics, 'regular', body * 0.98)
+    const contactLines = contactSegments.length > 0
+      ? wrapContactSegments(contactSegments, flow.contentWidth - 32, metrics, body * 0.98)
       : [];
 
     const padTop = 14;
@@ -769,15 +845,22 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
         if (contactLines.length > 0) {
           cursor += 6;
           contactLines.forEach((line, index) => {
-            page.blocks.push({
-              kind: 'TEXT',
-              x: x + 16,
-              y: cursor + index * body * 1.25,
-              width: metrics.measure(line, 'regular', body * 0.98),
-              text: line,
-              style: 'regular',
-              size: body * 0.98,
-              color: accent.textOnAccent,
+            let cursorX = x + 16;
+            line.forEach((segment, segmentIndex) => {
+              const text = `${segmentIndex === 0 ? '' : ' · '}${segment.text}`;
+              const width = metrics.measure(text, 'regular', body * 0.98);
+              page.blocks.push({
+                kind: 'TEXT',
+                x: cursorX,
+                y: cursor + index * body * 1.25,
+                width,
+                text,
+                style: 'regular',
+                size: body * 0.98,
+                color: accent.textOnAccent,
+                ...(segment.href ? { href: segment.href } : {}),
+              });
+              cursorX += width;
             });
           });
         }
@@ -811,18 +894,9 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
         }),
       );
     }
-    if (contacts) {
+    if (contactSegments.length > 0) {
       gap(4);
-      push(
-        textFlowable({
-          text: contacts,
-          style: 'regular',
-          size: body * 0.98,
-          color: mutedInk,
-          lineHeight: body * 1.25,
-          metrics,
-        }),
-      );
+      push(contactFlowable(contactSegments, body * 0.98, body * 1.25, metrics, flow.contentWidth, accent.accentDeep));
     }
     if (template.sectionRules) {
       gap(8);
@@ -881,24 +955,26 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
 
   // ── Summary ───────────────────────────────────────────────────────────────
   const summary = collapse(options.content.summary ?? '');
-  if (visible.includes('summary') && summary.length > 0) {
+  const renderSummary = () => {
+    if (!visible.has('summary') || summary.length === 0) return;
     pushSectionHeading('Professional Summary', bodyLine * 2);
     push(
       textFlowable({
         text: summary,
         style: 'regular',
-      size: template.style === 'EXECUTIVE_EXPERIENCED' ? body * 1.06 : body,
+        size: template.style === 'EXECUTIVE_EXPERIENCED' ? body * 1.06 : body,
         color: ink,
-      lineHeight: template.style === 'EXECUTIVE_EXPERIENCED' ? body * 1.52 : bodyLine,
+        lineHeight: template.style === 'EXECUTIVE_EXPERIENCED' ? body * 1.52 : bodyLine,
         metrics,
       }),
     );
     gap(density.sectionGap);
-  }
+  };
 
   // ── Experience ────────────────────────────────────────────────────────────
   const experiences = options.content.experiences.filter((entry) => !isExperienceEmpty(entry));
-  if (visible.includes('experience') && experiences.length > 0) {
+  const renderExperience = () => {
+    if (!visible.has('experience') || experiences.length === 0) return;
     pushSectionHeading('Professional Experience', bodyLine * 2);
 
     experiences.forEach((entry, index) => {
@@ -974,19 +1050,21 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
       }
     });
     gap(density.sectionGap);
-  }
+  };
 
   // ── Skills ────────────────────────────────────────────────────────────────
   const skills = options.content.skills;
-  if (visible.includes('skills') && skills.length > 0) {
+  const renderSkills = () => {
+    if (!visible.has('skills') || skills.length === 0) return;
     pushSectionHeading('Skills', bodyLine);
     pushSkills(push, skills, template.compactSkills, body, bodyLine, metrics, accent);
     gap(density.sectionGap);
-  }
+  };
 
   // ── Education ─────────────────────────────────────────────────────────────
   const education = options.content.education.filter((entry) => !isEducationEmpty(entry));
-  if (visible.includes('education') && education.length > 0) {
+  const renderEducation = () => {
+    if (!visible.has('education') || education.length === 0) return;
     pushSectionHeading('Education', bodyLine * 2);
 
     education.forEach((entry, index) => {
@@ -1026,11 +1104,12 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
       }
     });
     gap(density.sectionGap);
-  }
+  };
 
   // ── Projects ──────────────────────────────────────────────────────────────
   const projects = options.content.projects.filter((entry) => !isProjectEmpty(entry));
-  if (visible.includes('projects') && projects.length > 0) {
+  const renderProjects = () => {
+    if (!visible.has('projects') || projects.length === 0) return;
     pushSectionHeading('Projects', bodyLine * 2);
 
     projects.forEach((entry, index) => {
@@ -1070,11 +1149,12 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
       for (const result of entry.results) push(bullet(result, ink, body));
     });
     gap(density.sectionGap);
-  }
+  };
 
   // ── Credentials ───────────────────────────────────────────────────────────
   const credentials = options.content.credentials.filter((entry) => !isCredentialEmpty(entry));
-  if (visible.includes('credentials') && credentials.length > 0) {
+  const renderCredentials = () => {
+    if (!visible.has('credentials') || credentials.length === 0) return;
     const headingText = credentials.some((entry) => entry.kind === 'AWARD')
       ? 'Certifications & Awards'
       : credentials.some((entry) => entry.kind === 'LANGUAGE')
@@ -1111,7 +1191,17 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
       }
     }
     gap(density.sectionGap);
-  }
+  };
+
+  const renderers: Record<ResumeSectionKey, () => void> = {
+    summary: renderSummary,
+    experience: renderExperience,
+    skills: renderSkills,
+    education: renderEducation,
+    projects: renderProjects,
+    credentials: renderCredentials,
+  };
+  for (const section of sectionOrder) renderers[section]();
 
   const pages = flow.finish();
 

@@ -384,6 +384,7 @@ export async function buildOnePageProposal(params: {
   objective?: string | null;
   templateKey?: string;
   pageSize?: string;
+  sectionOrder?: readonly string[];
   includedKeys?: string[];
   acceptedOperationIds?: string[];
   summaryOverride?: string | null;
@@ -464,6 +465,7 @@ export async function buildOnePageProposal(params: {
     // only a modest margin adjustment; it never squeezes text to force a fit.
     density: 0,
     margins: ONE_PAGE_MARGINS,
+    sectionOrder: params.sectionOrder,
   });
   let rendered = await renderResumePdf(layout);
   let attempts = 1;
@@ -479,6 +481,7 @@ export async function buildOnePageProposal(params: {
       accentKey: 'charcoal',
       density: 0,
       margins: ONE_PAGE_MARGINS,
+      sectionOrder: params.sectionOrder,
     });
     rendered = await renderResumePdf(layout);
   }

@@ -78,6 +78,7 @@ export default async function ResumeEditorPage({ params }: Props) {
         accentKey: resume.accentKey,
         density: resume.density,
         hiddenSections: resume.hiddenSections,
+        sectionOrder: resume.sectionOrder,
         revision: resume.revision,
         targetJobId: resume.targetJobId,
         targetJob: resume.targetJob,

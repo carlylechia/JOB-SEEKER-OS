@@ -29,7 +29,7 @@
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/600.css';
 
-import { useMemo } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { DOCUMENT_FONT_FAMILIES } from '@/lib/resume-builder/templates';
 import type { LayoutBlock, LayoutDocument, LayoutPage } from '@/lib/resume-builder/layout';
 
@@ -177,10 +177,7 @@ function PreviewBlock({ block, ascentRatio }: { block: LayoutBlock; ascentRatio:
     );
   }
 
-  return (
-    <span
-      aria-hidden="true"
-      style={{
+  const style: CSSProperties = {
         position: 'absolute',
         left: `${block.x}pt`,
         top: `${block.y - ascentRatio * block.size}pt`,
@@ -190,9 +187,24 @@ function PreviewBlock({ block, ascentRatio }: { block: LayoutBlock; ascentRatio:
         lineHeight: 1,
         color: block.color,
         whiteSpace: 'pre',
-      }}
-    >
-      {block.text}
-    </span>
-  );
+      };
+
+  if (block.href) {
+    const label = block.text.replace(/^\s*·\s*/, '').trim();
+    return (
+      <a
+        href={block.href}
+        target={block.href.startsWith('mailto:') ? undefined : '_blank'}
+        rel={block.href.startsWith('mailto:') ? undefined : 'noreferrer'}
+        aria-label={`Open ${label}`}
+        title={label}
+        className="hover:underline focus:underline focus:outline-none"
+        style={style}
+      >
+        {block.text}
+      </a>
+    );
+  }
+
+  return <span aria-hidden="true" style={style}>{block.text}</span>;
 }

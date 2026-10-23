@@ -5,6 +5,7 @@ import { buildLetterLayout } from '@/lib/application-materials/letter-layout';
 import { renderMaterialDocx } from '@/lib/application-materials/docx';
 import { renderResumeDocx } from '@/lib/resume-builder/docx';
 import { getLayoutMetrics, preparePdfEngine, renderPdfLayout } from '@/lib/resume-builder/pdf';
+import { buildLayout, contactLineFor } from '@/lib/resume-builder/layout';
 import { resumeDocumentDownloadHeaders } from '@/lib/resume-builder/download';
 import { checkResumeQuality } from '@/lib/resume-builder/quality';
 import { resumeContentSchema } from '@/lib/resume-builder/schema';
@@ -41,6 +42,35 @@ describe('editable document exports', () => {
     expect(headers.get('Content-Type')).toBe('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     expect(headers.get('Content-Disposition')).toContain('Jordan-Ellis-One-Page.docx');
     expect(headers.get('Cache-Control')).toContain('private, no-store');
+  });
+
+  it('masks header links and respects the saved section order in PDF and DOCX', async () => {
+    const content = typicalContent();
+    const order = ['skills', 'summary', 'experience', 'education', 'projects', 'credentials'] as const;
+    const contact = contactLineFor(content) ?? '';
+    expect(contact).toContain('Email');
+    expect(contact).toContain('LinkedIn');
+    if (content.basics.email) expect(contact).not.toContain(content.basics.email);
+    if (content.basics.linkedinUrl) expect(contact).not.toContain(content.basics.linkedinUrl);
+
+    const layout = buildLayout({
+      content,
+      templateKey: 'classic-ats',
+      accentKey: 'gold',
+      density: 1,
+      sectionOrder: order,
+    }, getLayoutMetrics());
+    const blocks = layout.pages.flatMap((page) => page.blocks);
+    const text = blocks.filter((block) => block.kind === 'TEXT');
+    expect(text.some((block) => block.text.includes('LinkedIn') && block.href === content.basics.linkedinUrl)).toBe(true);
+    expect(text.some((block) => block.text.includes('Email') && block.href === `mailto:${content.basics.email}`)).toBe(true);
+    expect(text.findIndex((block) => block.text === 'SKILLS')).toBeLessThan(text.findIndex((block) => block.text === 'PROFESSIONAL SUMMARY'));
+
+    const bytes = await renderResumeDocx({ content, sectionOrder: order });
+    const exported = (await mammoth.extractRawText({ buffer: bytes })).value;
+    expect(exported.indexOf('Skills')).toBeLessThan(exported.indexOf('Professional Summary'));
+    expect(exported).toContain('LinkedIn');
+    expect(exported).not.toContain(content.basics.linkedinUrl ?? '');
   });
 
   it('keeps cover letters structured and short messages free of letterhead', async () => {

@@ -323,6 +323,18 @@ export async function renderPdfLayout(layout: LayoutDocument): Promise<RenderPdf
           font: fonts[block.style],
           color: toRgb(block.color),
         });
+        const uri = safeContactUri(block.href);
+        if (uri) {
+          const baseline = layoutPage.height - block.y - baselineOffset(block.size);
+          const annotation = doc.context.obj({
+            Type: 'Annot',
+            Subtype: 'Link',
+            Rect: [block.x, baseline - block.size * 0.3, block.x + block.width, baseline + block.size * 0.9],
+            Border: [0, 0, 0],
+            A: { Type: 'Action', S: 'URI', URI: uri },
+          });
+          page.node.addAnnot(doc.context.register(annotation));
+        }
         continue;
       }
 
@@ -365,6 +377,20 @@ export async function renderPdfLayout(layout: LayoutDocument): Promise<RenderPdf
     throw new Error('The rendered PDF page tree does not match the document layout.');
   }
   return { bytes: output, pageCount };
+}
+
+function safeContactUri(value?: string): string | null {
+  if (!value || /[\r\n\u0000]/.test(value)) return null;
+  if (value.startsWith('mailto:')) {
+    const address = value.slice('mailto:'.length);
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address) ? value : null;
+  }
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

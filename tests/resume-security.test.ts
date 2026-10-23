@@ -534,6 +534,7 @@ describe('no route derives identity from the request', () => {
         '[id]/export.pdf/route.ts',
         '[id]/one-page/route.ts',
         '[id]/one-page/save/route.ts',
+        '[id]/optimization/answer/route.ts',
         '[id]/optimization/apply/route.ts',
         '[id]/optimization/route.ts',
         '[id]/preview/route.ts',

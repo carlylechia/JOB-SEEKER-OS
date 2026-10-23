@@ -60,6 +60,18 @@ export const applyOptimizationRequestSchema = z
 
 export type ApplyOptimizationRequest = z.infer<typeof applyOptimizationRequestSchema>;
 
+/** A candidate-authored answer to one stored information gap. */
+export const refineInformationGapAnswerSchema = z
+  .object({
+    optimizationId: z.string().min(1).max(64),
+    question: z.string().trim().min(1).max(600),
+    why: z.string().trim().min(1).max(600),
+    answer: z.string().trim().min(1).max(2000),
+  })
+  .strict();
+
+export type RefineInformationGapAnswer = z.infer<typeof refineInformationGapAnswerSchema>;
+
 /**
  * A duplicate request.
  *

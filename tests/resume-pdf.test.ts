@@ -112,7 +112,16 @@ describe('templates', () => {
     const content = typicalContent();
     const classic = layoutOf(content, 'classic-ats');
     const modern = layoutOf(content, 'modern-professional');
-    expect(modern.pages[0].blocks.length).not.toBe(classic.pages[0].blocks.length);
+    const geometry = (layout: ReturnType<typeof layoutOf>) =>
+      layout.pages[0].blocks.map((block) => [
+        block.kind,
+        block.x,
+        block.y,
+        block.width,
+        'height' in block ? block.height : null,
+        'size' in block ? block.size : null,
+      ]);
+    expect(geometry(modern)).not.toEqual(geometry(classic));
   });
 
   it('falls back to a known template for an unknown key rather than throwing', () => {

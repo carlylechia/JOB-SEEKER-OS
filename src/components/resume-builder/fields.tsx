@@ -148,7 +148,7 @@ export function SelectField<T extends string>({
     <Field label={label} hint={hint} htmlFor={id}>
       <select
         id={id}
-        className="select"
+        className="select min-w-0 truncate"
         value={value}
         onChange={(event) => onChange(event.target.value as T)}
       >

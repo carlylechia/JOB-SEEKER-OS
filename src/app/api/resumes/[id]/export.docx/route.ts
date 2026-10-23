@@ -56,6 +56,7 @@ export async function GET(request: Request, { params }: Params) {
         templateKey: resume.templateKey,
         pageSize: resume.pageSize,
         accentKey: resume.accentKey,
+        sectionOrder: resume.sectionOrder,
         compact: resume.origin === 'ONE_PAGE',
       });
       await logImportantInfo({

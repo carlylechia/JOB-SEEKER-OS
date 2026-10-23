@@ -437,11 +437,10 @@ export function emptyResumeContent(): ResumeContent {
 /**
  * Section keys, in the order they render.
  *
- * Order is part of the contract: it is what makes "logical content order" true
- * for the exported document, and it is the order the editor's navigation uses.
- * Experience comes before education because that is the convention in every
- * ATS and every recruiter's eye; skills sit high because they are what gets
- * keyword-matched.
+ * This is the default presentation order. Each resume may save its own order,
+ * and normalisation uses this list to fill any missing keys from older records.
+ * Experience comes before education by default; skills sit high because they
+ * are what gets keyword-matched.
  */
 export const RESUME_SECTION_KEYS = [
   'summary',
@@ -453,6 +452,17 @@ export const RESUME_SECTION_KEYS = [
 ] as const;
 
 export type ResumeSectionKey = (typeof RESUME_SECTION_KEYS)[number];
+
+/** Keep a saved ordering complete even when reading records created before this preference existed. */
+export function normalizeResumeSectionOrder(value?: readonly string[] | null): ResumeSectionKey[] {
+  const selected = new Set((value ?? []).filter((key): key is ResumeSectionKey =>
+    (RESUME_SECTION_KEYS as readonly string[]).includes(key),
+  ));
+  const ordered = (value ?? []).filter((key, index, keys): key is ResumeSectionKey =>
+    (RESUME_SECTION_KEYS as readonly string[]).includes(key) && keys.indexOf(key) === index,
+  );
+  return [...ordered, ...RESUME_SECTION_KEYS.filter((key) => !selected.has(key))];
+}
 
 export const SECTION_LABELS: Record<ResumeSectionKey, string> = {
   summary: 'Professional Summary',
@@ -539,6 +549,9 @@ export const updateResumeSchema = z
       .array(z.enum(HIDABLE_SECTION_KEYS))
       .max(RESUME_MAX_HIDDEN_SECTIONS)
       .optional(),
+    sectionOrder: z.array(z.enum(RESUME_SECTION_KEYS)).length(RESUME_SECTION_KEYS.length)
+      .refine((order) => new Set(order).size === RESUME_SECTION_KEYS.length, 'Each section must appear once.')
+      .optional(),
     targetJobId: z.string().max(64).nullable().optional(),
     pageSize: pageSizeSchema.optional(),
   })
@@ -560,6 +573,9 @@ export const previewRequestSchema = z
     accentKey: accentKeySchema.optional(),
     density: densitySchema.optional(),
     hiddenSections: z.array(z.enum(HIDABLE_SECTION_KEYS)).max(RESUME_MAX_HIDDEN_SECTIONS).optional(),
+    sectionOrder: z.array(z.enum(RESUME_SECTION_KEYS)).length(RESUME_SECTION_KEYS.length)
+      .refine((order) => new Set(order).size === RESUME_SECTION_KEYS.length, 'Each section must appear once.')
+      .optional(),
     pageSize: pageSizeSchema.optional(),
   })
   .strict();

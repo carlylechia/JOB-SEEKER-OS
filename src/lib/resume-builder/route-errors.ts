@@ -24,10 +24,12 @@ import {
 import {
   DuplicateOptimizationInFlightError,
   EditedTextRejectedError,
+  InformationGapNotFoundError,
   NoOperationsAcceptedError,
   NoTargetJobError,
   OptimizationStaleError,
   ResumeOptimizationAiError,
+  RefinedAnswerRejectedError,
 } from './optimization/service';
 import { OPTIMIZATION_ERROR_MESSAGES, type OptimizationErrorCode } from './optimization/schema';
 import { OnePageDoesNotFitError, OnePageSelectionError } from './one-page-errors';
@@ -95,6 +97,14 @@ function map(error: unknown): Mapped | null {
 
   if (error instanceof EditedTextRejectedError) {
     return { code: 'VALIDATION_FAILED', message: error.message };
+  }
+
+  if (error instanceof RefinedAnswerRejectedError) {
+    return { code: 'VALIDATION_FAILED', message: error.message };
+  }
+
+  if (error instanceof InformationGapNotFoundError) {
+    return { code: 'NOT_FOUND', message: error.message };
   }
 
   if (error instanceof OptimizationStaleError) {

@@ -15,7 +15,7 @@ import {
   Paragraph,
   TextRun,
 } from 'docx';
-import type { ResumeContent } from './schema';
+import { normalizeResumeSectionOrder, type ResumeContent, type ResumeSectionKey } from './schema';
 import { DOCUMENT_FONT_FAMILIES, PAGE_SIZES, getAccent, getTemplate, isPageSizeKey, isTemplateKey } from './templates';
 
 type ResumeDocxOptions = {
@@ -23,6 +23,7 @@ type ResumeDocxOptions = {
   templateKey?: string;
   pageSize?: string;
   accentKey?: string;
+  sectionOrder?: readonly string[];
   compact?: boolean;
 };
 
@@ -63,6 +64,9 @@ export async function renderResumeDocx(options: ResumeDocxOptions): Promise<Buff
 
   const content = options.content;
   const paragraphs: Paragraph[] = [];
+  const sectionParagraphs: Record<ResumeSectionKey, Paragraph[]> = {
+    summary: [], experience: [], skills: [], education: [], projects: [], credentials: [],
+  };
   if (clean(content.basics.fullName)) {
     const nameSize = template.style === 'EXECUTIVE_EXPERIENCED' ? 38 : template.style === 'MODERN_PROFESSIONAL' ? 34 : 32;
     paragraphs.push(new Paragraph({
@@ -77,17 +81,21 @@ export async function renderResumeDocx(options: ResumeDocxOptions): Promise<Buff
     }));
   }
 
-  const contactParts = [content.basics.email, content.basics.phone, content.basics.location].filter((value): value is string => Boolean(clean(value)));
+  const contactParts = [content.basics.phone, content.basics.location].filter((value): value is string => Boolean(clean(value)));
   if (contactParts.length) paragraphs.push(body(contactParts.join('  ·  '), { spacing: { after: 60 } }));
-  const links = [content.basics.linkedinUrl, content.basics.portfolioUrl, content.basics.websiteUrl]
-    .filter((value): value is string => Boolean(value));
+  const links = [
+    content.basics.email ? { label: 'Email', url: `mailto:${content.basics.email}` } : null,
+    content.basics.linkedinUrl ? { label: 'LinkedIn', url: content.basics.linkedinUrl } : null,
+    content.basics.portfolioUrl ? { label: 'Portfolio', url: content.basics.portfolioUrl } : null,
+    content.basics.websiteUrl ? { label: 'Website', url: content.basics.websiteUrl } : null,
+  ].filter((value): value is { label: string; url: string } => Boolean(value));
   if (links.length) {
     paragraphs.push(new Paragraph({
-      children: links.flatMap((url, index) => [
+      children: links.flatMap(({ label, url }, index) => [
         ...(index ? [new TextRun({ text: '  ·  ', font: docxFont, size: halfPoints(9.5), color: '5B616C' })] : []),
         new ExternalHyperlink({
           link: url,
-          children: [new TextRun({ text: displayUrl(url), style: 'Hyperlink', font: docxFont, size: halfPoints(9.5), color: accent.accentDeep })],
+          children: [new TextRun({ text: label, style: 'Hyperlink', font: docxFont, size: halfPoints(9.5), color: accent.accentDeep })],
         }),
       ]),
       spacing: { after: 100 },
@@ -95,15 +103,15 @@ export async function renderResumeDocx(options: ResumeDocxOptions): Promise<Buff
   }
 
   if (content.summary) {
-    paragraphs.push(section('Professional Summary'));
-    paragraphs.push(body(content.summary));
+    sectionParagraphs.summary.push(section('Professional Summary'));
+    sectionParagraphs.summary.push(body(content.summary));
   }
   if (content.experiences.length) {
-    paragraphs.push(section('Professional Experience'));
+    sectionParagraphs.experience.push(section('Professional Experience'));
     for (const entry of content.experiences) {
       const title = [entry.jobTitle, entry.company].filter(Boolean).join(' · ');
       const dates = [formatDate(entry.startDate), entry.isCurrent ? 'Present' : formatDate(entry.endDate)].filter(Boolean).join(' – ');
-      paragraphs.push(new Paragraph({
+      sectionParagraphs.experience.push(new Paragraph({
         children: [
           new TextRun({ text: title || 'Experience', font: docxFont, size: halfPoints(bodySize + 0.3), bold: true, color: '17191E' }),
           ...(dates ? [new TextRun({ text: `  |  ${dates}`, font: docxFont, size: halfPoints(9.5), color: '5B616C' })] : []),
@@ -111,59 +119,62 @@ export async function renderResumeDocx(options: ResumeDocxOptions): Promise<Buff
         keepNext: true,
         spacing: { before: entryGap, after: 40 },
       }));
-      if (entry.location) paragraphs.push(body(entry.location, { keepNext: true, spacing: { after: 40 } }));
-      for (const line of [...entry.responsibilities, ...entry.achievements]) paragraphs.push(bullet(line));
-      if (entry.technologies.length) paragraphs.push(body(`Technologies: ${entry.technologies.join(', ')}`, { spacing: { after: entryGap } }));
+      if (entry.location) sectionParagraphs.experience.push(body(entry.location, { keepNext: true, spacing: { after: 40 } }));
+      for (const line of [...entry.responsibilities, ...entry.achievements]) sectionParagraphs.experience.push(bullet(line));
+      if (entry.technologies.length) sectionParagraphs.experience.push(body(`Technologies: ${entry.technologies.join(', ')}`, { spacing: { after: entryGap } }));
     }
   }
   if (content.skills.length) {
-    paragraphs.push(section('Skills'));
+    sectionParagraphs.skills.push(section('Skills'));
     const grouped = new Map<string, string[]>();
     for (const skill of content.skills) {
       const group = skill.category || '';
       grouped.set(group, [...(grouped.get(group) ?? []), skill.name]);
     }
-    for (const [group, skills] of grouped) paragraphs.push(body(`${group ? `${group}: ` : ''}${skills.join(', ')}`));
+    for (const [group, skills] of grouped) sectionParagraphs.skills.push(body(`${group ? `${group}: ` : ''}${skills.join(', ')}`));
   }
   if (content.education.length) {
-    paragraphs.push(section('Education'));
+    sectionParagraphs.education.push(section('Education'));
     for (const entry of content.education) {
       const qualification = [entry.qualification, entry.fieldOfStudy].filter(Boolean).join(' · ');
       const institution = [entry.institution, formatDate(entry.endDate)].filter(Boolean).join(' · ');
-      paragraphs.push(new Paragraph({
+      sectionParagraphs.education.push(new Paragraph({
         children: [
           ...(qualification ? [new TextRun({ text: qualification, font: docxFont, size: halfPoints(bodySize), bold: true, color: '17191E' })] : []),
           ...(institution ? [new TextRun({ text: `${qualification ? '  |  ' : ''}${institution}`, font: docxFont, size: halfPoints(bodySize), color: '5B616C' })] : []),
         ],
         spacing: { after: entryGap },
       }));
-      if (entry.details) paragraphs.push(body(entry.details));
+      if (entry.details) sectionParagraphs.education.push(body(entry.details));
     }
   }
   if (content.projects.length) {
-    paragraphs.push(section('Projects'));
+    sectionParagraphs.projects.push(section('Projects'));
     for (const entry of content.projects) {
       const title = [entry.name, entry.role].filter(Boolean).join(' · ');
-      paragraphs.push(new Paragraph({
+      sectionParagraphs.projects.push(new Paragraph({
         children: [new TextRun({ text: title || 'Project', font: docxFont, size: halfPoints(bodySize), bold: true, color: '17191E' })],
         keepNext: true,
         spacing: { after: 40 },
       }));
-      if (entry.description) paragraphs.push(body(entry.description));
-      for (const result of entry.results) paragraphs.push(bullet(result));
-      if (entry.technologies.length) paragraphs.push(body(`Technologies: ${entry.technologies.join(', ')}`));
-      if (entry.projectUrl) paragraphs.push(new Paragraph({
-        children: [new ExternalHyperlink({ link: entry.projectUrl, children: [new TextRun({ text: entry.projectUrl, font: docxFont, size: halfPoints(9.5), color: accent.accentDeep })] })],
+      if (entry.description) sectionParagraphs.projects.push(body(entry.description));
+      for (const result of entry.results) sectionParagraphs.projects.push(bullet(result));
+      if (entry.technologies.length) sectionParagraphs.projects.push(body(`Technologies: ${entry.technologies.join(', ')}`));
+      if (entry.projectUrl) sectionParagraphs.projects.push(new Paragraph({
+        children: [new ExternalHyperlink({ link: entry.projectUrl, children: [new TextRun({ text: 'Project', font: docxFont, size: halfPoints(9.5), color: accent.accentDeep })] })],
         spacing: { after: entryGap },
       }));
     }
   }
   if (content.credentials.length) {
-    paragraphs.push(section('Certifications & Other Credentials'));
+    sectionParagraphs.credentials.push(section('Certifications & Other Credentials'));
     for (const entry of content.credentials) {
       const details = [entry.issuer, formatDate(entry.issuedDate), entry.proficiency].filter(Boolean).join(' · ');
-      paragraphs.push(body(`${entry.name}${details ? ` — ${details}` : ''}`));
+      sectionParagraphs.credentials.push(body(`${entry.name}${details ? ` — ${details}` : ''}`));
     }
+  }
+  for (const key of normalizeResumeSectionOrder(options.sectionOrder)) {
+    paragraphs.push(...sectionParagraphs[key]);
   }
   if (!paragraphs.length) paragraphs.push(body(''));
 
@@ -192,10 +203,6 @@ export async function renderResumeDocx(options: ResumeDocxOptions): Promise<Buff
     }],
   });
   return Packer.toBuffer(doc);
-}
-
-function displayUrl(url: string): string {
-  try { return new URL(url).host.replace(/^www\./, ''); } catch { return url; }
 }
 
 function formatDate(value: string | null): string | null {

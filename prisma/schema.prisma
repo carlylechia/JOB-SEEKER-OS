@@ -798,6 +798,9 @@ model StructuredResume {
   /// Presentation only — the content is still stored and still exportable.
   hiddenSections String[]
 
+  /// Preferred presentation order, shared by the editor, PDF and DOCX.
+  sectionOrder String[] @default(["summary", "experience", "skills", "education", "projects", "credentials"])
+
   /// Optimistic-concurrency counter. A save carries the revision it was built
   /// from; a mismatch is rejected with 409 rather than silently clobbering a
   /// newer edit. Same mechanism, and the same intent, as

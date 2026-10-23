@@ -33,6 +33,7 @@ export type LayoutSource = {
   pageSize?: string;
   margins?: PageMargins;
   hiddenSections?: readonly string[];
+  sectionOrder?: readonly string[];
 };
 
 /**
@@ -56,6 +57,7 @@ export async function buildResumeLayout(source: LayoutSource): Promise<LayoutDoc
       pageSize: isPageSizeKey(source.pageSize) ? source.pageSize : DEFAULT_PAGE_SIZE,
       margins: source.margins,
       hiddenSections: source.hiddenSections ?? [],
+      sectionOrder: source.sectionOrder,
     },
     getLayoutMetrics(),
   );
@@ -73,6 +75,7 @@ export async function buildResumeLayoutFromRecord(
     density: resume.density,
     pageSize: resume.pageSize,
     hiddenSections: resume.hiddenSections,
+    sectionOrder: resume.sectionOrder,
     ...overrides,
   });
 }

@@ -24,7 +24,7 @@ import { buildResumeLayoutFromRecord } from '@/lib/resume-builder/serve';
 import { resumeBuilderErrorResponse } from '@/lib/resume-builder/route-errors';
 import { serialiseLayout } from '@/lib/resume-builder/wire';
 import { DENSITY_VALUES, isAccentKey, isPageSizeKey, isTemplateKey } from '@/lib/resume-builder/templates';
-import { HIDABLE_SECTION_KEYS } from '@/lib/resume-builder/schema';
+import { HIDABLE_SECTION_KEYS, RESUME_SECTION_KEYS, type ResumeSectionKey } from '@/lib/resume-builder/schema';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -58,6 +58,7 @@ export async function GET(request: Request, { params }: Params) {
       const densityRaw = url.searchParams.get('density');
       const pageSizeRaw = url.searchParams.get('pageSize');
       const hiddenRaw = url.searchParams.get('hiddenSections');
+      const orderRaw = url.searchParams.get('sectionOrder');
 
       // An unrecognised value falls back to the stored one rather than
       // failing: a stale bookmark with `?template=wordart` should still render a
@@ -77,6 +78,13 @@ export async function GET(request: Request, { params }: Params) {
               )
           : undefined;
 
+      const requestedOrder = orderRaw?.split(',') ?? [];
+      const sectionOrder = requestedOrder.length === RESUME_SECTION_KEYS.length &&
+        new Set(requestedOrder).size === RESUME_SECTION_KEYS.length &&
+        requestedOrder.every((value) => (RESUME_SECTION_KEYS as readonly string[]).includes(value))
+        ? requestedOrder as ResumeSectionKey[]
+        : undefined;
+
       try {
         const resume = await getResume({ userId, resumeId: id });
         const layout = await buildResumeLayoutFromRecord(resume, {
@@ -85,6 +93,7 @@ export async function GET(request: Request, { params }: Params) {
           density: density ?? resume.density,
           pageSize: isPageSizeKey(pageSizeRaw) ? pageSizeRaw : resume.pageSize,
           hiddenSections: hiddenSections ?? resume.hiddenSections,
+          sectionOrder: sectionOrder ?? resume.sectionOrder,
         });
 
         return privateNoStore(jsonOk({ layout: serialiseLayout(layout) }, request));

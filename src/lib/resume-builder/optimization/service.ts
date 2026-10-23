@@ -22,7 +22,7 @@
  * a credit, and re-resolves every operation against the live document first.
  */
 
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { prisma } from '@/lib/prisma';
 import { getUserPreferences, hasPrismaUniqueViolation } from '@/lib/db-helpers';
 import { requireEntitlement, type Entitlement } from '@/lib/billing/subscriptions';
@@ -46,7 +46,7 @@ import {
   JOB_INTELLIGENCE_MIN_JOB_CHARS,
 } from './limits';
 import { buildDeterministicBlock } from './prompt';
-import { resumeContentToText, verifyProposal } from './verify';
+import { findNewClaims, resumeContentToText, verifyProposal } from './verify';
 import {
   OPTIMIZATION_ERROR_MESSAGES,
   OPTIMIZATION_SCHEMA_VERSION,
@@ -129,6 +129,26 @@ export class EditedTextRejectedError extends Error {
       'Your edited text introduced something your resume does not support, so nothing was changed. Take the figure out, or add it to your resume first.',
     );
     this.name = 'EditedTextRejectedError';
+  }
+}
+
+export class InformationGapNotFoundError extends Error {
+  readonly code = 'NOT_FOUND';
+  readonly status = 404;
+
+  constructor() {
+    super('This question is no longer available. Run optimisation again.');
+    this.name = 'InformationGapNotFoundError';
+  }
+}
+
+export class RefinedAnswerRejectedError extends Error {
+  readonly code = 'VALIDATION_FAILED';
+  readonly status = 422;
+
+  constructor() {
+    super('The rewrite added a detail that was not in your answer. Nothing was changed; edit the answer or keep your own wording.');
+    this.name = 'RefinedAnswerRejectedError';
   }
 }
 
@@ -788,6 +808,67 @@ export async function getOptimizationForResume(params: {
     data: row.data as OptimizationResult,
     staleReasons,
   };
+}
+
+/** Refine one candidate-authored answer; the answer is never written automatically. */
+export async function refineInformationGapAnswer(params: {
+  userId: string;
+  resumeId: string;
+  optimizationId: string;
+  question: string;
+  why: string;
+  answer: string;
+  route: string;
+  provider?: ResumeOptimizationAiProvider;
+}): Promise<{ refinedAnswer: string; creditsConsumed: number }> {
+  const stored = await getOptimizationForResume({
+    userId: params.userId,
+    resumeId: params.resumeId,
+    optimizationId: params.optimizationId,
+  });
+  if (!stored.optimization.isFresh) throw new OptimizationStaleError();
+
+  const gap = stored.data.informationGaps.find(
+    (item) => item.question === params.question && item.why === params.why,
+  );
+  if (!gap) throw new InformationGapNotFoundError();
+
+  const entitlements = await requireEntitlement(params.userId, RESUME_OPTIMIZATION_FEATURE);
+  let creditsConsumed = 0;
+  if (!entitlements.isAdmin) {
+    const usage = await consumeUsage(params.userId, RESUME_OPTIMIZATION_FEATURE, 1, {
+      limit: entitlements.limits.aiCredits,
+      idempotencyKey: `resume-gap-answer:${randomUUID()}`,
+    });
+    creditsConsumed = usage.consumed;
+  }
+
+  const provider = params.provider ?? resolveOptimizationAiProvider();
+  if (!provider.refineAnswer) {
+    throw new ResumeOptimizationAiError('AI_UNAVAILABLE', false);
+  }
+  const refinedAnswer = (await provider.refineAnswer({
+    question: gap.question,
+    why: gap.why,
+    answer: params.answer,
+  })).trim();
+  if (!refinedAnswer) throw new ResumeOptimizationAiError('AI_EMPTY_RESPONSE', true);
+
+  const violations = findNewClaims(refinedAnswer, {
+    resumeText: params.answer,
+    profileText: '',
+    jobText: '',
+    jobMetaText: '',
+  });
+  if (violations.length > 0) throw new RefinedAnswerRejectedError();
+
+  await logImportantInfo({
+    event: 'resume_information_gap_answer_refined',
+    userId: params.userId,
+    route: params.route,
+    context: { resumeId: params.resumeId, optimizationId: params.optimizationId, creditsConsumed },
+  });
+  return { refinedAnswer, creditsConsumed };
 }
 
 /**

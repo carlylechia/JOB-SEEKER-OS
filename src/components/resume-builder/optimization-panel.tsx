@@ -40,13 +40,14 @@ import {
   X,
 } from 'lucide-react';
 
-import type { OptimizationResult, ReviewOperation } from '@/lib/resume-builder/optimization/schema';
+import { optimizationResultSchema, type OptimizationResult, type ReviewOperation } from '@/lib/resume-builder/optimization/schema';
 
 type Props = {
   resumeId: string;
   revision: number;
   targetJobId: string | null;
   canOptimize: boolean;
+  hasUnsavedChanges: boolean;
   onApplied: (next: { revision: number; content: unknown; layout: unknown }) => void;
 };
 
@@ -75,6 +76,7 @@ type Wire = {
   } | null;
   access: { canOptimize: boolean; plan: string; aiCreditsRemaining: number | null };
   privacyNotice: string;
+  resume: { id: string; name: string; revision: number };
 };
 
 type Phase = 'loading' | 'idle' | 'running' | 'error';
@@ -90,6 +92,7 @@ export function ResumeOptimizationPanel({
   revision,
   targetJobId,
   canOptimize,
+  hasUnsavedChanges,
   onApplied,
 }: Props) {
   const [state, setState] = useState<Wire | null>(null);
@@ -99,13 +102,20 @@ export function ResumeOptimizationPanel({
   const [rejected, setRejected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<string | null>(null);
   const [editedText, setEditedText] = useState<Record<string, string>>({});
+  const [gapAnswers, setGapAnswers] = useState<Record<string, string>>({});
+  const [refinedAnswers, setRefinedAnswers] = useState<Record<string, string>>({});
+  const [gapErrors, setGapErrors] = useState<Record<string, string>>({});
+  const [improvingGap, setImprovingGap] = useState<string | null>(null);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [applying, setApplying] = useState(false);
   // A ref, not state: a double-click inside one render must not be able to fire
   // two provider calls, and a ref updates synchronously.
   const inFlight = useRef(false);
+  const loadGeneration = useRef(0);
+  const answerInFlight = useRef<string | null>(null);
 
   const load = useCallback(async () => {
+    const generation = ++loadGeneration.current;
     try {
       const response = await fetch(`/api/resumes/${resumeId}/optimization`, {
         cache: 'no-store',
@@ -113,17 +123,44 @@ export function ResumeOptimizationPanel({
       });
       if (!response.ok) throw new Error('unavailable');
       const data = (await response.json()) as Wire;
+      if (generation !== loadGeneration.current) return;
+      if (data.optimization) {
+        const parsed = optimizationResultSchema.safeParse(data.optimization.data);
+        if (!parsed.success) {
+          data.optimization = null;
+          setMessage('We could not display an older suggestion set safely. Run optimisation again for fresh suggestions.');
+        } else {
+          data.optimization.data = parsed.data;
+        }
+      }
       setState(data);
       setPhase('idle');
     } catch {
+      if (generation !== loadGeneration.current) return;
       setPhase('error');
       setMessage('We could not load your optimisation history.');
     }
   }, [resumeId]);
 
   useEffect(() => {
-    void load();
+    return () => { loadGeneration.current += 1; };
   }, [load]);
+
+  useEffect(() => {
+    setAccepted(new Set());
+    setRejected(new Set());
+    setEditedText({});
+    setRefinedAnswers({});
+    setGapErrors({});
+    setEditing(null);
+    void load();
+  }, [revision, targetJobId, load]);
+
+  const isStale = state?.optimization
+    ? !state.optimization.isFresh ||
+      state.optimization.data.meta.baseRevision !== revision ||
+      state.job?.id !== targetJobId
+    : false;
 
   const run = useCallback(async () => {
     if (inFlight.current) return;
@@ -182,10 +219,9 @@ export function ResumeOptimizationPanel({
       const payload = await response.json().catch(() => null);
 
       if (!response.ok) {
-        setMessage(
-          (payload?.error?.message as string | undefined) ??
-            'Those changes could not be saved. Nothing was changed.',
-        );
+        setMessage(response.status === 409
+          ? 'Your resume or target job changed while these suggestions were open. The latest status is shown below; run optimisation again before applying.'
+          : (payload?.error?.message as string | undefined) ?? 'Those changes could not be saved. Nothing was changed.');
         await load();
         return;
       }
@@ -212,6 +248,53 @@ export function ResumeOptimizationPanel({
     }
   }, [state, resumeId, accepted, editedText, revision, onApplied, load]);
 
+  const refineAnswer = useCallback(async (params: {
+    key: string;
+    optimizationId: string;
+    question: string;
+    why: string;
+  }) => {
+    if (answerInFlight.current || hasUnsavedChanges || isStale) return;
+    const answer = gapAnswers[params.key]?.trim() ?? '';
+    if (!answer) return;
+    answerInFlight.current = params.key;
+    setImprovingGap(params.key);
+    setGapErrors((current) => ({ ...current, [params.key]: '' }));
+    try {
+      const response = await fetch(`/api/resumes/${resumeId}/optimization/answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          optimizationId: params.optimizationId,
+          question: params.question,
+          why: params.why,
+          answer,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        setGapErrors((current) => ({
+          ...current,
+          [params.key]: (payload?.error?.message as string | undefined) ?? 'We could not improve that answer. Please try again.',
+        }));
+        if (response.status === 409) await load();
+        return;
+      }
+      if (typeof payload?.refinedAnswer !== 'string' || payload.refinedAnswer.trim().length === 0) {
+        setGapErrors((current) => ({ ...current, [params.key]: 'The rewrite was empty. Your answer is still here; please try again.' }));
+        return;
+      }
+      setRefinedAnswers((current) => ({ ...current, [params.key]: payload.refinedAnswer.trim() }));
+      await load();
+    } catch {
+      setGapErrors((current) => ({ ...current, [params.key]: 'We could not reach the AI service. Your answer is still here.' }));
+    } finally {
+      answerInFlight.current = null;
+      setImprovingGap(null);
+    }
+  }, [resumeId, gapAnswers, hasUnsavedChanges, isStale, load]);
+
   if (phase === 'loading') {
     return (
       <section aria-labelledby="optimization-heading" className="card-pad">
@@ -226,7 +309,6 @@ export function ResumeOptimizationPanel({
   }
 
   const result = state?.optimization?.data ?? null;
-  const isStale = state?.optimization ? !state.optimization.isFresh : false;
   const operations = result?.operations ?? [];
   const visible = operations.filter((operation) => !rejected.has(operation.id));
 
@@ -268,7 +350,7 @@ export function ResumeOptimizationPanel({
         <button
           type="button"
           className="btn-primary"
-          disabled={!targetJobId || !canOptimize || phase === 'running'}
+          disabled={!targetJobId || !canOptimize || hasUnsavedChanges || phase === 'running'}
           onClick={() => void run()}
         >
           {phase === 'running' ? (
@@ -297,6 +379,12 @@ export function ResumeOptimizationPanel({
           </span>
         ) : null}
       </div>
+
+      {hasUnsavedChanges ? (
+        <p className="rounded-xl border border-warn/40 bg-warn/5 p-3 text-xs text-warn-text">
+          Save your resume edits before running or accepting suggestions. Suggestions are checked against the saved version.
+        </p>
+      ) : null}
 
       {showPrivacy ? (
         <p className="rounded-xl border border-line bg-surface-sunken p-3 text-xs text-ink-2">
@@ -391,6 +479,7 @@ export function ResumeOptimizationPanel({
                           }`}
                           aria-label={isAccepted ? `Stop accepting ${operation.sectionLabel}` : `Accept ${operation.sectionLabel}`}
                           aria-pressed={isAccepted}
+                          disabled={isStale || hasUnsavedChanges || applying}
                           onClick={() => {
                             setAccepted((current) => {
                               const next = new Set(current);
@@ -413,6 +502,7 @@ export function ResumeOptimizationPanel({
                             rejected.has(operation.id) ? 'border-danger bg-danger/10 text-danger-text' : 'border-line text-ink-2'
                           }`}
                           aria-label={`Dismiss ${operation.sectionLabel}`}
+                          disabled={isStale || hasUnsavedChanges || applying}
                           onClick={() => {
                             setRejected((current) => new Set(current).add(operation.id));
                             setAccepted((current) => {
@@ -552,15 +642,82 @@ export function ResumeOptimizationPanel({
             <div className="rounded-xl border border-line bg-surface p-4">
               <p className="text-sm font-medium text-ink">Things only you can answer</p>
               <p className="mt-1 text-xs text-muted">
-                We did not fill these in. A number we invent is worse than no number.
+                Add the detail you know, then ask AI to make your wording clearer. Your answer is never added to the resume automatically.
               </p>
-              <ul className="mt-3 space-y-2 text-sm text-ink-2">
-                {result.informationGaps.map((gap) => (
-                  <li key={gap.question}>
-                    <p className="text-ink">{gap.question}</p>
-                    <p className="text-xs text-muted">{gap.why}</p>
-                  </li>
-                ))}
+              <ul className="mt-4 space-y-4">
+                {result.informationGaps.map((gap, index) => {
+                  const key = `${gap.section}-${gap.question}`;
+                  const answer = gapAnswers[key] ?? '';
+                  const refined = refinedAnswers[key];
+                  return (
+                    <li key={key} className="rounded-xl border border-line bg-card p-4">
+                      <label htmlFor={`gap-answer-${index}`} className="block text-sm font-medium text-ink">
+                        {gap.question}
+                      </label>
+                      <p className="mt-1 text-xs leading-relaxed text-muted">{gap.why}</p>
+                      <textarea
+                        id={`gap-answer-${index}`}
+                        className="input mt-3 resize-y"
+                        rows={3}
+                        maxLength={2000}
+                        value={answer}
+                        placeholder="Write what happened in your own words…"
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setGapAnswers((current) => ({ ...current, [key]: value }));
+                          setRefinedAnswers((current) => {
+                            const next = { ...current };
+                            delete next[key];
+                            return next;
+                          });
+                          setGapErrors((current) => ({ ...current, [key]: '' }));
+                        }}
+                      />
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          disabled={!answer.trim() || isStale || hasUnsavedChanges || !canOptimize || improvingGap !== null}
+                          onClick={() => void refineAnswer({
+                            key,
+                            optimizationId: state?.optimization?.id ?? '',
+                            question: gap.question,
+                            why: gap.why,
+                          })}
+                        >
+                          {improvingGap === key ? (
+                            <Loader className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <Sparkles className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                          )}
+                          Improve answer
+                        </button>
+                        <span className="text-xs text-muted">Uses 1 AI credit. Review every change.</span>
+                      </div>
+                      {gapErrors[key] ? <p role="alert" className="mt-2 text-xs text-danger-text">{gapErrors[key]}</p> : null}
+                      {refined ? (
+                        <div className="mt-3 rounded-lg border border-accent/30 bg-accent/[0.04] p-3">
+                          <p className="text-xs font-medium text-ink-2">Suggested wording</p>
+                          <p className="mt-1 whitespace-pre-wrap text-sm text-ink">{refined}</p>
+                          <button
+                            type="button"
+                            className="mt-2 text-xs font-medium text-accent-text underline underline-offset-2"
+                            onClick={() => {
+                              setGapAnswers((current) => ({ ...current, [key]: refined }));
+                              setRefinedAnswers((current) => {
+                                const next = { ...current };
+                                delete next[key];
+                                return next;
+                              });
+                            }}
+                          >
+                            Use this wording in my answer
+                          </button>
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ) : null}
@@ -569,7 +726,7 @@ export function ResumeOptimizationPanel({
             <button
               type="button"
               className="btn-primary"
-              disabled={accepted.size === 0 || isStale || applying}
+              disabled={accepted.size === 0 || isStale || hasUnsavedChanges || applying}
               onClick={() => void apply()}
             >
               {applying ? (

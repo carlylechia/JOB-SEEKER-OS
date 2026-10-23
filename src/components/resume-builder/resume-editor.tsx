@@ -22,7 +22,7 @@
  * admits what it is showing.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
@@ -30,6 +30,7 @@ import {
   Copy,
   Download,
   Eye,
+  GripVertical,
   Loader,
   Settings2,
   Scissors,
@@ -56,6 +57,7 @@ import {
 } from './section-editors';
 import { TemplatePicker, type AccentOption, type TemplateOption } from './template-picker';
 import { ResumeOptimizationPanel } from './optimization-panel';
+import { OptimizationPanelBoundary } from './optimization-panel-boundary';
 import { OnePageReviewPanel } from './one-page-review-panel';
 import { SelectField, TextField } from './fields';
 import type { PageSizeKey } from '@/lib/resume-builder/templates';
@@ -70,6 +72,7 @@ type SerialisedResume = {
   accentKey: string;
   density: number;
   hiddenSections: string[];
+  sectionOrder: ResumeSectionKey[];
   revision: number;
   targetJobId: string | null;
   targetJob: { id: string; title: string; company: string } | null;
@@ -114,6 +117,7 @@ export function ResumeEditor({
   const [accentKey, setAccentKey] = useState(resume.accentKey);
   const [density, setDensity] = useState(resume.density);
   const [hiddenSections, setHiddenSections] = useState<string[]>(resume.hiddenSections);
+  const [sectionOrder, setSectionOrder] = useState<ResumeSectionKey[]>(resume.sectionOrder);
   const [targetJobId, setTargetJobId] = useState<string | null>(resume.targetJobId);
   const [revision, setRevision] = useState(resume.revision);
 
@@ -128,18 +132,31 @@ export function ResumeEditor({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
   const [previewWidth, setPreviewWidth] = useState(640);
+  const [draggingSection, setDraggingSection] = useState<ResumeSectionKey | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
+  const savedRef = useRef({
+    content: resume.content,
+    name: resume.name,
+    templateKey: resume.templateKey,
+    pageSize: resume.pageSize,
+    accentKey: resume.accentKey,
+    density: resume.density,
+    hiddenSections: resume.hiddenSections,
+    sectionOrder: resume.sectionOrder,
+    targetJobId: resume.targetJobId,
+  });
 
   const dirty =
     saveState === 'dirty' ||
-    JSON.stringify(content) !== JSON.stringify(resume.content) ||
-    name !== resume.name ||
-    templateKey !== resume.templateKey ||
-    pageSize !== resume.pageSize ||
-    accentKey !== resume.accentKey ||
-    density !== resume.density ||
-    JSON.stringify(hiddenSections) !== JSON.stringify(resume.hiddenSections) ||
-    targetJobId !== resume.targetJobId;
+    JSON.stringify(content) !== JSON.stringify(savedRef.current.content) ||
+    name !== savedRef.current.name ||
+    templateKey !== savedRef.current.templateKey ||
+    pageSize !== savedRef.current.pageSize ||
+    accentKey !== savedRef.current.accentKey ||
+    density !== savedRef.current.density ||
+    JSON.stringify(hiddenSections) !== JSON.stringify(savedRef.current.hiddenSections) ||
+    JSON.stringify(sectionOrder) !== JSON.stringify(savedRef.current.sectionOrder) ||
+    targetJobId !== savedRef.current.targetJobId;
 
   const qualityIssues = useMemo(
     () => checkResumeQuality(content, layout.pages.length),
@@ -175,12 +192,13 @@ export function ResumeEditor({
    * unsaved edits are untouched.
    */
   const refreshPreview = useCallback(
-    async (settings: { templateKey?: string; accentKey?: string; density?: number; hidden?: string[]; pageSize?: PageSizeKey }) => {
+    async (settings: { templateKey?: string; accentKey?: string; density?: number; hidden?: string[]; pageSize?: PageSizeKey; order?: ResumeSectionKey[] }) => {
       const params = new URLSearchParams({
         template: settings.templateKey ?? templateKey,
         accent: settings.accentKey ?? accentKey,
         density: String(settings.density ?? density),
         hiddenSections: (settings.hidden ?? hiddenSections).join(','),
+        sectionOrder: (settings.order ?? sectionOrder).join(','),
         pageSize: settings.pageSize ?? pageSize,
       });
       try {
@@ -196,7 +214,7 @@ export function ResumeEditor({
         // layout stays on screen rather than blanking the panel.
       }
     },
-    [resume.id, templateKey, accentKey, density, hiddenSections, pageSize],
+    [resume.id, templateKey, accentKey, density, hiddenSections, pageSize, sectionOrder],
   );
 
   const save = useCallback(async () => {
@@ -233,6 +251,7 @@ export function ResumeEditor({
           accentKey,
           density,
           hiddenSections,
+          sectionOrder,
           targetJobId,
         }),
       });
@@ -256,8 +275,10 @@ export function ResumeEditor({
       }
 
       setContent(payload.resume.content);
+      setName(payload.resume.name);
       setRevision(payload.resume.revision);
       setLayout(payload.layout);
+      savedRef.current = { content: parsed.data, name: name.trim(), templateKey, pageSize, accentKey, density, hiddenSections, sectionOrder, targetJobId };
       setSaveState('saved');
       setMessage('Saved.');
       router.refresh();
@@ -265,7 +286,7 @@ export function ResumeEditor({
       setSaveState('error');
       setMessage('We could not reach the server. Your edits are still here — try saving again.');
     }
-  }, [saveState, content, name, revision, templateKey, pageSize, accentKey, density, hiddenSections, targetJobId, resume.id, router]);
+  }, [saveState, content, name, revision, templateKey, pageSize, accentKey, density, hiddenSections, sectionOrder, targetJobId, resume.id, router]);
 
   const duplicate = useCallback(async () => {
     setBusy(true);
@@ -320,6 +341,29 @@ export function ResumeEditor({
 
   const selectedJob = targetableJobs.find((job) => job.id === targetJobId) ?? null;
 
+  const reorderSection = useCallback((section: ResumeSectionKey, deltaOrTarget: number | ResumeSectionKey) => {
+    const from = sectionOrder.indexOf(section);
+    const to = typeof deltaOrTarget === 'number'
+      ? from + deltaOrTarget
+      : sectionOrder.indexOf(deltaOrTarget);
+    if (from < 0 || to < 0) return;
+    const boundedTarget = Math.max(0, Math.min(sectionOrder.length - 1, to));
+    if (from === boundedTarget) return;
+    const next = [...sectionOrder];
+    next.splice(from, 1);
+    next.splice(boundedTarget, 0, section);
+    setSectionOrder(next);
+    setSaveState('dirty');
+    void refreshPreview({ order: next });
+  }, [sectionOrder, refreshPreview]);
+
+  const handleSectionDrop = useCallback((target: ResumeSectionKey, event: ReactDragEvent<HTMLLIElement>) => {
+    event.preventDefault();
+    const source = event.dataTransfer.getData('text/plain') as ResumeSectionKey;
+    if ((RESUME_SECTION_KEYS as readonly string[]).includes(source)) reorderSection(source, target);
+    setDraggingSection(null);
+  }, [reorderSection]);
+
   return (
     <div className="space-y-6">
       {/* Title, target job and the actions that affect the whole document. */}
@@ -329,8 +373,10 @@ export function ResumeEditor({
             <h1 id="resume-heading" className="title">
               {name || 'Untitled resume'}
             </h1>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <TextField label="Resume name" value={name} maxLength={120} onChange={(value) => { setName(value); setSaveState('dirty'); }} />
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+              <div className="min-w-0">
+                <TextField label="Resume name" value={name} maxLength={120} onChange={(value) => { setName(value); setSaveState('dirty'); }} />
+              </div>
               <SelectField
                 label="Target job"
                 value={targetJobId ?? ''}
@@ -342,12 +388,12 @@ export function ResumeEditor({
                   { value: '', label: 'No specific job' },
                   ...targetableJobs.map((job) => ({
                     value: job.id,
-                    label: `${job.title} · ${job.company}${job.hasDescription ? '' : ' (no description)'}`,
+                    label: `${job.title} · ${job.company}`,
                   })),
                 ]}
               />
             </div>
-            <p className="text-xs text-muted">
+            <p className="min-w-0 text-xs leading-relaxed text-muted">
               {selectedJob
                 ? selectedJob.hasDescription
                   ? 'Optimisation will use this job’s full description.'
@@ -474,26 +520,52 @@ export function ResumeEditor({
               with a keyboard and is announced, rather than a row of buttons
               that only looks like tabs. */}
           <nav aria-label="Resume sections">
+            <p className="sr-only">Drag sections to change their order, or use the move earlier and move later buttons.</p>
             <ul className="flex flex-wrap gap-2">
-              {RESUME_SECTION_KEYS.map((section) => {
+              {sectionOrder.map((section, index) => {
                 const active = activeSection === section;
                 const count = sectionCounts[section];
                 return (
-                  <li key={section}>
+                  <li
+                    key={section}
+                    onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }}
+                    onDrop={(event) => handleSectionDrop(section, event)}
+                    className={`flex min-w-0 items-center overflow-hidden rounded-xl border transition-colors ${
+                      active ? 'border-accent bg-accent/10' : 'border-line bg-surface hover:bg-surface-hover'
+                    } ${draggingSection === section ? 'opacity-50' : ''}`}
+                  >
                     <button
                       type="button"
                       onClick={() => setActiveSection(section)}
                       aria-current={active ? 'true' : undefined}
-                      className={`rounded-xl border px-3 py-1.5 text-sm transition-colors ${
-                        active
-                          ? 'border-accent bg-accent/10 font-medium text-ink'
-                          : 'border-line bg-surface text-ink-2 hover:bg-surface-hover'
-                      }`}
+                      className={`min-w-0 truncate px-3 py-1.5 text-sm ${active ? 'font-medium text-ink' : 'text-ink-2'}`}
                     >
                       {SECTION_LABELS[section]}
-                      {count > 0 ? (
-                        <span className="ml-1.5 text-xs text-muted">{count}</span>
-                      ) : null}
+                      {count > 0 ? <span className="ml-1.5 text-xs text-muted">{count}</span> : null}
+                    </button>
+                    <button
+                      type="button"
+                      draggable
+                      onDragStart={(event) => {
+                        event.dataTransfer.effectAllowed = 'move';
+                        event.dataTransfer.setData('text/plain', section);
+                        setDraggingSection(section);
+                      }}
+                      onDragEnd={() => setDraggingSection(null)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'ArrowUp' && index > 0) {
+                          event.preventDefault();
+                          reorderSection(section, -1);
+                        } else if (event.key === 'ArrowDown' && index < sectionOrder.length - 1) {
+                          event.preventDefault();
+                          reorderSection(section, 1);
+                        }
+                      }}
+                      className="flex h-8 w-8 shrink-0 cursor-grab touch-none items-center justify-center border-l border-line/70 text-muted hover:text-ink active:cursor-grabbing"
+                      aria-label={`Reorder ${SECTION_LABELS[section]}. Use the up and down arrow keys to move.`}
+                      title="Drag to reorder, or focus and use the up/down arrow keys"
+                    >
+                      <GripVertical className="h-4 w-4" aria-hidden="true" />
                     </button>
                   </li>
                 );
@@ -537,19 +609,23 @@ export function ResumeEditor({
             ) : null}
           </section>
 
-          <ResumeOptimizationPanel
-            resumeId={resume.id}
-            revision={revision}
-            targetJobId={targetJobId}
-            canOptimize={access.canOptimize}
-            onApplied={({ revision: nextRevision, content: nextContent, layout: nextLayout }) => {
-              setRevision(nextRevision);
-              setContent(nextContent as ResumeContent);
-              setLayout(nextLayout as LayoutDocument);
-              setSaveState('idle');
-              setMessage('Saved.');
-            }}
-          />
+          <OptimizationPanelBoundary>
+            <ResumeOptimizationPanel
+              resumeId={resume.id}
+              revision={revision}
+              targetJobId={targetJobId}
+              canOptimize={access.canOptimize}
+              hasUnsavedChanges={dirty}
+              onApplied={({ revision: nextRevision, content: nextContent, layout: nextLayout }) => {
+                setRevision(nextRevision);
+                setContent(nextContent as ResumeContent);
+                setLayout(nextLayout as LayoutDocument);
+                savedRef.current = { ...savedRef.current, content: nextContent as ResumeContent };
+                setSaveState('idle');
+                setMessage('Saved.');
+              }}
+            />
+          </OptimizationPanelBoundary>
 
           <section aria-labelledby="danger-heading" className="card-pad">
             <h2 id="danger-heading" className="text-base font-semibold text-ink">
