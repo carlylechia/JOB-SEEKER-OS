@@ -107,6 +107,7 @@ export default function MaterialEditor() {
   const [generating, setGenerating] = useState(false);
   const [copying, setCopying] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
@@ -292,6 +293,29 @@ export default function MaterialEditor() {
     }
   }, [result, materialId, editVersion, form.type]);
 
+  const handleDelete = useCallback(async () => {
+    if (!materialId || !window.confirm('Permanently delete this material? This cannot be undone.')) {
+      return;
+    }
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/application-materials/${materialId}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.error?.message ?? 'Could not delete this material.');
+        return;
+      }
+      router.replace('/application-materials');
+    } catch {
+      setError('Could not delete this material.');
+    } finally {
+      setDeleting(false);
+    }
+  }, [materialId, router]);
+
   const handleCopy = async () => {
     if (!result) return;
     setCopying(true);
@@ -367,9 +391,19 @@ export default function MaterialEditor() {
         }
         action={
           mode === 'edit' && materialId ? (
-            <Link href="/application-materials" className="btn-secondary text-xs">
-              ← Back to library
-            </Link>
+            <div className="flex gap-2">
+              <Link href="/application-materials" className="btn-secondary text-xs">
+                ← Back to library
+              </Link>
+              <button
+                type="button"
+                onClick={() => void handleDelete()}
+                disabled={deleting}
+                className="btn-secondary text-xs text-danger-text"
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
           ) : null
         }
       />

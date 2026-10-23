@@ -20,7 +20,7 @@ import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { saveMaterialRequestSchema, deleteMaterialRequestSchema } from '@/lib/application-materials/requests';
+import { saveMaterialRequestSchema } from '@/lib/application-materials/requests';
 import { serialiseMaterialDetail } from '@/lib/application-materials/wire';
 import { applicationMaterialErrorResponse } from '@/lib/application-materials/route-errors';
 
@@ -203,20 +203,15 @@ export async function DELETE(request: Request, { params }: Params) {
         return apiError('RATE_LIMITED', 'Too many requests. Please wait a moment.', { request });
       }
 
-      const existing = await prisma.applicationMaterial.findFirst({
+      // Scope the mutation itself to the caller, and make repeated deletes
+      // return the same non-disclosing 404 as missing or foreign materials.
+      // The revision relation uses SetNull, so successors remain intact.
+      const deleted = await prisma.applicationMaterial.deleteMany({
         where: { id, userId },
-        select: { id: true },
       });
-      if (!existing) {
+      if (deleted.count === 0) {
         return apiError('NOT_FOUND', 'Material not found.', { request });
       }
-
-      // Archive rather than hard-delete: any revision that chains from this one
-      // keeps its link back, and the row stays meaningful as provenance.
-      await prisma.applicationMaterial.update({
-        where: { id },
-        data: { status: 'ARCHIVED' },
-      });
 
       return privateNoStore(jsonOk({ ok: true }, request));
     },

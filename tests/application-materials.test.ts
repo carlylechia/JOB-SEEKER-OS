@@ -1064,7 +1064,7 @@ describe('persistence', () => {
     expect(revision.revision).toBe(2);
   });
 
-  it('archives rather than hard-deletes', async () => {
+  it('can retain materials in the archived library section', async () => {
     const { user } = await setup({ plan: 'PRO' });
     const saved = await saveMaterial(user.id);
 
@@ -1075,6 +1075,40 @@ describe('persistence', () => {
 
     const archived = await prisma.applicationMaterial.findUnique({ where: { id: saved.id } });
     expect(archived?.status).toBe('ARCHIVED');
+  });
+
+  it('keeps a successor revision when its predecessor is deleted', async () => {
+    const { user } = await setup({ plan: 'PRO' });
+    const original = await saveMaterial(user.id, { title: 'Version 1' });
+    const revision = await prisma.applicationMaterial.create({
+      data: {
+        userId: user.id,
+        type: 'COVER_LETTER',
+        title: 'Version 1 (revision)',
+        content: 'Revised draft',
+        subject: null,
+        jobId: null,
+        status: 'DRAFT',
+        origin: 'AI_REVISED',
+        supersedesId: original.id,
+        inputFingerprint: 'delete-predecessor',
+        schemaVersion: 1,
+        promptVersion: 1,
+        generationStatus: 'COMPLETED',
+        revision: 2,
+      },
+    });
+
+    await prisma.applicationMaterial.delete({ where: { id: original.id } });
+
+    const deletedOriginal = await prisma.applicationMaterial.findUnique({
+      where: { id: original.id },
+    });
+    const retainedRevision = await prisma.applicationMaterial.findUnique({
+      where: { id: revision.id },
+    });
+    expect(deletedOriginal).toBeNull();
+    expect(retainedRevision?.supersedesId).toBeNull();
   });
 
   it('prevents one user from reading another user\'s material', async () => {

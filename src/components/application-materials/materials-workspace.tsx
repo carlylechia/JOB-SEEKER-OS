@@ -65,6 +65,8 @@ export default function ApplicationMaterialsPage() {
   const [materials, setMaterials] = useState<SerialisedMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
   const load = useCallback(async () => {
@@ -79,6 +81,30 @@ export default function ApplicationMaterialsPage() {
       setIsLoading(false);
     }
   }, []);
+
+  const handleDelete = async (material: SerialisedMaterial) => {
+    if (!window.confirm(`Permanently delete "${material.title}"? This cannot be undone.`)) {
+      return;
+    }
+    setDeletingId(material.id);
+    setActionError(null);
+    try {
+      const response = await fetch(`/api/application-materials/${material.id}`, {
+        method: 'DELETE',
+      });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(json.error?.message ?? 'Could not delete this material.');
+      }
+      setMaterials((current) => current.filter((item) => item.id !== material.id));
+    } catch (deleteError) {
+      setActionError(
+        deleteError instanceof Error ? deleteError.message : 'Could not delete this material.',
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     void load();
@@ -118,6 +144,12 @@ export default function ApplicationMaterialsPage() {
           <button type="button" className="btn-secondary text-xs" onClick={() => void load()}>
             Try again
           </button>
+        </div>
+      )}
+
+      {actionError && (
+        <div className="rounded-xl border border-danger/25 bg-danger/[0.07] px-4 py-3 text-sm text-danger-text" role="alert">
+          {actionError}
         </div>
       )}
 
@@ -188,6 +220,14 @@ export default function ApplicationMaterialsPage() {
                   >
                     Open
                   </Link>
+                  <button
+                    type="button"
+                    className="btn-secondary text-xs shrink-0 text-danger-text"
+                    disabled={deletingId !== null}
+                    onClick={() => void handleDelete(material)}
+                  >
+                    {deletingId === material.id ? 'Deleting…' : 'Delete'}
+                  </button>
                 </div>
               );
             })}
