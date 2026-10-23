@@ -15,7 +15,7 @@
  *  - It does not call an AI provider. Exporting a saved document consumes no
  *    credit, is not metered, and works identically on Free and on Premium.
  *  - It does not accept any template code, HTML, CSS or script. The renderer is
- *    a switch over three known styles and a fixed geometry. There is nowhere for
+ *    a switch over four known styles and a fixed geometry. There is nowhere for
  *    a user-supplied string to become markup.
  *  - It does not trust a path. The resume is loaded with `{ id, userId }`, and
  *    the filename in `Content-Disposition` is derived from the server-known
@@ -34,6 +34,7 @@ import { getResume } from '@/lib/resume-builder/documents';
 import { buildResumeLayoutFromRecord, renderResumePdf } from '@/lib/resume-builder/serve';
 import { resumeDownloadHeaders } from '@/lib/resume-builder/download';
 import { resumeBuilderErrorResponse } from '@/lib/resume-builder/route-errors';
+import { OnePageDoesNotFitError } from '@/lib/resume-builder/one-page-errors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -89,6 +90,9 @@ export async function GET(request: Request, { params }: Params) {
       try {
         const layout = await buildResumeLayoutFromRecord(resume);
         const { bytes, pageCount } = await renderResumePdf(layout);
+        if (resume.origin === 'ONE_PAGE' && pageCount !== 1) {
+          throw new OnePageDoesNotFitError(pageCount);
+        }
 
         await logImportantInfo({
           event: 'resume_pdf_exported',

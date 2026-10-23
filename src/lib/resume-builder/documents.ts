@@ -658,6 +658,63 @@ export async function duplicateResume(params: {
   });
 }
 
+/** Save an explicitly reviewed, measured one-page proposal as a new variant. */
+export async function createOnePageResume(params: {
+  userId: string;
+  sourceResumeId: string;
+  expectedRevision: number;
+  name: string;
+  content: ResumeContent;
+  targetJobId: string | null;
+  templateKey: string;
+  pageSize: string;
+  limit: PlanLimitValue;
+}): Promise<StructuredResumeRecord> {
+  const source = await getResume({ userId: params.userId, resumeId: params.sourceResumeId });
+  if (source.revision !== params.expectedRevision) {
+    throw new ResumeRevisionConflictError(source.revision);
+  }
+
+  if (params.limit !== null) {
+    const used = await countResumes(params.userId);
+    if (used >= params.limit) throw new ResumeLimitExceededError(params.limit, used);
+  }
+
+  const content = reidentifyEntries(resumeContentSchema.parse(params.content));
+  const targetJobId = await resolveTargetJobId(params.userId, params.targetJobId);
+  const templateKey = isTemplateKey(params.templateKey) ? params.templateKey : 'classic-ats';
+  const pageSize = isPageSizeKey(params.pageSize) ? params.pageSize : source.pageSize;
+
+  const row = await prisma.structuredResume.create({
+    data: {
+      userId: params.userId,
+      name: params.name.trim().slice(0, RESUME_MAX_NAME_LENGTH),
+      content: content as unknown as object,
+      templateKey,
+      pageSize,
+      accentKey: 'charcoal',
+      density: 0,
+      hiddenSections: [],
+      revision: 1,
+      origin: 'ONE_PAGE',
+      sourceResumeId: source.id,
+      sourceProfileVersion: source.sourceProfileVersion,
+      targetJobId,
+    },
+    select: { ...LIST_SELECT, targetJob: { select: { id: true, title: true, company: true } } },
+  });
+
+  await logImportantInfo({
+    event: 'one_page_resume_created',
+    userId: params.userId,
+    route: '/api/resumes/[id]/one-page/save',
+    jobId: targetJobId ?? undefined,
+    context: { sourceResumeId: source.id, resumeId: row.id, pageSize, templateKey },
+  });
+
+  return toRecord(row);
+}
+
 /**
  * Apply a partial update.
  *

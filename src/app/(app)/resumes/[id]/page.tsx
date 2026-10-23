@@ -72,6 +72,7 @@ export default async function ResumeEditorPage({ params }: Props) {
       resume={{
         id: resume.id,
         name: resume.name,
+        origin: resume.origin,
         templateKey: resume.templateKey,
         pageSize: resume.pageSize,
         accentKey: resume.accentKey,

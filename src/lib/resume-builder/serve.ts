@@ -14,7 +14,15 @@
 import { buildLayout, type LayoutDocument } from './layout';
 import { getLayoutMetrics, preparePdfEngine, renderPdfLayout } from './pdf';
 import type { ResumeContent } from './schema';
-import { DEFAULT_PAGE_SIZE, getAccent, isAccentKey, isPageSizeKey, isTemplateKey, type Density } from './templates';
+import {
+  DEFAULT_PAGE_SIZE,
+  getAccent,
+  isAccentKey,
+  isPageSizeKey,
+  isTemplateKey,
+  type Density,
+  type PageMargins,
+} from './templates';
 import type { StructuredResumeRecord } from './documents';
 
 export type LayoutSource = {
@@ -23,6 +31,7 @@ export type LayoutSource = {
   accentKey?: string;
   density?: number;
   pageSize?: string;
+  margins?: PageMargins;
   hiddenSections?: readonly string[];
 };
 
@@ -45,6 +54,7 @@ export async function buildResumeLayout(source: LayoutSource): Promise<LayoutDoc
         ? source.density
         : 1) as Density,
       pageSize: isPageSizeKey(source.pageSize) ? source.pageSize : DEFAULT_PAGE_SIZE,
+      margins: source.margins,
       hiddenSections: source.hiddenSections ?? [],
     },
     getLayoutMetrics(),

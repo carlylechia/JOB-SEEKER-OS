@@ -30,6 +30,7 @@ import {
   ResumeOptimizationAiError,
 } from './optimization/service';
 import { OPTIMIZATION_ERROR_MESSAGES, type OptimizationErrorCode } from './optimization/schema';
+import { OnePageDoesNotFitError, OnePageSelectionError } from './one-page-errors';
 
 type Mapped = { code: ApiErrorCode; message: string; meta?: Record<string, unknown> };
 
@@ -55,6 +56,14 @@ function map(error: unknown): Mapped | null {
       code: 'FORBIDDEN',
       message: error.message,
       meta: { limit: error.limit, used: error.used },
+    };
+  }
+
+  if (error instanceof OnePageDoesNotFitError || error instanceof OnePageSelectionError) {
+    return {
+      code: 'VALIDATION_FAILED',
+      message: error.message,
+      ...(error instanceof OnePageDoesNotFitError ? { meta: { pageCount: error.pageCount } } : {}),
     };
   }
 

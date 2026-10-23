@@ -32,6 +32,7 @@ import {
   Eye,
   Loader,
   Settings2,
+  Scissors,
   Trash2,
 } from 'lucide-react';
 
@@ -55,12 +56,15 @@ import {
 } from './section-editors';
 import { TemplatePicker, type AccentOption, type TemplateOption } from './template-picker';
 import { ResumeOptimizationPanel } from './optimization-panel';
+import { OnePageReviewPanel } from './one-page-review-panel';
 import { SelectField, TextField } from './fields';
 import type { PageSizeKey } from '@/lib/resume-builder/templates';
+import { checkResumeQuality } from '@/lib/resume-builder/quality';
 
 type SerialisedResume = {
   id: string;
   name: string;
+  origin: string;
   templateKey: string;
   pageSize: PageSizeKey;
   accentKey: string;
@@ -116,6 +120,7 @@ export function ResumeEditor({
   const [layout, setLayout] = useState<LayoutDocument>(initialLayout);
   const [activeSection, setActiveSection] = useState<ResumeSectionKey>('summary');
   const [showTemplate, setShowTemplate] = useState(false);
+  const [showOnePage, setShowOnePage] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [message, setMessage] = useState('');
@@ -135,6 +140,11 @@ export function ResumeEditor({
     density !== resume.density ||
     JSON.stringify(hiddenSections) !== JSON.stringify(resume.hiddenSections) ||
     targetJobId !== resume.targetJobId;
+
+  const qualityIssues = useMemo(
+    () => checkResumeQuality(content, layout.pages.length),
+    [content, layout.pages.length],
+  );
 
   // The preview measures its own container so it can scale to whatever width the
   // viewport gives it — full width on mobile, a column on desktop.
@@ -347,6 +357,17 @@ export function ResumeEditor({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setShowOnePage((value) => !value)}
+              aria-expanded={showOnePage}
+              disabled={dirty || saveState === 'saving'}
+              title={dirty ? 'Save your current edits before creating a one-page version.' : undefined}
+            >
+              <Scissors className="mr-1.5 h-4 w-4" aria-hidden="true" />
+              {showOnePage ? 'Close one-page' : 'Create a one-page version'}
+            </button>
             <a
               className="btn-secondary"
               href={`/api/resumes/${resume.id}/export.pdf`}
@@ -355,6 +376,10 @@ export function ResumeEditor({
             >
               <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />
               Download PDF
+            </a>
+            <a className="btn-secondary" href={`/api/resumes/${resume.id}/export.docx`}>
+              <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />
+              Download DOCX
             </a>
             <button type="button" className="btn-secondary" onClick={() => void duplicate()} disabled={busy}>
               {busy ? <Loader className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" /> : <Copy className="mr-1.5 h-4 w-4" aria-hidden="true" />}
@@ -429,6 +454,19 @@ export function ResumeEditor({
           </div>
         ) : null}
       </section>
+
+      {showOnePage ? (
+        <OnePageReviewPanel
+          sourceId={resume.id}
+          sourceName={resume.name}
+          sourceRevision={revision}
+          sourcePageSize={pageSize}
+          sourceTargetJobId={targetJobId}
+          targetableJobs={targetableJobs}
+          canOptimize={access.canOptimize}
+          onClose={() => setShowOnePage(false)}
+        />
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
         <div className="min-w-0 space-y-6">
@@ -565,6 +603,25 @@ export function ResumeEditor({
                 </p>
               ) : null}
               <ResumeLayoutPreview layout={layout} availableWidth={previewWidth - 40} />
+              {qualityIssues.length > 0 ? (
+                <section className="mt-4 rounded-xl border border-warn/30 bg-warn/[0.05] p-3" aria-label="Resume review checks">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-warn-text">
+                    <AlertTriangle className="h-4 w-4" aria-hidden="true" /> Review before sending
+                  </h3>
+                  <ul className="mt-2 space-y-2">
+                    {qualityIssues.map((issue) => (
+                      <li key={issue.code} className="text-xs text-warn-text">
+                        <span className="font-medium">{issue.title}.</span> {issue.detail}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+              {resume.origin === 'ONE_PAGE' ? (
+                <p className="mt-3 text-xs text-muted">
+                  The PDF export is checked to stay on one page. Word-compatible apps may reflow the editable DOCX differently.
+                </p>
+              ) : null}
             </div>
           </div>
         ) : null}
