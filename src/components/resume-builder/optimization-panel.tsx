@@ -28,6 +28,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { z } from 'zod';
 import {
   AlertTriangle,
   Check,
@@ -79,6 +80,38 @@ type Wire = {
   resume: { id: string; name: string; revision: number };
 };
 
+const optimizationWireSchema = z.object({
+  available: z.boolean(),
+  job: z.object({
+    id: z.string(),
+    title: z.string(),
+    company: z.string(),
+    hasDescription: z.boolean(),
+    fitScore: z.number(),
+    fitTier: z.string(),
+    blockedBy: z.array(z.string()),
+  }).nullable(),
+  readiness: z.object({
+    hasJobDescription: z.boolean(),
+    hasConfirmedProfile: z.boolean(),
+    resumeCharacters: z.number(),
+    thinInputs: z.boolean(),
+  }).nullable(),
+  optimization: z.object({
+    id: z.string(),
+    isFresh: z.boolean(),
+    staleReasons: z.array(z.string()),
+    data: z.unknown(),
+  }).nullable(),
+  access: z.object({
+    canOptimize: z.boolean(),
+    plan: z.string(),
+    aiCreditsRemaining: z.number().nullable(),
+  }),
+  privacyNotice: z.string(),
+  resume: z.object({ id: z.string(), name: z.string(), revision: z.number() }),
+}).passthrough();
+
 type Phase = 'loading' | 'idle' | 'running' | 'error';
 
 const CONFIDENCE_STYLES: Record<ReviewOperation['confidence'], string> = {
@@ -122,7 +155,9 @@ export function ResumeOptimizationPanel({
         credentials: 'same-origin',
       });
       if (!response.ok) throw new Error('unavailable');
-      const data = (await response.json()) as Wire;
+      const parsedWire = optimizationWireSchema.safeParse(await response.json());
+      if (!parsedWire.success) throw new Error('Invalid optimisation response');
+      const data = parsedWire.data as Wire;
       if (generation !== loadGeneration.current) return;
       if (data.optimization) {
         const parsed = optimizationResultSchema.safeParse(data.optimization.data);
@@ -254,7 +289,7 @@ export function ResumeOptimizationPanel({
     question: string;
     why: string;
   }) => {
-    if (answerInFlight.current || hasUnsavedChanges || isStale) return;
+    if (answerInFlight.current || !canOptimize) return;
     const answer = gapAnswers[params.key]?.trim() ?? '';
     if (!answer) return;
     answerInFlight.current = params.key;
@@ -293,7 +328,7 @@ export function ResumeOptimizationPanel({
       answerInFlight.current = null;
       setImprovingGap(null);
     }
-  }, [resumeId, gapAnswers, hasUnsavedChanges, isStale, load]);
+  }, [resumeId, gapAnswers, canOptimize, load]);
 
   if (phase === 'loading') {
     return (
@@ -423,7 +458,8 @@ export function ResumeOptimizationPanel({
               </ul>
               <p className="mt-2 text-xs text-ink-2">
                 Run it again before accepting anything. We will not write old advice onto a document
-                that has moved on.
+                that has moved on. You can still improve your own answers below; those rewrites do not
+                update the resume.
               </p>
             </div>
           ) : null}
@@ -677,7 +713,7 @@ export function ResumeOptimizationPanel({
                         <button
                           type="button"
                           className="btn-secondary"
-                          disabled={!answer.trim() || isStale || hasUnsavedChanges || !canOptimize || improvingGap !== null}
+                          disabled={!answer.trim() || !canOptimize || improvingGap !== null}
                           onClick={() => void refineAnswer({
                             key,
                             optimizationId: state?.optimization?.id ?? '',
@@ -692,7 +728,14 @@ export function ResumeOptimizationPanel({
                           )}
                           Improve answer
                         </button>
-                        <span className="text-xs text-muted">Uses 1 AI credit. Review every change.</span>
+                        {canOptimize ? (
+                          <span className="text-xs text-muted">Uses 1 AI credit. Review every change.</span>
+                        ) : (
+                          <span className="text-xs text-muted">
+                            <a href="/settings/billing" className="font-medium text-accent-text underline underline-offset-2">Upgrade to Pro</a>
+                            {' '}to improve answers with AI.
+                          </span>
+                        )}
                       </div>
                       {gapErrors[key] ? <p role="alert" className="mt-2 text-xs text-danger-text">{gapErrors[key]}</p> : null}
                       {refined ? (

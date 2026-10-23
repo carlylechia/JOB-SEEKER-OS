@@ -224,35 +224,40 @@ export function OnePageReviewPanel({
         </button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <label className="block space-y-1.5">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <label className="block min-w-0 space-y-1.5">
           <span className="text-sm font-medium text-ink">Target job</span>
-          <select className="select w-full" value={targetJobId} onChange={(event) => { setTargetJobId(event.target.value); setStale(Boolean(proposal)); }}>
+          <select className="select w-full min-w-0 max-w-full truncate" value={targetJobId} onChange={(event) => { setTargetJobId(event.target.value); setStale(Boolean(proposal)); }}>
             <option value="">General version</option>
             {targetableJobs.map((job) => (
-              <option key={job.id} value={job.id}>{job.title} · {job.company}{job.hasDescription ? '' : ' (no description)'}</option>
+              <option key={job.id} value={job.id}>{job.title} · {job.company}</option>
             ))}
           </select>
+          {targetableJobs.find((job) => job.id === targetJobId)?.hasDescription === false ? (
+            <span className="block text-xs leading-relaxed text-muted">
+              This job has no description saved, so tailoring can only use its title and company.
+            </span>
+          ) : null}
         </label>
         {!targetJobId ? (
-          <label className="block space-y-1.5">
+          <label className="block min-w-0 space-y-1.5">
             <span className="text-sm font-medium text-ink">Target role (optional)</span>
-            <input className="input w-full" maxLength={180} value={targetRole} onChange={(event) => { setTargetRole(event.target.value); setStale(Boolean(proposal)); }} placeholder="e.g. Product Designer" />
+            <input className="input w-full min-w-0 max-w-full" maxLength={180} value={targetRole} onChange={(event) => { setTargetRole(event.target.value); setStale(Boolean(proposal)); }} placeholder="e.g. Product Designer" />
           </label>
         ) : null}
-        <label className="block space-y-1.5">
+        <label className="block min-w-0 space-y-1.5">
           <span className="text-sm font-medium text-ink">Main focus (optional)</span>
-          <input className="input w-full" maxLength={240} value={objective} onChange={(event) => { setObjective(event.target.value); setStale(Boolean(proposal)); }} placeholder="e.g. platform reliability" />
+          <input className="input w-full min-w-0 max-w-full" maxLength={240} value={objective} onChange={(event) => { setObjective(event.target.value); setStale(Boolean(proposal)); }} placeholder="e.g. platform reliability" />
         </label>
-        <label className="block space-y-1.5">
+        <label className="block min-w-0 space-y-1.5">
           <span className="text-sm font-medium text-ink">Template</span>
-          <select className="select w-full" value={templateKey} onChange={(event) => { setTemplateKey(event.target.value as TemplateKey); setStale(Boolean(proposal)); }}>
+          <select className="select w-full min-w-0 max-w-full truncate" value={templateKey} onChange={(event) => { setTemplateKey(event.target.value as TemplateKey); setStale(Boolean(proposal)); }}>
             {TEMPLATE_LIST.map((template) => <option key={template.key} value={template.key}>{template.label}</option>)}
           </select>
         </label>
-        <label className="block space-y-1.5">
+        <label className="block min-w-0 space-y-1.5">
           <span className="text-sm font-medium text-ink">Page size</span>
-          <select className="select w-full" value={pageSize} onChange={(event) => { setPageSize(event.target.value as PageSizeKey); setStale(Boolean(proposal)); }}>
+          <select className="select w-full min-w-0 max-w-full truncate" value={pageSize} onChange={(event) => { setPageSize(event.target.value as PageSizeKey); setStale(Boolean(proposal)); }}>
             {Object.values(PAGE_SIZES).map((size) => <option key={size.key} value={size.key}>{size.label}</option>)}
           </select>
         </label>

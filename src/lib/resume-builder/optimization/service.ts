@@ -810,7 +810,11 @@ export async function getOptimizationForResume(params: {
   };
 }
 
-/** Refine one candidate-authored answer; the answer is never written automatically. */
+/**
+ * Refine one candidate-authored answer; the answer is never written automatically.
+ * A stale proposal cannot be applied to the resume, but its question is only
+ * context for rewriting the user's own answer, so revision changes do not block it.
+ */
 export async function refineInformationGapAnswer(params: {
   userId: string;
   resumeId: string;
@@ -826,7 +830,6 @@ export async function refineInformationGapAnswer(params: {
     resumeId: params.resumeId,
     optimizationId: params.optimizationId,
   });
-  if (!stored.optimization.isFresh) throw new OptimizationStaleError();
 
   const gap = stored.data.informationGaps.find(
     (item) => item.question === params.question && item.why === params.why,

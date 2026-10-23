@@ -31,6 +31,7 @@ import {
   buildOptimizationInputs,
   fingerprintFor,
   getOptimizationForResume,
+  refineInformationGapAnswer,
   runOptimization,
   type RunOptimizationResult,
 } from '@/lib/resume-builder/optimization/service';
@@ -638,6 +639,51 @@ describe('running an optimisation', () => {
     expect(result.data.job.id).toBeTruthy();
     expect(result.data.meta.provider).toBe('fake-provider');
     expect(result.creditsConsumed).toBe(1);
+  });
+
+  it('can refine a user answer from stale suggestions without changing the resume', async () => {
+    const { user, resume } = await setup();
+    await grantPro(user.id);
+    const question = 'Can you provide a measured result for this improvement?';
+    const why = 'A number would make this bullet much stronger.';
+    const provider = fakeProvider({
+      informationGaps: [{ question, section: 'EXPERIENCE', why }],
+    });
+    provider.refineAnswer = async ({ answer }) => answer;
+    useProvider(provider);
+
+    const generated = await runOptimization({ userId: user.id, resumeId: resume.id, route: '/test' });
+    expect(generated.outcome).toBe('COMPLETED');
+    if (generated.outcome !== 'COMPLETED') return;
+
+    await updateResume({
+      userId: user.id,
+      resumeId: resume.id,
+      input: {
+        expectedRevision: resume.revision,
+        content: resumeContentSchema.parse({
+          ...resume.content,
+          summary: 'A more recent summary.',
+        }),
+      },
+    });
+
+    const answer = 'I improved response times for customers.';
+    const refined = await refineInformationGapAnswer({
+      userId: user.id,
+      resumeId: resume.id,
+      optimizationId: generated.optimization.id,
+      question,
+      why,
+      answer,
+      route: '/test',
+      provider,
+    });
+
+    expect(refined.refinedAnswer).toBe(answer);
+    const latest = await getResume({ userId: user.id, resumeId: resume.id });
+    expect(latest.content.summary).toBe('A more recent summary.');
+    expect(latest.revision).toBe(resume.revision + 1);
   });
 
   it('never modifies the resume', async () => {

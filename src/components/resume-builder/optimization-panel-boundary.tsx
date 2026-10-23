@@ -13,9 +13,10 @@ export class OptimizationPanelBoundary extends Component<
     return { hasError: true, resetKey: 0 };
   }
 
-  componentDidCatch(_error: Error, _info: ErrorInfo) {
-    // The application error logger handles server failures. This local boundary
-    // keeps malformed historical suggestion data from taking down the editor.
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    // Keep an actionable client-side stack in the browser console while the
+    // resume editor remains usable behind this recovery panel.
+    console.error('Resume optimization panel failed to render', error, info.componentStack);
   }
 
   render() {

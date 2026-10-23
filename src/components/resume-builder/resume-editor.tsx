@@ -368,7 +368,7 @@ export function ResumeEditor({
     <div className="space-y-6">
       {/* Title, target job and the actions that affect the whole document. */}
       <section aria-labelledby="resume-heading" className="card-pad space-y-4">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div className="min-w-0 space-y-4">
           <div className="min-w-0 space-y-3">
             <h1 id="resume-heading" className="title">
               {name || 'Untitled resume'}
@@ -402,7 +402,7 @@ export function ResumeEditor({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 border-t border-line pt-4">
             <button
               type="button"
               className="btn-secondary"

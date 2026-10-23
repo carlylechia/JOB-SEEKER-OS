@@ -78,7 +78,7 @@ export function TextField({
       <input
         id={id}
         type={type}
-        className="input disabled:cursor-not-allowed disabled:opacity-60"
+        className="input min-w-0 max-w-full disabled:cursor-not-allowed disabled:opacity-60"
         value={value}
         placeholder={placeholder}
         maxLength={maxLength}
@@ -117,7 +117,7 @@ export function TextAreaField({
     <Field label={label} hint={hint} error={error} htmlFor={id}>
       <textarea
         id={id}
-        className="input resize-y"
+        className="input min-w-0 max-w-full resize-y"
         rows={rows}
         value={value}
         placeholder={placeholder}
@@ -225,7 +225,7 @@ export function ListField({
     <Field label={label} hint={hint} htmlFor={id}>
       <textarea
         id={id}
-        className="input resize-y font-mono text-xs"
+        className="input min-w-0 max-w-full resize-y font-mono text-xs"
         rows={Math.min(8, Math.max(2, values.length + 1))}
         value={values.join('\n')}
         placeholder={placeholder}
