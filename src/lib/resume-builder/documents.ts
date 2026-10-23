@@ -34,7 +34,13 @@ import {
   type ResumeContent,
   type UpdateResumeInput,
 } from './schema';
-import { isAccentKey, isTemplateKey } from './templates';
+import {
+  DEFAULT_PAGE_SIZE,
+  isAccentKey,
+  isPageSizeKey,
+  isTemplateKey,
+  type PageSizeKey,
+} from './templates';
 
 // ─── Errors ─────────────────────────────────────────────────────────────────
 
@@ -110,6 +116,7 @@ export type StructuredResumeRecord = {
   name: string;
   content: ResumeContent;
   templateKey: string;
+  pageSize: PageSizeKey;
   accentKey: string;
   density: number;
   hiddenSections: string[];
@@ -133,6 +140,7 @@ type Row = {
   name: string;
   content: unknown;
   templateKey: string;
+  pageSize: string;
   accentKey: string;
   density: number;
   hiddenSections: string[];
@@ -165,6 +173,7 @@ function toRecord(row: Row): StructuredResumeRecord {
     name: row.name,
     content: parsed.data,
     templateKey: isTemplateKey(row.templateKey) ? row.templateKey : 'classic-ats',
+    pageSize: isPageSizeKey(row.pageSize) ? row.pageSize : DEFAULT_PAGE_SIZE,
     accentKey: isAccentKey(row.accentKey) ? row.accentKey : 'gold',
     density: row.density,
     hiddenSections: row.hiddenSections ?? [],
@@ -185,6 +194,7 @@ const LIST_SELECT = {
   name: true,
   content: true,
   templateKey: true,
+  pageSize: true,
   accentKey: true,
   density: true,
   hiddenSections: true,
@@ -545,6 +555,7 @@ export async function createResume(params: {
   let origin: string = 'BLANK';
   let sourceProfileVersion: number | null = null;
   let sourceResumeId: string | null = null;
+  let pageSize = input.pageSize ?? DEFAULT_PAGE_SIZE;
   let name = input.name?.trim() || 'Untitled resume';
 
   if (input.from === 'PROFILE') {
@@ -572,6 +583,7 @@ export async function createResume(params: {
     sourceResumeId = source.id;
     origin = 'DUPLICATE';
     sourceProfileVersion = source.sourceProfileVersion;
+    pageSize = input.pageSize ?? source.pageSize;
     if (!input.name) {
       name = `${source.name} (copy)`.slice(0, RESUME_MAX_NAME_LENGTH);
     }
@@ -589,6 +601,7 @@ export async function createResume(params: {
       sourceProfileVersion,
       targetJobId,
       templateKey: 'classic-ats',
+      pageSize,
       accentKey: 'gold',
       density: 1,
       hiddenSections: [],
@@ -684,6 +697,7 @@ export async function updateResume(params: {
       ...(input.targetJobId !== undefined
         ? { targetJobId: await resolveTargetJobId(userId, input.targetJobId) }
         : {}),
+      ...(input.pageSize !== undefined ? { pageSize: input.pageSize } : {}),
       revision: { increment: 1 },
     },
   });

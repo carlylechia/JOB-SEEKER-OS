@@ -13,7 +13,7 @@
  * comparing looks, and an unsaved preference is not data anyone can lose.
  */
 
-import { ATS_STATEMENT } from '@/lib/resume-builder/templates';
+import { ATS_STATEMENT, PAGE_SIZES, type PageSizeKey } from '@/lib/resume-builder/templates';
 import { RESUME_SECTION_KEYS, SECTION_LABELS, type ResumeSectionKey } from '@/lib/resume-builder/schema';
 
 export type TemplateOption = {
@@ -37,10 +37,12 @@ export function TemplatePicker({
   templateKey,
   accentKey,
   density,
+  pageSize,
   hiddenSections,
   onTemplateChange,
   onAccentChange,
   onDensityChange,
+  onPageSizeChange,
   onHiddenSectionsChange,
 }: {
   templates: TemplateOption[];
@@ -49,16 +51,31 @@ export function TemplatePicker({
   templateKey: string;
   accentKey: string;
   density: number;
+  pageSize: PageSizeKey;
   hiddenSections: string[];
   onTemplateChange: (key: string) => void;
   onAccentChange: (key: string) => void;
   onDensityChange: (value: number) => void;
+  onPageSizeChange: (value: PageSizeKey) => void;
   onHiddenSectionsChange: (sections: string[]) => void;
 }) {
   const active = templates.find((template) => template.key === templateKey);
 
   return (
     <div className="space-y-5">
+      <label className="block max-w-xs space-y-1.5">
+        <span className="text-sm font-medium text-ink">Page size</span>
+        <select
+          className="select w-full"
+          value={pageSize}
+          onChange={(event) => onPageSizeChange(event.target.value as PageSizeKey)}
+        >
+          {Object.values(PAGE_SIZES).map((size) => (
+            <option key={size.key} value={size.key}>{size.label}</option>
+          ))}
+        </select>
+      </label>
+
       <fieldset>
         <legend className="mb-2 text-sm font-medium text-ink">Template</legend>
         <div className="space-y-2" role="radiogroup" aria-label="Resume template">

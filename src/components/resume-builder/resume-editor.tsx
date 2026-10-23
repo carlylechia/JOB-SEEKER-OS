@@ -56,11 +56,13 @@ import {
 import { TemplatePicker, type AccentOption, type TemplateOption } from './template-picker';
 import { ResumeOptimizationPanel } from './optimization-panel';
 import { SelectField, TextField } from './fields';
+import type { PageSizeKey } from '@/lib/resume-builder/templates';
 
 type SerialisedResume = {
   id: string;
   name: string;
   templateKey: string;
+  pageSize: PageSizeKey;
   accentKey: string;
   density: number;
   hiddenSections: string[];
@@ -104,6 +106,7 @@ export function ResumeEditor({
   const [content, setContent] = useState<ResumeContent>(resume.content);
   const [name, setName] = useState(resume.name);
   const [templateKey, setTemplateKey] = useState(resume.templateKey);
+  const [pageSize, setPageSize] = useState<PageSizeKey>(resume.pageSize);
   const [accentKey, setAccentKey] = useState(resume.accentKey);
   const [density, setDensity] = useState(resume.density);
   const [hiddenSections, setHiddenSections] = useState<string[]>(resume.hiddenSections);
@@ -127,6 +130,7 @@ export function ResumeEditor({
     JSON.stringify(content) !== JSON.stringify(resume.content) ||
     name !== resume.name ||
     templateKey !== resume.templateKey ||
+    pageSize !== resume.pageSize ||
     accentKey !== resume.accentKey ||
     density !== resume.density ||
     JSON.stringify(hiddenSections) !== JSON.stringify(resume.hiddenSections) ||
@@ -161,12 +165,13 @@ export function ResumeEditor({
    * unsaved edits are untouched.
    */
   const refreshPreview = useCallback(
-    async (settings: { templateKey?: string; accentKey?: string; density?: number; hidden?: string[] }) => {
+    async (settings: { templateKey?: string; accentKey?: string; density?: number; hidden?: string[]; pageSize?: PageSizeKey }) => {
       const params = new URLSearchParams({
         template: settings.templateKey ?? templateKey,
         accent: settings.accentKey ?? accentKey,
         density: String(settings.density ?? density),
         hiddenSections: (settings.hidden ?? hiddenSections).join(','),
+        pageSize: settings.pageSize ?? pageSize,
       });
       try {
         const response = await fetch(`/api/resumes/${resume.id}/preview?${params.toString()}`, {
@@ -181,7 +186,7 @@ export function ResumeEditor({
         // layout stays on screen rather than blanking the panel.
       }
     },
-    [resume.id, templateKey, accentKey, density, hiddenSections],
+    [resume.id, templateKey, accentKey, density, hiddenSections, pageSize],
   );
 
   const save = useCallback(async () => {
@@ -214,6 +219,7 @@ export function ResumeEditor({
           name: name.trim(),
           content: parsed.data,
           templateKey,
+          pageSize,
           accentKey,
           density,
           hiddenSections,
@@ -249,7 +255,7 @@ export function ResumeEditor({
       setSaveState('error');
       setMessage('We could not reach the server. Your edits are still here — try saving again.');
     }
-  }, [saveState, content, name, revision, templateKey, accentKey, density, hiddenSections, targetJobId, resume.id, router]);
+  }, [saveState, content, name, revision, templateKey, pageSize, accentKey, density, hiddenSections, targetJobId, resume.id, router]);
 
   const duplicate = useCallback(async () => {
     setBusy(true);
@@ -390,6 +396,7 @@ export function ResumeEditor({
               accents={accents}
               densities={densities}
               templateKey={templateKey}
+              pageSize={pageSize}
               accentKey={accentKey}
               density={density}
               hiddenSections={hiddenSections}
@@ -407,6 +414,11 @@ export function ResumeEditor({
                 setDensity(value);
                 setSaveState('dirty');
                 void refreshPreview({ density: value });
+              }}
+              onPageSizeChange={(value) => {
+                setPageSize(value);
+                setSaveState('dirty');
+                void refreshPreview({ pageSize: value });
               }}
               onHiddenSectionsChange={(sections) => {
                 setHiddenSections(sections);

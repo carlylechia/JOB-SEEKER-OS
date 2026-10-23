@@ -14,8 +14,47 @@
  */
 
 /** Stable identifiers. Stored on the document; renaming a display label is safe. */
-export const TEMPLATE_KEYS = ['classic-ats', 'modern-professional', 'technical-minimal'] as const;
+export const TEMPLATE_KEYS = [
+  'classic-ats',
+  'modern-professional',
+  'technical-minimal',
+  'executive-experienced',
+] as const;
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
+
+export const PAGE_SIZE_KEYS = ['A4', 'LETTER'] as const;
+export type PageSizeKey = (typeof PAGE_SIZE_KEYS)[number];
+export type PageMargins = { top: number; right: number; bottom: number; left: number };
+
+/** Document geometry is shared by the browser preview, PDF, and DOCX adapters. */
+export const PAGE_SIZES: Record<
+  PageSizeKey,
+  { key: PageSizeKey; label: string; width: number; height: number; margins: PageMargins }
+> = {
+  A4: {
+    key: 'A4',
+    label: 'A4',
+    width: 595.28,
+    height: 841.89,
+    margins: { top: 46, right: 46, bottom: 46, left: 46 },
+  },
+  LETTER: {
+    key: 'LETTER',
+    label: 'US Letter',
+    width: 612,
+    height: 792,
+    margins: { top: 46, right: 48, bottom: 46, left: 48 },
+  },
+};
+
+export const DEFAULT_PAGE_SIZE: PageSizeKey = 'A4';
+
+export function isPageSizeKey(value: unknown): value is PageSizeKey {
+  return value === 'A4' || value === 'LETTER';
+}
+
+/** Minimum safe geometry for a requested one-page output; typography is never scaled down. */
+export const ONE_PAGE_MARGINS: PageMargins = { top: 38, right: 38, bottom: 38, left: 38 };
 
 export function isTemplateKey(value: unknown): value is TemplateKey {
   return typeof value === 'string' && (TEMPLATE_KEYS as readonly string[]).includes(value);
@@ -108,7 +147,8 @@ export const DENSITY_LABELS: Record<Density, string> = {
 export type TemplateStyle =
   | 'CLASSIC_ATS'
   | 'MODERN_PROFESSIONAL'
-  | 'TECHNICAL_MINIMAL';
+  | 'TECHNICAL_MINIMAL'
+  | 'EXECUTIVE_EXPERIENCED';
 
 export type TemplateDefinition = {
   key: TemplateKey;
@@ -182,6 +222,19 @@ export const TEMPLATES: Record<TemplateKey, TemplateDefinition> = {
     baseFontSize: 9.5,
     baseHeadingSize: 10.5,
   },
+  'executive-experienced': {
+    key: 'executive-experienced',
+    label: 'Executive / Experienced',
+    description: 'A stronger narrative hierarchy for senior experience, leadership scope and verified accomplishments.',
+    style: 'EXECUTIVE_EXPERIENCED',
+    atsPrinciples: true,
+    nameBlockFill: false,
+    sectionRules: true,
+    inlineMeta: false,
+    compactSkills: false,
+    baseFontSize: 10.5,
+    baseHeadingSize: 12.5,
+  },
 };
 
 export function getTemplate(key: string): TemplateDefinition {
@@ -207,4 +260,5 @@ export const TEMPLATE_GUIDANCE: Record<TemplateKey, string> = {
   'classic-ats': 'The safest default when you do not know what will read your file.',
   'modern-professional': 'A little more visual identity. Still one column, still plain headings.',
   'technical-minimal': 'Tighter spacing for long technical histories. Readable, just denser.',
+  'executive-experienced': 'A measured narrative layout for senior experience. It does not add leadership claims.',
 };

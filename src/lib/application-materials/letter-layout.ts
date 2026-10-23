@@ -89,6 +89,7 @@ export function buildLetterLayout(params: {
 
   return {
     templateKey: 'classic-ats',
+    pageSize: 'A4',
     accentKey: 'gold',
     density: 1,
     fontSize,

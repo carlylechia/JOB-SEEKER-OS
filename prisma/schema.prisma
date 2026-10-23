@@ -787,6 +787,8 @@ model StructuredResume {
 
   /// Presentation only. Templates never change what the content means.
   templateKey String @default("classic-ats")
+  /// Physical page dimensions selected by the user; A4 remains the default.
+  pageSize String @default("A4")
   /// Key from the approved accent palette in `templates.ts`. Not a raw colour.
   accentKey   String @default("gold")
   /// 0 = compact, 1 = comfortable, 2 = relaxed. Bounded server-side.
