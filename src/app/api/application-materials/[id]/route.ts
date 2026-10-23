@@ -18,6 +18,7 @@ import { apiError, handleRoute, jsonOk, privateNoStore } from '@/lib/api';
 import { handleOptions } from '@/lib/cors';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 import { z } from 'zod';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { saveMaterialRequestSchema, deleteMaterialRequestSchema } from '@/lib/application-materials/requests';
 import { serialiseMaterialDetail } from '@/lib/application-materials/wire';
@@ -60,8 +61,7 @@ const MATERIAL_FIELDS = {
   editVersion: true,
   createdAt: true,
   updatedAt: true,
-  data: true,
-} as const;
+} satisfies Prisma.ApplicationMaterialSelect;
 
 export async function OPTIONS(request: Request) {
   return handleOptions(request);
