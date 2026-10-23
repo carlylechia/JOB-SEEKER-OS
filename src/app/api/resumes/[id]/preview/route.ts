@@ -23,7 +23,7 @@ import { getResume } from '@/lib/resume-builder/documents';
 import { buildResumeLayoutFromRecord } from '@/lib/resume-builder/serve';
 import { resumeBuilderErrorResponse } from '@/lib/resume-builder/route-errors';
 import { serialiseLayout } from '@/lib/resume-builder/wire';
-import { DENSITY_VALUES, isAccentKey, isTemplateKey } from '@/lib/resume-builder/templates';
+import { DENSITY_VALUES, isAccentKey, isPageSizeKey, isTemplateKey } from '@/lib/resume-builder/templates';
 import { HIDABLE_SECTION_KEYS } from '@/lib/resume-builder/schema';
 
 export const runtime = 'nodejs';
@@ -56,6 +56,7 @@ export async function GET(request: Request, { params }: Params) {
       const templateKey = url.searchParams.get('template');
       const accentKey = url.searchParams.get('accent');
       const densityRaw = url.searchParams.get('density');
+      const pageSizeRaw = url.searchParams.get('pageSize');
       const hiddenRaw = url.searchParams.get('hiddenSections');
 
       // An unrecognised value falls back to the stored one rather than
@@ -82,6 +83,7 @@ export async function GET(request: Request, { params }: Params) {
           templateKey: isTemplateKey(templateKey) ? templateKey : resume.templateKey,
           accentKey: isAccentKey(accentKey) ? accentKey : resume.accentKey,
           density: density ?? resume.density,
+          pageSize: isPageSizeKey(pageSizeRaw) ? pageSizeRaw : resume.pageSize,
           hiddenSections: hiddenSections ?? resume.hiddenSections,
         });
 

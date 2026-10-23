@@ -23,6 +23,7 @@ export function serialiseResume(resume: StructuredResumeRecord) {
     id: resume.id,
     name: resume.name,
     templateKey: resume.templateKey,
+    pageSize: resume.pageSize,
     accentKey: resume.accentKey,
     density: resume.density,
     hiddenSections: resume.hiddenSections,

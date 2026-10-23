@@ -13,14 +13,14 @@ employer or external platform.
 
 ## Supported material types
 
-| Type | Target job needed? | Template source | PDF export |
-|---|---|---|---|
-| Cover letter | Yes | `intro` | Yes |
-| Recruiter message | No | `intro`, `referral` | No |
-| LinkedIn connection | No | `intro` | No |
-| Application follow-up | Yes | `follow_up`, `check_in` | No |
-| Application status check | Yes | `check_in`, `follow_up` | No |
-| Interview thank-you | Yes | `thank_you` | No |
+| Type | Target job needed? | Template source | PDF export | Editable DOCX |
+|---|---|---|---|---|
+| Cover letter | Yes | `intro` | Yes | Yes |
+| Recruiter message | No | `intro`, `referral` | No | Yes |
+| LinkedIn connection | No | `intro` | No | Yes |
+| Application follow-up | Yes | `follow_up`, `check_in` | No | Yes |
+| Application status check | Yes | `check_in`, `follow_up` | No | Yes |
+| Interview thank-you | Yes | `thank_you` | No | Yes |
 
 Follow-up, status check and thank-you are **application-grounded**: they are
 only offered when the pipeline record genuinely supports the claim (the role
@@ -158,7 +158,14 @@ do **not** consume a credit.
 - **Download .txt** produces a plain-text file with the subject (if any) and
   body. No AI call, no credit.
 - **Download PDF** (cover letters only) reuses the resume builder's `pdf-lib`
-  renderer — no second PDF stack. No AI call, no credit.
+  renderer — no second PDF stack. The letter uses bundled-font metrics,
+  structured applicant contact details from the selected resume/profile,
+  today's date, and the actual saved company/job title when available. It does
+  not add an invented recipient name or postal address. No AI call, no credit.
+- **Download DOCX** uses semantic editable paragraphs and safe URL hyperlinks.
+  Cover letters receive a restrained sender/date/company/subject block. Other
+  materials remain message/email text with an optional subject and no forced
+  letterhead. Word-compatible apps may repaginate the output.
 
 All downloads are `private, no-store`, force-download, with safe server-derived
 filenames.

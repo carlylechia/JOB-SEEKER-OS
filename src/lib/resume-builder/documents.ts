@@ -34,7 +34,13 @@ import {
   type ResumeContent,
   type UpdateResumeInput,
 } from './schema';
-import { isAccentKey, isTemplateKey } from './templates';
+import {
+  DEFAULT_PAGE_SIZE,
+  isAccentKey,
+  isPageSizeKey,
+  isTemplateKey,
+  type PageSizeKey,
+} from './templates';
 
 // ─── Errors ─────────────────────────────────────────────────────────────────
 
@@ -110,6 +116,7 @@ export type StructuredResumeRecord = {
   name: string;
   content: ResumeContent;
   templateKey: string;
+  pageSize: PageSizeKey;
   accentKey: string;
   density: number;
   hiddenSections: string[];
@@ -133,6 +140,7 @@ type Row = {
   name: string;
   content: unknown;
   templateKey: string;
+  pageSize: string;
   accentKey: string;
   density: number;
   hiddenSections: string[];
@@ -165,6 +173,7 @@ function toRecord(row: Row): StructuredResumeRecord {
     name: row.name,
     content: parsed.data,
     templateKey: isTemplateKey(row.templateKey) ? row.templateKey : 'classic-ats',
+    pageSize: isPageSizeKey(row.pageSize) ? row.pageSize : DEFAULT_PAGE_SIZE,
     accentKey: isAccentKey(row.accentKey) ? row.accentKey : 'gold',
     density: row.density,
     hiddenSections: row.hiddenSections ?? [],
@@ -185,6 +194,7 @@ const LIST_SELECT = {
   name: true,
   content: true,
   templateKey: true,
+  pageSize: true,
   accentKey: true,
   density: true,
   hiddenSections: true,
@@ -545,6 +555,7 @@ export async function createResume(params: {
   let origin: string = 'BLANK';
   let sourceProfileVersion: number | null = null;
   let sourceResumeId: string | null = null;
+  let pageSize = input.pageSize ?? DEFAULT_PAGE_SIZE;
   let name = input.name?.trim() || 'Untitled resume';
 
   if (input.from === 'PROFILE') {
@@ -572,6 +583,7 @@ export async function createResume(params: {
     sourceResumeId = source.id;
     origin = 'DUPLICATE';
     sourceProfileVersion = source.sourceProfileVersion;
+    pageSize = input.pageSize ?? source.pageSize;
     if (!input.name) {
       name = `${source.name} (copy)`.slice(0, RESUME_MAX_NAME_LENGTH);
     }
@@ -589,6 +601,7 @@ export async function createResume(params: {
       sourceProfileVersion,
       targetJobId,
       templateKey: 'classic-ats',
+      pageSize,
       accentKey: 'gold',
       density: 1,
       hiddenSections: [],
@@ -645,6 +658,63 @@ export async function duplicateResume(params: {
   });
 }
 
+/** Save an explicitly reviewed, measured one-page proposal as a new variant. */
+export async function createOnePageResume(params: {
+  userId: string;
+  sourceResumeId: string;
+  expectedRevision: number;
+  name: string;
+  content: ResumeContent;
+  targetJobId: string | null;
+  templateKey: string;
+  pageSize: string;
+  limit: PlanLimitValue;
+}): Promise<StructuredResumeRecord> {
+  const source = await getResume({ userId: params.userId, resumeId: params.sourceResumeId });
+  if (source.revision !== params.expectedRevision) {
+    throw new ResumeRevisionConflictError(source.revision);
+  }
+
+  if (params.limit !== null) {
+    const used = await countResumes(params.userId);
+    if (used >= params.limit) throw new ResumeLimitExceededError(params.limit, used);
+  }
+
+  const content = reidentifyEntries(resumeContentSchema.parse(params.content));
+  const targetJobId = await resolveTargetJobId(params.userId, params.targetJobId);
+  const templateKey = isTemplateKey(params.templateKey) ? params.templateKey : 'classic-ats';
+  const pageSize = isPageSizeKey(params.pageSize) ? params.pageSize : source.pageSize;
+
+  const row = await prisma.structuredResume.create({
+    data: {
+      userId: params.userId,
+      name: params.name.trim().slice(0, RESUME_MAX_NAME_LENGTH),
+      content: content as unknown as object,
+      templateKey,
+      pageSize,
+      accentKey: 'charcoal',
+      density: 0,
+      hiddenSections: [],
+      revision: 1,
+      origin: 'ONE_PAGE',
+      sourceResumeId: source.id,
+      sourceProfileVersion: source.sourceProfileVersion,
+      targetJobId,
+    },
+    select: { ...LIST_SELECT, targetJob: { select: { id: true, title: true, company: true } } },
+  });
+
+  await logImportantInfo({
+    event: 'one_page_resume_created',
+    userId: params.userId,
+    route: '/api/resumes/[id]/one-page/save',
+    jobId: targetJobId ?? undefined,
+    context: { sourceResumeId: source.id, resumeId: row.id, pageSize, templateKey },
+  });
+
+  return toRecord(row);
+}
+
 /**
  * Apply a partial update.
  *
@@ -684,6 +754,7 @@ export async function updateResume(params: {
       ...(input.targetJobId !== undefined
         ? { targetJobId: await resolveTargetJobId(userId, input.targetJobId) }
         : {}),
+      ...(input.pageSize !== undefined ? { pageSize: input.pageSize } : {}),
       revision: { increment: 1 },
     },
   });

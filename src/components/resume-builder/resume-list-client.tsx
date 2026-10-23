@@ -66,6 +66,7 @@ const ORIGIN_LABELS: Record<string, string> = {
   BLANK: 'Blank',
   DUPLICATE: 'Copied from another resume',
   OPTIMIZATION: 'Tailored for a job',
+  ONE_PAGE: 'One-page version',
 };
 
 export function ResumeListClient({ initialResumes, careerProfile, access }: Props) {

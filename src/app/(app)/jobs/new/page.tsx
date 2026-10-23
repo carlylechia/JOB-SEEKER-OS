@@ -70,7 +70,7 @@ export default function NewJobPage() {
         <div className="card-pad">
           <h3 className="mb-1 text-lg font-semibold">Public jobs pool</h3>
           <p className="mb-5 text-sm text-muted">
-            Jobs contributed by the community. Click "Add to workspace" to instantly clone a role into your tracker with personalised scoring applied.
+            Jobs contributed by the community. Click &quot;Add to workspace&quot; to instantly clone a role into your tracker with personalised scoring applied.
           </p>
           <PublicJobBrowser onImport={handlePublicImport} />
         </div>

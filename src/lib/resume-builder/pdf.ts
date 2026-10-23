@@ -20,7 +20,7 @@
  *     returns the original string exactly.
  *
  * Inter ships under the SIL Open Font License 1.1. Two weights only — Regular
- * and SemiBold — because three weights across three templates produced no
+ * and SemiBold — because three weights across four templates produced no
  * visible difference at these sizes, and every extra embedded weight is roughly
  * 180 KB in every downloaded file (see the subsetting note in `renderPdfLayout`).
  */
@@ -357,7 +357,14 @@ export async function renderPdfLayout(layout: LayoutDocument): Promise<RenderPdf
   // file, and an assertion against compressed bytes proves nothing. An
   // inspectable export is also a better one to debug.
   const output = await doc.save({ useObjectStreams: false });
-  return { bytes: output, pageCount: layout.pages.length };
+  // Count pages from the serialized PDF's page tree, not from the layout plan.
+  // This is the value one-page generation and export routes rely on.
+  const serialized = await PDFDocument.load(output);
+  const pageCount = serialized.getPageCount();
+  if (pageCount !== layout.pages.length) {
+    throw new Error('The rendered PDF page tree does not match the document layout.');
+  }
+  return { bytes: output, pageCount };
 }
 
 /**

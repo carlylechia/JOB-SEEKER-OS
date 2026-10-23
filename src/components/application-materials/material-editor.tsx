@@ -329,7 +329,7 @@ export default function MaterialEditor() {
     }
   };
 
-  const handleDownload = async (format: 'txt' | 'pdf') => {
+  const handleDownload = async (format: 'txt' | 'pdf' | 'docx') => {
     if (!result || !materialId) return;
     setDownloading(true);
     try {
@@ -577,7 +577,7 @@ export default function MaterialEditor() {
             />
             <p className="muted text-xs mt-1">
               These are treated as style guidance only — they can never add a fact
-              that isn't in your profile.
+              that isn&apos;t in your profile.
             </p>
           </div>
         </div>
@@ -672,6 +672,14 @@ export default function MaterialEditor() {
                   {downloading ? '…' : 'Download PDF'}
                 </button>
               )}
+              <button
+                type="button"
+                onClick={() => handleDownload('docx')}
+                disabled={downloading}
+                className="btn-secondary text-xs"
+              >
+                {downloading ? '…' : 'Download DOCX'}
+              </button>
               <button
                 type="button"
                 onClick={handleCopy}

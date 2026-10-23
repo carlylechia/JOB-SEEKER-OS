@@ -13,9 +13,10 @@ refuses to do.
 
 ## 1. What the feature does
 
-A user can build a structured resume, keep several versions of it, tailor a
-version to one job, review evidence-backed suggestions for that job, and export
-any version as a real PDF.
+A user can build a structured resume, keep several versions of it, create a
+reviewed one-page version for a role, tailor a version to one job, review
+evidence-backed suggestions, and export any saved version as PDF or editable
+DOCX.
 
 The career profile is where the facts come from. The builder is a reusable,
 editable representation of those facts. Optimisation proposes changes to ONE
@@ -45,7 +46,7 @@ read, and this release does not change any of it.
 | `targetJobId` | "Which resumes target this job" is a real query. |
 | `sourceResumeId` | "Which variants came from this master" is a real query. |
 | `revision` | Optimistic concurrency. Compared inside the write, not around it. |
-| `name`, `templateKey`, `accentKey`, `density`, `hiddenSections` | Presentation, listed so the editor can filter and the export can render without parsing the blob. |
+| `name`, `templateKey`, `pageSize`, `accentKey`, `density`, `hiddenSections` | Presentation, listed so the editor can filter and the export can render without parsing the blob. |
 | `origin`, `sourceProfileVersion` | Provenance, for the UI to say where a document came from. |
 | `content` (JSONB) | The document itself. |
 
@@ -84,6 +85,13 @@ Indexes match the access patterns and nothing else:
 - `StructuredResume (userId, targetJobId)` — "which versions target this job".
 - `StructuredResume (sourceResumeId)` — variant lineage.
 - `ResumeOptimization (userId, resumeId, createdAt)` and `(userId, status)`.
+
+This document-quality release adds the nullable-to-users `pageSize` preference
+with the non-destructive migration
+`prisma/migrations/20261023120000_document_page_size`. It adds a `TEXT NOT NULL`
+column with the existing A4 default; no stored resume content is rewritten.
+One-page provenance uses the existing text `origin` field, so it needs no
+additional enum or table migration.
 
 ---
 
@@ -152,7 +160,7 @@ Why not snapshots:
 
 ## 5. Templates
 
-Three templates, all rendering the identical validated `ResumeContent` through
+Four templates, all rendering the identical validated `ResumeContent` through
 the identical layout engine:
 
 | Key | Label | Character |
@@ -160,8 +168,10 @@ the identical layout engine:
 | `classic-ats` | Classic ATS | Single column, uppercase headings, hairline rules, dates right-aligned on the role line. |
 | `modern-professional` | Modern Professional | Contemporary type scale, a filled accent bar behind the name, a short accent rule under each heading. |
 | `technical-minimal` | Technical / Minimal | Denser rhythm, no rules, short headings. |
+| `executive-experienced` | Executive / Experienced | Narrative summary hierarchy and a distinct role/company treatment for senior histories. |
 
 A template is **presentation only**. The complete vocabulary of template
+Every resume stores an explicit page size: A4 by default or US Letter. Template
 difference is eight fields in `templates.ts` (`style`, `nameBlockFill`,
 `sectionRules`, `inlineMeta`, `compactSkills`, base sizes). There is no template
 hook, no per-template renderer registration, and no way for a template to
@@ -373,7 +383,54 @@ nothing.
 
 ---
 
-## 8. Job-specific optimisation
+## 8. One-page creation and editable export
+
+### One-page review flow
+
+The editor creates a one-page proposal from a saved resume. A user can choose a
+saved job, or enter a target role and objective, then choose a template and A4
+or US Letter. The deterministic selector ranks the source headline, summary,
+experience, accomplishments, skills, education, projects and credentials
+against the target. It preserves verified wording and dates. The review shows
+retained and omitted items with reasons, allows restoring/removing content,
+editing retained bullets and the summary, and supports changing the layout
+before saving.
+
+Optional AI wording suggestions reuse the existing Resume Optimization feature,
+entitlement, cache, provider and evidence verifier. The user opts in and accepts
+individual proposals; unavailable AI falls back to deterministic selection.
+There is no second AI quota and no AI call for previewing or exporting a saved
+document.
+
+Saving creates a separate `StructuredResume` with origin `ONE_PAGE`, its source
+resume relation and optional target job. The source and career profile remain
+unchanged. The renderer reopens the serialized PDF with `PDFDocument.load()` and
+reads the actual page tree. A proposal may be saved only when that count is
+exactly one; up to four bounded measurements are attempted with at least 9.5
+pt body text and 38 pt margins. The export endpoint checks saved one-page
+variants again after later edits.
+
+### DOCX adapter
+
+`src/lib/resume-builder/docx.ts` adapts the same validated content, template
+registry, page size and accent to semantic editable paragraphs, headings,
+bullets and hyperlinks. It uses `docx@9.14.0` in the Node runtime. The route is
+owner-scoped, rate-limited, private/no-store and does not call AI. DOCX avoids
+tables and text boxes for core resume content. Word-compatible applications
+can repaginate because installed fonts and layout engines differ; the
+one-page PDF remains the page-count-validated output. Editable DOCX uses Arial
+for broad office compatibility; PDF and its browser preview embed/use Inter.
+
+### Pre-send quality checks
+
+The editor reports deterministic warnings or suggestions for missing name or
+contact methods, long summaries, placeholder text, experience entries missing
+role/employer details, repeated experience bullets and long page counts. These
+checks do not invent fixes or block intentional omissions. Request schemas
+continue to reject invalid structures and unsafe URLs; PDF layout reports
+unsupported glyphs.
+
+## 9. Job-specific optimisation
 
 ### The flow
 
@@ -425,7 +482,7 @@ applied automatically.
 
 ---
 
-## 9. Evidence and anti-fabrication
+## 10. Evidence and anti-fabrication
 
 This is the non-negotiable rule, so it is enforced in code rather than requested
 in a prompt. A prompt instruction ("never invent a metric") reduces how often a
@@ -491,7 +548,7 @@ with delimiters chosen so the payload is unlikely to contain them.
 
 ---
 
-## 10. Review and apply
+## 11. Review and apply
 
 The review screen shows, per operation: original text, proposed text, why it
 helps, the posting requirement it addresses, verbatim evidence with its source,
@@ -529,7 +586,7 @@ warning.
 
 ---
 
-## 11. Entitlements
+## 12. Entitlements
 
 This release **ships two entitlement keys that already existed** as defined but
 unreleased. It adds no new key, no new plan, no new limit and no parallel quota
@@ -555,7 +612,7 @@ security boundary.
 
 ---
 
-## 12. Usage accounting
+## 13. Usage accounting
 
 `runOptimization()` calls the shared `consumeUsage()`, under the existing
 PostgreSQL transaction-scoped advisory lock. One table (`UsageRecord`) backs
@@ -596,7 +653,7 @@ phantom in-flight run does not block the user for the stale window.
 
 ---
 
-## 13. Security and privacy
+## 14. Security and privacy
 
 ### Ownership
 
@@ -645,7 +702,7 @@ are refused, because these values end up in a document someone else opens.
 
 ---
 
-## 14. Logging
+## 15. Logging
 
 `logImportantInfo` for high-value events: created, updated (duplicate/delete
 recorded too), PDF export succeeded/failed, optimisation requested/succeeded/
@@ -660,7 +717,7 @@ Ordinary saves and template changes are **not** alerted.
 
 ---
 
-## 15. API
+## 16. API
 
 | Method | Route | Auth | Notes |
 | --- | --- | --- | --- |
@@ -685,7 +742,7 @@ from the layout its own **save response** returns.
 
 ---
 
-## 16. Local setup
+## 17. Local setup
 
 ```bash
 npm install
@@ -715,7 +772,7 @@ detail cost a production incident and is not obvious.
 
 ---
 
-## 17. Tests
+## 18. Tests
 
 ```bash
 npm test          # 580 tests
@@ -757,7 +814,7 @@ counterparts are covered directly.
 
 ---
 
-## 18. Deployment
+## 19. Deployment
 
 1. Merge to the default branch. The existing pipeline runs
    `prisma migrate deploy` on merge, then `npm run schema:check` to block a
@@ -787,7 +844,7 @@ jobs and career profiles are untouched.
 
 ---
 
-## 19. Troubleshooting
+## 20. Troubleshooting
 
 **The preview and the PDF differ.** They cannot, by construction — both render
 the same blocks. If they appear to differ, the browser has not loaded Inter yet:
@@ -825,7 +882,7 @@ into the user's own workspace first. This release does not relax that.
 
 ---
 
-## 20. Recommended next work
+## 21. Recommended next work
 
 Not implemented here, deliberately:
 

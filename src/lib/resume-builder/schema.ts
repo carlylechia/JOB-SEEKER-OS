@@ -22,7 +22,7 @@
  */
 
 import { z } from 'zod';
-import { TEMPLATE_KEYS, ACCENT_KEYS, DENSITY_VALUES } from './templates';
+import { TEMPLATE_KEYS, ACCENT_KEYS, DENSITY_VALUES, PAGE_SIZE_KEYS } from './templates';
 
 // ─── Limits ─────────────────────────────────────────────────────────────────
 //
@@ -476,6 +476,7 @@ export const HIDABLE_SECTION_KEYS = RESUME_SECTION_KEYS;
 
 export const templateKeySchema = z.enum(TEMPLATE_KEYS);
 export const accentKeySchema = z.enum(ACCENT_KEYS);
+export const pageSizeSchema = z.enum(PAGE_SIZE_KEYS);
 export const densitySchema = z
   .number()
   .int()
@@ -491,6 +492,7 @@ export const createResumeSchema = z
     /** Server-verified to belong to the caller. Never trusted as-is. */
     sourceResumeId: z.string().max(64).nullable().optional(),
     targetJobId: z.string().max(64).nullable().optional(),
+    pageSize: pageSizeSchema.optional(),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -538,6 +540,7 @@ export const updateResumeSchema = z
       .max(RESUME_MAX_HIDDEN_SECTIONS)
       .optional(),
     targetJobId: z.string().max(64).nullable().optional(),
+    pageSize: pageSizeSchema.optional(),
   })
   .strict();
 
@@ -557,6 +560,7 @@ export const previewRequestSchema = z
     accentKey: accentKeySchema.optional(),
     density: densitySchema.optional(),
     hiddenSections: z.array(z.enum(HIDABLE_SECTION_KEYS)).max(RESUME_MAX_HIDDEN_SECTIONS).optional(),
+    pageSize: pageSizeSchema.optional(),
   })
   .strict();
 

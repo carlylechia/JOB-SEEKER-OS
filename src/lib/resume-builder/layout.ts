@@ -50,16 +50,21 @@ import {
   getTemplate,
   type AccentKey,
   type Density,
+  type PageMargins,
+  type PageSizeKey,
   type TemplateKey,
+  DEFAULT_PAGE_SIZE,
+  PAGE_SIZES,
+  isPageSizeKey,
 } from './templates';
 
 // ─── Geometry ───────────────────────────────────────────────────────────────
 
-/** A4 in points. The near-universal resume size outside North America. */
-export const PAGE_WIDTH = 595.28;
-export const PAGE_HEIGHT = 841.89;
+/** Backwards-compatible A4 constants for document types using the default size. */
+export const PAGE_WIDTH = PAGE_SIZES.A4.width;
+export const PAGE_HEIGHT = PAGE_SIZES.A4.height;
 
-export const DEFAULT_MARGINS = { top: 46, right: 46, bottom: 46, left: 46 } as const;
+export const DEFAULT_MARGINS: PageMargins = PAGE_SIZES[DEFAULT_PAGE_SIZE].margins;
 
 /** Below this the content column is too narrow to be worth printing. */
 const MIN_CONTENT_WIDTH = 180;
@@ -132,7 +137,7 @@ export type LayoutPage = {
   index: number;
   width: number;
   height: number;
-  margins: typeof DEFAULT_MARGINS;
+  margins: PageMargins;
   blocks: LayoutBlock[];
 };
 
@@ -146,6 +151,7 @@ export type LayoutWarning = {
 
 export type LayoutDocument = {
   templateKey: TemplateKey;
+  pageSize: PageSizeKey;
   accentKey: AccentKey;
   density: Density;
   /** Base body size in points, after the density multiplier. */
@@ -156,7 +162,7 @@ export type LayoutDocument = {
    * place the baseline; see `LayoutMetrics.ascent`.
    */
   ascentRatio: number;
-  margins: typeof DEFAULT_MARGINS;
+  margins: PageMargins;
   pages: LayoutPage[];
   warnings: LayoutWarning[];
 };
@@ -177,6 +183,8 @@ export type LayoutOptions = {
   templateKey: TemplateKey;
   accentKey: AccentKey;
   density: Density;
+  pageSize?: PageSizeKey;
+  margins?: PageMargins;
   hiddenSections?: readonly string[];
 };
 
@@ -315,7 +323,11 @@ class Flow {
   private current: LayoutPage;
   private cursor: number;
 
-  constructor(private readonly margins = DEFAULT_MARGINS) {
+  constructor(
+    private readonly margins = DEFAULT_MARGINS,
+    private readonly pageWidth = PAGE_WIDTH,
+    private readonly pageHeight = PAGE_HEIGHT,
+  ) {
     this.current = this.newPage();
     this.cursor = margins.top;
   }
@@ -323,8 +335,8 @@ class Flow {
   private newPage(): LayoutPage {
     return {
       index: this.pages.length,
-      width: PAGE_WIDTH,
-      height: PAGE_HEIGHT,
+      width: this.pageWidth,
+      height: this.pageHeight,
       margins: this.margins,
       blocks: [],
     };
@@ -335,11 +347,11 @@ class Flow {
   }
 
   get contentWidth(): number {
-    return PAGE_WIDTH - this.margins.left - this.margins.right;
+    return this.pageWidth - this.margins.left - this.margins.right;
   }
 
   get bottom(): number {
-    return PAGE_HEIGHT - this.margins.bottom;
+    return this.pageHeight - this.margins.bottom;
   }
 
   get isFirstPage(): boolean {
@@ -625,8 +637,11 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
   const template = getTemplate(options.templateKey);
   const accent = getAccent(options.accentKey);
   const density = getDensity(options.density);
+  const pageSize = isPageSizeKey(options.pageSize) ? options.pageSize : DEFAULT_PAGE_SIZE;
+  const page = PAGE_SIZES[pageSize];
+  const margins = options.margins ?? page.margins;
 
-  const body = template.baseFontSize * density.scale;
+  const body = Math.max(9.5, template.baseFontSize * density.scale);
   const heading = template.baseHeadingSize * density.scale;
   const bodyLine = body * 1.38 + density.lineGap;
   const metaLine = body * 1.22 + density.lineGap;
@@ -677,7 +692,7 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
   };
   trackContent(options.content);
 
-  const flow = new Flow();
+  const flow = new Flow(margins, page.width, page.height);
   const push = (flowable: Flowable, keepWithNext = 0) => flow.place(flowable, keepWithNext);
   const gap = (points: number) => {
     if (points > 0) push(spaceFlowable(points));
@@ -826,7 +841,12 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
       ruleColor: accent.accent,
       showRule: template.sectionRules,
       metrics,
-      ruleFraction: template.style === 'MODERN_PROFESSIONAL' ? 0.28 : 1,
+      ruleFraction:
+        template.style === 'MODERN_PROFESSIONAL'
+          ? 0.28
+          : template.style === 'EXECUTIVE_EXPERIENCED'
+            ? 0.62
+            : 1,
     }),
     spaceFlowable(3),
   ] as const;
@@ -867,9 +887,9 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
       textFlowable({
         text: summary,
         style: 'regular',
-        size: body,
+      size: template.style === 'EXECUTIVE_EXPERIENCED' ? body * 1.06 : body,
         color: ink,
-        lineHeight: bodyLine,
+      lineHeight: template.style === 'EXECUTIVE_EXPERIENCED' ? body * 1.52 : bodyLine,
         metrics,
       }),
     );
@@ -884,7 +904,9 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
     experiences.forEach((entry, index) => {
       if (index > 0) gap(body * 0.5);
 
-      const roleLine = joinParts([entry.jobTitle, entry.company], ' · ');
+      const roleLine = template.inlineMeta
+        ? joinParts([entry.jobTitle, entry.company], ' · ')
+        : collapse(entry.jobTitle ?? entry.company ?? '');
       const dates = formatDateRange(entry.startDate, entry.endDate, entry.isCurrent);
 
       if (roleLine || dates) {
@@ -898,8 +920,22 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
             rightColor: mutedInk,
             lineHeight: metaLine,
             metrics,
+            contentWidth: flow.contentWidth,
           }),
           bodyLine * 2,
+        );
+      }
+
+      if (!template.inlineMeta && entry.jobTitle && entry.company) {
+        push(
+          textFlowable({
+            text: entry.company,
+            style: 'regular',
+            size: body * 0.98,
+            color: accent.accentDeep,
+            lineHeight: metaLine,
+            metrics,
+          }),
         );
       }
 
@@ -968,6 +1004,7 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
           rightColor: mutedInk,
           lineHeight: metaLine,
           metrics,
+          contentWidth: flow.contentWidth,
         }),
         bodyLine,
       );
@@ -1009,6 +1046,7 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
           rightColor: mutedInk,
           lineHeight: metaLine,
           metrics,
+          contentWidth: flow.contentWidth,
         }),
         bodyLine * 2,
       );
@@ -1098,11 +1136,12 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
 
   return {
     templateKey: options.templateKey,
+    pageSize,
     accentKey: options.accentKey,
     density: options.density,
     fontSize: body,
     ascentRatio: metrics.ascent(100) / 100,
-    margins: DEFAULT_MARGINS,
+    margins,
     pages,
     warnings,
   };
@@ -1125,11 +1164,19 @@ function inlinePairFlowable(params: {
   rightColor: string;
   lineHeight: number;
   metrics: LayoutMetrics;
+  contentWidth: number;
 }): Flowable {
-  const { left, right, leftStyle, size, leftColor, rightColor, lineHeight, metrics } = params;
+  const { left, right, leftStyle, size, leftColor, rightColor, lineHeight, metrics, contentWidth } = params;
+  const leftLines = left ? wrapText(left, contentWidth, metrics, leftStyle, size) : [];
+  const rightLines = right ? wrapText(right, contentWidth, metrics, 'regular', size) : [];
+  const rightWidth = right ? metrics.measure(right, 'regular', size) : 0;
+  const leftWidth = right ? contentWidth - rightWidth - 12 : 0;
+  const canShare = Boolean(left && right && leftWidth > MIN_CONTENT_WIDTH && metrics.measure(left, leftStyle, size) <= leftWidth);
 
   return {
-    height: lineHeight * 2,
+    height: canShare
+      ? Math.max(leftLines.length, rightLines.length, 1) * lineHeight
+      : (left ? Math.max(leftLines.length, 1) : 0) * lineHeight + (right ? Math.max(rightLines.length, 1) * lineHeight : 0),
 
     draw(page, y, x, width) {
       if (!left && !right) return;
@@ -1159,13 +1206,13 @@ function inlinePairFlowable(params: {
         return;
       }
 
-      const rightWidth = metrics.measure(right, 'regular', size);
-      const leftWidth = width - rightWidth - 12;
+      const measuredRightWidth = metrics.measure(right, 'regular', size);
+      const availableLeftWidth = width - measuredRightWidth - 12;
 
-      if (leftWidth > MIN_CONTENT_WIDTH && metrics.measure(left, leftStyle, size) <= leftWidth) {
-        const leftLines = wrapText(left, leftWidth, metrics, leftStyle, size);
-        const rightLines = wrapText(right, rightWidth + 1, metrics, 'regular', size);
-        leftLines.forEach((line, index) => {
+      if (availableLeftWidth > MIN_CONTENT_WIDTH && metrics.measure(left, leftStyle, size) <= availableLeftWidth) {
+        const sharedLeftLines = wrapText(left, availableLeftWidth, metrics, leftStyle, size);
+        const sharedRightLines = wrapText(right, measuredRightWidth + 1, metrics, 'regular', size);
+        sharedLeftLines.forEach((line, index) => {
           page.blocks.push({
             kind: 'TEXT',
             x,
@@ -1177,7 +1224,7 @@ function inlinePairFlowable(params: {
             color: leftColor,
           });
         });
-        rightLines.forEach((line, index) => {
+        sharedRightLines.forEach((line, index) => {
           page.blocks.push({
             kind: 'TEXT',
             x: x + width - metrics.measure(line, 'regular', size),
@@ -1207,7 +1254,7 @@ function inlinePairFlowable(params: {
         lineHeight,
         metrics,
         align: 'right',
-      }).draw(page, y + lineHeight, x, width);
+      }).draw(page, y + Math.max(leftLines.length, 1) * lineHeight, x, width);
     },
   };
 }

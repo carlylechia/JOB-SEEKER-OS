@@ -30,6 +30,7 @@ import '@fontsource/inter/400.css';
 import '@fontsource/inter/600.css';
 
 import { useMemo } from 'react';
+import { DOCUMENT_FONT_FAMILIES } from '@/lib/resume-builder/templates';
 import type { LayoutBlock, LayoutDocument, LayoutPage } from '@/lib/resume-builder/layout';
 
 type Props = {
@@ -55,7 +56,7 @@ type Props = {
  * different letterforms rather than to a broken document.
  */
 const FONT_STACK =
-  "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+  `'${DOCUMENT_FONT_FAMILIES.pdf}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif`;
 
 export function ResumeLayoutPreview({
   layout,

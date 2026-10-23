@@ -221,6 +221,25 @@ describe('the layout engine', () => {
     }
   });
 
+  it('keeps long role and employer names separate from their dates', () => {
+    const layout = layoutOf(longNameContent(), 'classic-ats');
+    for (const page of layout.pages) {
+      const runs = page.blocks.filter((block) => block.kind === 'TEXT');
+      for (let i = 0; i < runs.length; i += 1) {
+        for (let j = i + 1; j < runs.length; j += 1) {
+          const first = runs[i];
+          const second = runs[j];
+          if (Math.abs(first.y - second.y) > 0.5) continue;
+          const firstRight = first.x + first.width;
+          const secondRight = second.x + second.width;
+          if (first.x < secondRight && second.x < firstRight) {
+            throw new Error(`long role heading overlap: "${first.text}" / "${second.text}"`);
+          }
+        }
+      }
+    }
+  });
+
   it('does not strand a section heading at the foot of a page', () => {
     const layout = layoutOf(longContent());
     for (let index = 0; index < layout.pages.length - 1; index += 1) {

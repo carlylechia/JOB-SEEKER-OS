@@ -1,0 +1,2 @@
+ALTER TABLE "StructuredResume"
+ADD COLUMN "pageSize" TEXT NOT NULL DEFAULT 'A4';
