@@ -46,3 +46,23 @@ export function resumeDownloadHeaders(params: {
     Vary: 'Cookie',
   });
 }
+
+/** Private download headers shared by the editable formats. */
+export function resumeDocumentDownloadHeaders(params: {
+  resumeName: string;
+  byteLength: number;
+  extension: 'docx';
+  contentType: string;
+}): Headers {
+  const fileName = resumeDownloadFileName(params.resumeName).replace(/\.pdf$/i, `.${params.extension}`);
+  return new Headers({
+    'Content-Type': params.contentType,
+    'Content-Length': String(params.byteLength),
+    'Content-Disposition': `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+    'Content-Security-Policy': "default-src 'none'; sandbox",
+    'X-Content-Type-Options': 'nosniff',
+    'Cache-Control': 'private, no-store, max-age=0, must-revalidate',
+    Pragma: 'no-cache',
+    Vary: 'Cookie',
+  });
+}

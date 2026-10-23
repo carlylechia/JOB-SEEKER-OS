@@ -20,6 +20,7 @@ import { prisma } from '@/lib/prisma';
 import { preparePdfEngine, getLayoutMetrics, renderPdfLayout } from '@/lib/resume-builder/pdf';
 import { buildLetterLayout } from '@/lib/application-materials/letter-layout';
 import { downloadHeaders } from '@/lib/application-materials/download';
+import { buildMaterialExportContext } from '@/lib/application-materials/export-context';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -56,7 +57,11 @@ export async function GET(request: Request, { params }: Params) {
 
       const material = await prisma.applicationMaterial.findFirst({
         where: { id, userId },
-        select: { id: true, title: true, content: true, type: true },
+        select: {
+          id: true, title: true, content: true, type: true, subject: true,
+          job: { select: { userId: true, title: true, company: true } },
+          resume: { select: { userId: true, content: true, pageSize: true } },
+        },
       });
 
       if (!material) {
@@ -69,8 +74,19 @@ export async function GET(request: Request, { params }: Params) {
       const startedAt = Date.now();
       try {
         await preparePdfEngine();
-        const layout = buildLetterLayout({ content: material.content });
-        getLayoutMetrics();
+        const context = await buildMaterialExportContext({ userId, resume: material.resume, job: material.job });
+        const layout = buildLetterLayout({
+          content: material.content,
+          metrics: getLayoutMetrics(),
+          pageSize: context.pageSize,
+          applicant: material.type === 'COVER_LETTER' ? context.applicant : null,
+          date: material.type === 'COVER_LETTER'
+            ? new Intl.DateTimeFormat('en', { dateStyle: 'long' }).format(new Date())
+            : null,
+          company: material.type === 'COVER_LETTER' ? context.company : null,
+          jobTitle: material.type === 'COVER_LETTER' ? context.jobTitle : null,
+          subject: material.type === 'COVER_LETTER' ? material.subject : null,
+        });
         const { bytes, pageCount } = await renderPdfLayout(layout);
 
         await logImportantInfo({
