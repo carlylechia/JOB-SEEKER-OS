@@ -54,7 +54,7 @@ export function LandingDashboardPreview() {
             Everything in one view. Nothing hidden.
           </h2>
           <p className="mt-5 text-base leading-7 text-muted">
-            Your dashboard surfaces your streak, today's priorities, pipeline health, and upcoming follow-ups — so you can
+            Your dashboard surfaces your streak, today&apos;s priorities, pipeline health, and upcoming follow-ups — so you can
             start each session knowing exactly what to do.
           </p>
 

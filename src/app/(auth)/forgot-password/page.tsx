@@ -43,7 +43,7 @@ function ForgotPasswordForm() {
             <div className="text-3xl">📧</div>
             <h2 className="mt-3 text-lg font-semibold text-success-text">Check your inbox</h2>
             <p className="mt-2 text-sm text-muted">
-              If an account exists for <strong className="text-ink">{email}</strong>, you'll
+              If an account exists for <strong className="text-ink">{email}</strong>, you&apos;ll
               receive a password reset link shortly.
             </p>
             <Link href="/login" className="btn-primary mt-5 inline-block">
@@ -64,7 +64,7 @@ function ForgotPasswordForm() {
 
         <h1 className="text-2xl font-semibold">Forgot your password?</h1>
         <p className="muted mt-1">
-          Enter your email and we'll send you a reset link valid for 1 hour.
+          Enter your email and we&apos;ll send you a reset link valid for 1 hour.
         </p>
 
         <form className="mt-6 space-y-3" onSubmit={handleSubmit}>
