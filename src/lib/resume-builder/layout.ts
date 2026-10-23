@@ -920,6 +920,7 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
             rightColor: mutedInk,
             lineHeight: metaLine,
             metrics,
+            contentWidth: flow.contentWidth,
           }),
           bodyLine * 2,
         );
@@ -1003,6 +1004,7 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
           rightColor: mutedInk,
           lineHeight: metaLine,
           metrics,
+          contentWidth: flow.contentWidth,
         }),
         bodyLine,
       );
@@ -1044,6 +1046,7 @@ export function buildLayout(options: LayoutOptions, metrics: LayoutMetrics): Lay
           rightColor: mutedInk,
           lineHeight: metaLine,
           metrics,
+          contentWidth: flow.contentWidth,
         }),
         bodyLine * 2,
       );
@@ -1161,11 +1164,19 @@ function inlinePairFlowable(params: {
   rightColor: string;
   lineHeight: number;
   metrics: LayoutMetrics;
+  contentWidth: number;
 }): Flowable {
-  const { left, right, leftStyle, size, leftColor, rightColor, lineHeight, metrics } = params;
+  const { left, right, leftStyle, size, leftColor, rightColor, lineHeight, metrics, contentWidth } = params;
+  const leftLines = left ? wrapText(left, contentWidth, metrics, leftStyle, size) : [];
+  const rightLines = right ? wrapText(right, contentWidth, metrics, 'regular', size) : [];
+  const rightWidth = right ? metrics.measure(right, 'regular', size) : 0;
+  const leftWidth = right ? contentWidth - rightWidth - 12 : 0;
+  const canShare = Boolean(left && right && leftWidth > MIN_CONTENT_WIDTH && metrics.measure(left, leftStyle, size) <= leftWidth);
 
   return {
-    height: lineHeight * 2,
+    height: canShare
+      ? Math.max(leftLines.length, rightLines.length, 1) * lineHeight
+      : (left ? Math.max(leftLines.length, 1) : 0) * lineHeight + (right ? Math.max(rightLines.length, 1) * lineHeight : 0),
 
     draw(page, y, x, width) {
       if (!left && !right) return;
@@ -1195,13 +1206,13 @@ function inlinePairFlowable(params: {
         return;
       }
 
-      const rightWidth = metrics.measure(right, 'regular', size);
-      const leftWidth = width - rightWidth - 12;
+      const measuredRightWidth = metrics.measure(right, 'regular', size);
+      const availableLeftWidth = width - measuredRightWidth - 12;
 
-      if (leftWidth > MIN_CONTENT_WIDTH && metrics.measure(left, leftStyle, size) <= leftWidth) {
-        const leftLines = wrapText(left, leftWidth, metrics, leftStyle, size);
-        const rightLines = wrapText(right, rightWidth + 1, metrics, 'regular', size);
-        leftLines.forEach((line, index) => {
+      if (availableLeftWidth > MIN_CONTENT_WIDTH && metrics.measure(left, leftStyle, size) <= availableLeftWidth) {
+        const sharedLeftLines = wrapText(left, availableLeftWidth, metrics, leftStyle, size);
+        const sharedRightLines = wrapText(right, measuredRightWidth + 1, metrics, 'regular', size);
+        sharedLeftLines.forEach((line, index) => {
           page.blocks.push({
             kind: 'TEXT',
             x,
@@ -1213,7 +1224,7 @@ function inlinePairFlowable(params: {
             color: leftColor,
           });
         });
-        rightLines.forEach((line, index) => {
+        sharedRightLines.forEach((line, index) => {
           page.blocks.push({
             kind: 'TEXT',
             x: x + width - metrics.measure(line, 'regular', size),
@@ -1243,7 +1254,7 @@ function inlinePairFlowable(params: {
         lineHeight,
         metrics,
         align: 'right',
-      }).draw(page, y + lineHeight, x, width);
+      }).draw(page, y + Math.max(leftLines.length, 1) * lineHeight, x, width);
     },
   };
 }

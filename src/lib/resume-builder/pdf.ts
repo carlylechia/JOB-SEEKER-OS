@@ -20,7 +20,7 @@
  *     returns the original string exactly.
  *
  * Inter ships under the SIL Open Font License 1.1. Two weights only — Regular
- * and SemiBold — because three weights across three templates produced no
+ * and SemiBold — because three weights across four templates produced no
  * visible difference at these sizes, and every extra embedded weight is roughly
  * 180 KB in every downloaded file (see the subsetting note in `renderPdfLayout`).
  */

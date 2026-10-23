@@ -1,11 +1,11 @@
 /**
  * Template registry.
  *
- * A template is PRESENTATION ONLY. All three render the identical validated
+ * A template is PRESENTATION ONLY. All four render the identical validated
  * `ResumeContent` through the identical layout engine; they differ in type
  * scale, rule weight, hierarchy and accent placement, never in what they mean
  * or how they are stored. There is deliberately no per-template data model — the
- * brief for this feature was three good templates, not thirty weak ones, and a
+ * brief for this feature was four good templates, not thirty weak ones, and a
  * template that needs its own content schema is a template that will drift.
  *
  * Everything here is data, so the editor can render a template picker without a
@@ -48,6 +48,9 @@ export const PAGE_SIZES: Record<
 };
 
 export const DEFAULT_PAGE_SIZE: PageSizeKey = 'A4';
+
+/** PDF embeds Inter; editable Word files use a broadly available office font. */
+export const DOCUMENT_FONT_FAMILIES = { pdf: 'Inter', docx: 'Arial' } as const;
 
 export function isPageSizeKey(value: unknown): value is PageSizeKey {
   return value === 'A4' || value === 'LETTER';
