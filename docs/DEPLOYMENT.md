@@ -320,7 +320,7 @@ Job-specific optimisation uses the existing `OPENAI_API_KEY`.
 2. Create a resume **from your career profile**. Confirm the roles, dates and
    titles match the profile exactly and that nothing was invented. Edit a role,
    save, refresh: your edit is still there and your profile is unchanged.
-3. Open **Design** and switch between the three templates. Confirm the preview
+3. Open **Design** and switch between the four templates. Confirm the preview
    changes and that the text does not.
 4. **Download PDF.** Confirm the browser downloads a file rather than opening a
    viewer, that its size is roughly 300–400 KB (two embedded font faces), and
