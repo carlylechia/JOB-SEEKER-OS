@@ -172,7 +172,7 @@ export function normalizeResumeDate(input: string | null | undefined): string | 
   }
   const reversedNamed = /^(\d{4})\s*[\s/-]+([a-z]{3,9})\.?$/.exec(value);
   if (reversedNamed) {
-    const month = MONTH_NAMES[reversedNamed[1]];
+    const month = MONTH_NAMES[reversedNamed[2]];
     return month ? `${reversedNamed[1]}-${month}` : null;
   }
 

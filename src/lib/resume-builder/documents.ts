@@ -28,6 +28,7 @@ import {
   RESUME_MAX_NAME_LENGTH,
   emptyResumeBasics,
   emptyResumeContent,
+  normalizeResumeDate,
   resumeContentSchema,
   type CreateResumeInput,
   type ResumeContent,
@@ -295,7 +296,9 @@ export async function resolveTargetJob(params: {
  * Where the profile has nothing, the resume field stays empty. Nothing is
  * invented: no title inferred from a company, no end date derived from a start
  * date, no skill promoted from a job description, and no contact detail filled
- * in that the user did not supply.
+ * in that the user did not supply. Free-text profile dates are normalised to
+ * resume month precision; dates the resume schema cannot represent are omitted
+ * from the copy while the original profile value remains untouched.
  *
  * Returns `null` rather than throwing when there is no confirmed profile, so
  * the caller can offer "start blank" instead of an error.
@@ -408,8 +411,8 @@ export async function resumeFromCareerProfile(userId: string): Promise<{
       jobTitle: entry.jobTitle,
       company: entry.company,
       location: entry.location,
-      startDate: entry.startDate,
-      endDate: entry.isCurrent ? null : entry.endDate,
+      startDate: normalizeResumeDate(entry.startDate),
+      endDate: entry.isCurrent ? null : normalizeResumeDate(entry.endDate),
       isCurrent: entry.isCurrent,
       responsibilities: entry.responsibilities,
       achievements: entry.achievements,
@@ -422,8 +425,8 @@ export async function resumeFromCareerProfile(userId: string): Promise<{
       institution: entry.institution,
       qualification: entry.qualification,
       fieldOfStudy: entry.fieldOfStudy,
-      startDate: entry.startDate,
-      endDate: entry.endDate,
+      startDate: normalizeResumeDate(entry.startDate),
+      endDate: normalizeResumeDate(entry.endDate),
       details: entry.details,
       origin: 'CAREER_PROFILE' as const,
     })),
@@ -446,8 +449,8 @@ export async function resumeFromCareerProfile(userId: string): Promise<{
       description: entry.description,
       role: entry.role,
       technologies: entry.technologies,
-      startDate: entry.startDate,
-      endDate: entry.endDate,
+      startDate: normalizeResumeDate(entry.startDate),
+      endDate: normalizeResumeDate(entry.endDate),
       projectUrl: entry.projectUrl,
       results: entry.results,
       origin: 'CAREER_PROFILE' as const,
@@ -457,8 +460,8 @@ export async function resumeFromCareerProfile(userId: string): Promise<{
       kind: entry.kind,
       name: entry.name,
       issuer: entry.issuer,
-      issuedDate: entry.issuedDate,
-      expiresDate: entry.expiresDate,
+      issuedDate: normalizeResumeDate(entry.issuedDate),
+      expiresDate: normalizeResumeDate(entry.expiresDate),
       proficiency: entry.proficiency,
       details: entry.details,
       origin: 'CAREER_PROFILE' as const,

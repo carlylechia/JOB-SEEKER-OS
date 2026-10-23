@@ -180,6 +180,7 @@ describe('the structured resume schema', () => {
     expect(normalizeResumeDate('2021-03')).toBe('2021-03');
     expect(normalizeResumeDate('Mar 2021')).toBe('2021-03');
     expect(normalizeResumeDate('March 2021')).toBe('2021-03');
+    expect(normalizeResumeDate('2021 Jan')).toBe('2021-01');
     expect(normalizeResumeDate('2021/3')).toBe('2021-03');
     expect(normalizeResumeDate('')).toBeNull();
     expect(normalizeResumeDate('whenever')).toBeNull();
@@ -789,6 +790,30 @@ describe('populating a resume from the career profile', () => {
     const result = await resumeFromCareerProfile(user.id);
     expect(result!.content.experiences[0].isCurrent).toBe(true);
     expect(result!.content.experiences[0].endDate).toBeNull();
+  });
+
+  it('omits unrecognised profile dates when creating a resume from the profile', async () => {
+    const user = await track(createUser());
+    const seeded = await seedCareerProfile(user.id);
+    await prisma.careerProject.update({
+      where: { id: seeded.project.id },
+      data: { startDate: '2024-03', endDate: 'Present' },
+    });
+
+    const resume = await createResume({
+      userId: user.id,
+      input: { from: 'PROFILE' },
+      limit: null,
+    });
+
+    expect(resume.origin).toBe('PROFILE');
+    expect(resume.content.projects[0].startDate).toBe('2024-03');
+    expect(resume.content.projects[0].endDate).toBeNull();
+
+    const original = await prisma.careerProject.findUniqueOrThrow({
+      where: { id: seeded.project.id },
+    });
+    expect(original.endDate).toBe('Present');
   });
 
   it('regenerates entry ids rather than reusing profile row ids', async () => {

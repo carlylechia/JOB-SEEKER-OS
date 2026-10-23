@@ -89,7 +89,7 @@ Indexes match the access patterns and nothing else:
 
 ## 3. Career profile integration
 
-`resumeFromCareerProfile()` copies **confirmed values verbatim** and returns
+`resumeFromCareerProfile()` copies **confirmed values** and returns
 `null` when there is no confirmed profile, so the caller can offer a blank
 document rather than an error.
 
@@ -97,7 +97,9 @@ What it does:
 
 - Reuses saved contact details, work history, education, projects, skills and
   credentials.
-- Preserves employment dates and titles exactly as stored.
+- Normalises readable profile dates to `YYYY-MM` while preserving titles.
+- Omits profile dates the resume format cannot represent; the original profile
+  values are left unchanged.
 - Regenerates every entry id, so a resume entry and a career-profile row are
   never the same object.
 - Carries `CareerSkill.origin` through as `STATED` / `SUPPORTED`, and
@@ -108,8 +110,8 @@ What it does **not** do:
 
 - Invent a contact detail the user never gave.
 - Infer a title from a company, or an end date from a start date.
-- Drop an end date from contradictory source data silently — a current role with
-  an end date is stored with the end date cleared and `isCurrent` kept.
+- Drop an end date from contradictory employment data silently — a current role
+  with an end date is stored with the end date cleared and `isCurrent` kept.
 - Write anything back.
 
 ### The one-way rule
