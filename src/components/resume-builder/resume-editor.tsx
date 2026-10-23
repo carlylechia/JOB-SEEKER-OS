@@ -3,23 +3,11 @@
 /**
  * The resume editor.
  *
- * The whole interface is organised around one decision: an EXPLICIT SAVE, not
- * autosave.
- *
- * Autosave is genuinely nice until it is not. Two tabs, a flaky connection or a
- * save that lands out of order all turn it into silent data loss, and the only
- * way to make it safe is a revision counter, a debounce, a visible status and a
- * conflict dialog — at which point an explicit button with a status line is
- * simpler to reason about and easier to trust. So: changes are held locally,
- * the Save button says whether there is anything to save, the status line only
- * claims success once the server has confirmed the mutation, and a 409 from a
- * concurrent edit is surfaced as a conflict the user resolves deliberately
- * rather than papered over.
- *
- * The preview is not re-rendered from local state. It is the server's layout for
- * the SAVED document, and it says so when there are unsaved changes — because a
- * preview that quietly disagreed with the export would be worse than one that
- * admits what it is showing.
+ * Changes are saved automatically after a short pause. Saves are serialised and
+ * revision-checked, so an older response cannot replace newer typing and edits
+ * from another tab are still surfaced as a conflict. The preview is updated
+ * from the exact layout returned by the successful save, keeping it aligned
+ * with the exported document.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent } from 'react';
@@ -89,6 +77,21 @@ type TargetableJob = {
 
 type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error' | 'conflict';
 
+type ResumeDraft = Pick<
+  SerialisedResume,
+  | 'content'
+  | 'name'
+  | 'templateKey'
+  | 'pageSize'
+  | 'accentKey'
+  | 'density'
+  | 'hiddenSections'
+  | 'sectionOrder'
+  | 'targetJobId'
+>;
+
+const AUTO_SAVE_DELAY_MS = 1_200;
+
 type Props = {
   resume: SerialisedResume;
   layout: LayoutDocument;
@@ -134,9 +137,16 @@ export function ResumeEditor({
   const [previewWidth, setPreviewWidth] = useState(640);
   const [draggingSection, setDraggingSection] = useState<ResumeSectionKey | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
-  const savedRef = useRef({
+  const revisionRef = useRef(resume.revision);
+  const draftVersionRef = useRef(0);
+  const saveInFlightRef = useRef(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryCountRef = useRef(0);
+  const saveRef = useRef<() => Promise<void>>(async () => {});
+  const savedRef = useRef<ResumeDraft>({
     content: resume.content,
-    name: resume.name,
+    name: resume.name.trim(),
     templateKey: resume.templateKey,
     pageSize: resume.pageSize,
     accentKey: resume.accentKey,
@@ -146,17 +156,21 @@ export function ResumeEditor({
     targetJobId: resume.targetJobId,
   });
 
-  const dirty =
-    saveState === 'dirty' ||
-    JSON.stringify(content) !== JSON.stringify(savedRef.current.content) ||
-    name !== savedRef.current.name ||
-    templateKey !== savedRef.current.templateKey ||
-    pageSize !== savedRef.current.pageSize ||
-    accentKey !== savedRef.current.accentKey ||
-    density !== savedRef.current.density ||
-    JSON.stringify(hiddenSections) !== JSON.stringify(savedRef.current.hiddenSections) ||
-    JSON.stringify(sectionOrder) !== JSON.stringify(savedRef.current.sectionOrder) ||
-    targetJobId !== savedRef.current.targetJobId;
+  const draft = useMemo<ResumeDraft>(() => ({
+    content,
+    name: name.trim(),
+    templateKey,
+    pageSize,
+    accentKey,
+    density,
+    hiddenSections,
+    sectionOrder,
+    targetJobId,
+  }), [content, name, templateKey, pageSize, accentKey, density, hiddenSections, sectionOrder, targetJobId]);
+  const latestDraftRef = useRef(draft);
+  latestDraftRef.current = draft;
+
+  const dirty = JSON.stringify(draft) !== JSON.stringify(savedRef.current);
 
   const qualityIssues = useMemo(
     () => checkResumeQuality(content, layout.pages.length),
@@ -176,56 +190,60 @@ export function ResumeEditor({
     return () => observer.disconnect();
   }, [showPreview]);
 
+  const markDraftChanged = useCallback(() => {
+    draftVersionRef.current += 1;
+    retryCountRef.current = 0;
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    setValidationErrors([]);
+    setSaveState((current) => current === 'saving' || current === 'conflict' ? current : 'idle');
+  }, []);
+
   const setSection = useCallback(
     (next: Partial<ResumeContent>) => {
       setContent((current) => ({ ...current, ...next }));
-      setSaveState('dirty');
+      markDraftChanged();
     },
-    [],
+    [markDraftChanged],
   );
 
-  /**
-   * Re-render the preview for a presentation-only change.
-   *
-   * Hits the preview endpoint with the chosen settings, which lays out the
-   * STORED document. Nothing is saved, nothing is billed, and the user's
-   * unsaved edits are untouched.
-   */
-  const refreshPreview = useCallback(
-    async (settings: { templateKey?: string; accentKey?: string; density?: number; hidden?: string[]; pageSize?: PageSizeKey; order?: ResumeSectionKey[] }) => {
-      const params = new URLSearchParams({
-        template: settings.templateKey ?? templateKey,
-        accent: settings.accentKey ?? accentKey,
-        density: String(settings.density ?? density),
-        hiddenSections: (settings.hidden ?? hiddenSections).join(','),
-        sectionOrder: (settings.order ?? sectionOrder).join(','),
-        pageSize: settings.pageSize ?? pageSize,
-      });
-      try {
-        const response = await fetch(`/api/resumes/${resume.id}/preview?${params.toString()}`, {
-          cache: 'no-store',
-          credentials: 'same-origin',
-        });
-        if (!response.ok) return;
-        const payload = (await response.json()) as { layout: LayoutDocument };
-        setLayout(payload.layout);
-      } catch {
-        // A failed preview is cosmetic; the save is what matters. The old
-        // layout stays on screen rather than blanking the panel.
-      }
-    },
-    [resume.id, templateKey, accentKey, density, hiddenSections, pageSize, sectionOrder],
-  );
+  const scheduleSaveRetry = useCallback(() => {
+    if (retryCountRef.current >= 2 || retryTimerRef.current) return;
+    const delay = 1_500 * (2 ** retryCountRef.current);
+    retryCountRef.current += 1;
+    retryTimerRef.current = setTimeout(() => {
+      retryTimerRef.current = null;
+      void saveRef.current();
+    }, delay);
+  }, []);
 
   const save = useCallback(async () => {
-    if (saveState === 'saving') return;
+    if (saveInFlightRef.current) return;
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+
+    const snapshot = latestDraftRef.current;
+    if (JSON.stringify(snapshot) === JSON.stringify(savedRef.current)) {
+      setSaveState('saved');
+      setMessage('All changes saved.');
+      return;
+    }
+
     setSaveState('saving');
     setMessage('');
     setValidationErrors([]);
 
     // Validate locally first so the user gets every problem at once rather than
     // one per round trip.
-    const parsed = resumeContentSchema.safeParse(content);
+    const parsed = resumeContentSchema.safeParse(snapshot.content);
     if (!parsed.success) {
       setValidationErrors(
         parsed.error.issues.slice(0, 6).map((issue) =>
@@ -237,22 +255,24 @@ export function ResumeEditor({
       return;
     }
 
+    saveInFlightRef.current = true;
+    const sentVersion = draftVersionRef.current;
     try {
       const response = await fetch(`/api/resumes/${resume.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         body: JSON.stringify({
-          expectedRevision: revision,
-          name: name.trim(),
+          expectedRevision: revisionRef.current,
+          name: snapshot.name,
           content: parsed.data,
-          templateKey,
-          pageSize,
-          accentKey,
-          density,
-          hiddenSections,
-          sectionOrder,
-          targetJobId,
+          templateKey: snapshot.templateKey,
+          pageSize: snapshot.pageSize,
+          accentKey: snapshot.accentKey,
+          density: snapshot.density,
+          hiddenSections: snapshot.hiddenSections,
+          sectionOrder: snapshot.sectionOrder,
+          targetJobId: snapshot.targetJobId,
         }),
       });
       const payload = await response.json().catch(() => null);
@@ -271,22 +291,151 @@ export function ResumeEditor({
         setValidationErrors(fields.map((field) => `${field.path}: ${field.message}`));
         setSaveState('error');
         setMessage((payload?.error?.message as string | undefined) ?? 'Those changes could not be saved.');
+        if (response.status === 429 || response.status >= 500) scheduleSaveRetry();
         return;
       }
 
-      setContent(payload.resume.content);
-      setName(payload.resume.name);
-      setRevision(payload.resume.revision);
+      const returnedContent = resumeContentSchema.safeParse(payload?.resume?.content);
+      if (!payload?.resume || !payload?.layout) {
+        setSaveState('error');
+        setMessage('The server saved your changes but returned an incomplete response. Your edits are still here; retry to sync the editor.');
+        return;
+      }
+
+      const persistedDraft: ResumeDraft = {
+        // Keep the sent, validated content as a safe fallback if an older or
+        // misconfigured API deployment omits it from the save response.
+        content: returnedContent.success ? returnedContent.data : parsed.data,
+        name: payload.resume.name as string,
+        templateKey: payload.resume.templateKey as string,
+        pageSize: payload.resume.pageSize as PageSizeKey,
+        accentKey: payload.resume.accentKey as string,
+        density: payload.resume.density as number,
+        hiddenSections: payload.resume.hiddenSections as string[],
+        sectionOrder: payload.resume.sectionOrder as ResumeSectionKey[],
+        targetJobId: payload.resume.targetJobId as string | null,
+      };
+      savedRef.current = persistedDraft;
+      revisionRef.current = payload.resume.revision as number;
+      setRevision(revisionRef.current);
       setLayout(payload.layout);
-      savedRef.current = { content: parsed.data, name: name.trim(), templateKey, pageSize, accentKey, density, hiddenSections, sectionOrder, targetJobId };
-      setSaveState('saved');
-      setMessage('Saved.');
-      router.refresh();
+      if (draftVersionRef.current === sentVersion) {
+        setContent(persistedDraft.content);
+        setName(persistedDraft.name);
+        setTemplateKey(persistedDraft.templateKey);
+        setPageSize(persistedDraft.pageSize);
+        setAccentKey(persistedDraft.accentKey);
+        setDensity(persistedDraft.density);
+        setHiddenSections(persistedDraft.hiddenSections);
+        setSectionOrder(persistedDraft.sectionOrder);
+        setTargetJobId(persistedDraft.targetJobId);
+        setSaveState('saved');
+        setMessage('All changes saved.');
+        retryCountRef.current = 0;
+      } else {
+        setSaveState('dirty');
+        setMessage('Saving your latest changes…');
+      }
     } catch {
       setSaveState('error');
-      setMessage('We could not reach the server. Your edits are still here — try saving again.');
+      setMessage('We could not reach the server. Your edits are still here; we will retry automatically.');
+      scheduleSaveRetry();
+    } finally {
+      saveInFlightRef.current = false;
     }
-  }, [saveState, content, name, revision, templateKey, pageSize, accentKey, density, hiddenSections, sectionOrder, targetJobId, resume.id, router]);
+  }, [resume.id, scheduleSaveRetry]);
+
+  saveRef.current = save;
+
+  useEffect(() => {
+    if (!dirty || saveState === 'saving' || saveState === 'error' || saveState === 'conflict') return;
+    autoSaveTimerRef.current = setTimeout(() => {
+      autoSaveTimerRef.current = null;
+      void saveRef.current();
+    }, AUTO_SAVE_DELAY_MS);
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+    };
+  }, [dirty, saveState, draft]);
+
+  useEffect(() => () => {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warnBeforeLeaving);
+    return () => window.removeEventListener('beforeunload', warnBeforeLeaving);
+  }, [dirty]);
+
+  const reloadLatest = useCallback(async () => {
+    if (saveInFlightRef.current) return;
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    const startingVersion = draftVersionRef.current;
+    setSaveState('saving');
+    setMessage('Loading the latest saved version…');
+    try {
+      const response = await fetch(`/api/resumes/${resume.id}`, {
+        cache: 'no-store',
+        credentials: 'same-origin',
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.resume || !payload?.layout) {
+        throw new Error('Could not load the latest saved resume.');
+      }
+      if (draftVersionRef.current !== startingVersion) {
+        setSaveState('conflict');
+        setMessage('This resume changed while reloading. Try again to load the latest version.');
+        return;
+      }
+
+      const latest: ResumeDraft = {
+        content: payload.resume.content as ResumeContent,
+        name: payload.resume.name as string,
+        templateKey: payload.resume.templateKey as string,
+        pageSize: payload.resume.pageSize as PageSizeKey,
+        accentKey: payload.resume.accentKey as string,
+        density: payload.resume.density as number,
+        hiddenSections: payload.resume.hiddenSections as string[],
+        sectionOrder: payload.resume.sectionOrder as ResumeSectionKey[],
+        targetJobId: payload.resume.targetJobId as string | null,
+      };
+      savedRef.current = latest;
+      latestDraftRef.current = latest;
+      revisionRef.current = payload.resume.revision as number;
+      setContent(latest.content);
+      setName(latest.name);
+      setTemplateKey(latest.templateKey);
+      setPageSize(latest.pageSize);
+      setAccentKey(latest.accentKey);
+      setDensity(latest.density);
+      setHiddenSections(latest.hiddenSections);
+      setSectionOrder(latest.sectionOrder);
+      setTargetJobId(latest.targetJobId);
+      setRevision(revisionRef.current);
+      setLayout(payload.layout as LayoutDocument);
+      setSaveState('saved');
+      setMessage('Latest saved version loaded.');
+    } catch {
+      setSaveState('conflict');
+      setMessage('We could not reload the latest version. Please try again.');
+    }
+  }, [resume.id]);
 
   const duplicate = useCallback(async () => {
     setBusy(true);
@@ -353,9 +502,8 @@ export function ResumeEditor({
     next.splice(from, 1);
     next.splice(boundedTarget, 0, section);
     setSectionOrder(next);
-    setSaveState('dirty');
-    void refreshPreview({ order: next });
-  }, [sectionOrder, refreshPreview]);
+    markDraftChanged();
+  }, [sectionOrder, markDraftChanged]);
 
   const handleSectionDrop = useCallback((target: ResumeSectionKey, event: ReactDragEvent<HTMLLIElement>) => {
     event.preventDefault();
@@ -375,14 +523,14 @@ export function ResumeEditor({
             </h1>
             <div className="grid min-w-0 gap-3 sm:grid-cols-2">
               <div className="min-w-0">
-                <TextField label="Resume name" value={name} maxLength={120} onChange={(value) => { setName(value); setSaveState('dirty'); }} />
+                <TextField label="Resume name" value={name} maxLength={120} onChange={(value) => { setName(value); markDraftChanged(); }} />
               </div>
               <SelectField
                 label="Target job"
                 value={targetJobId ?? ''}
                 onChange={(value) => {
                   setTargetJobId(value || null);
-                  setSaveState('dirty');
+                  markDraftChanged();
                 }}
                 options={[
                   { value: '', label: 'No specific job' },
@@ -409,25 +557,32 @@ export function ResumeEditor({
               onClick={() => setShowOnePage((value) => !value)}
               aria-expanded={showOnePage}
               disabled={dirty || saveState === 'saving'}
-              title={dirty ? 'Save your current edits before creating a one-page version.' : undefined}
+              title={dirty ? 'Your edits will save automatically before you create a one-page version.' : undefined}
             >
               <Scissors className="mr-1.5 h-4 w-4" aria-hidden="true" />
               {showOnePage ? 'Close one-page' : 'Create a one-page version'}
             </button>
             <a
-              className="btn-secondary"
+              className={`btn-secondary ${dirty || saveState === 'saving' ? 'pointer-events-none opacity-50' : ''}`}
               href={`/api/resumes/${resume.id}/export.pdf`}
+              aria-disabled={dirty || saveState === 'saving'}
+              title={dirty ? 'Your resume will be ready to download after autosave.' : undefined}
               // A plain link so the browser handles the download natively; the
               // route still requires the session and enforces ownership.
             >
               <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />
               Download PDF
             </a>
-            <a className="btn-secondary" href={`/api/resumes/${resume.id}/export.docx`}>
+            <a
+              className={`btn-secondary ${dirty || saveState === 'saving' ? 'pointer-events-none opacity-50' : ''}`}
+              href={`/api/resumes/${resume.id}/export.docx`}
+              aria-disabled={dirty || saveState === 'saving'}
+              title={dirty ? 'Your resume will be ready to download after autosave.' : undefined}
+            >
               <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />
               Download DOCX
             </a>
-            <button type="button" className="btn-secondary" onClick={() => void duplicate()} disabled={busy}>
+            <button type="button" className="btn-secondary" onClick={() => void duplicate()} disabled={busy || dirty || saveState === 'saving'}>
               {busy ? <Loader className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" /> : <Copy className="mr-1.5 h-4 w-4" aria-hidden="true" />}
               Duplicate
             </button>
@@ -449,16 +604,29 @@ export function ResumeEditor({
               <Settings2 className="mr-1.5 h-4 w-4" aria-hidden="true" />
               Design
             </button>
-            <button type="button" className="btn-primary" onClick={() => void save()} disabled={saveState === 'saving' || !dirty}>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => void save()}
+              disabled={!dirty || saveState === 'saving' || saveState === 'conflict'}
+            >
               {saveState === 'saving' ? (
                 <Loader className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : saveState === 'saved' && !dirty ? (
+                <Check className="mr-1.5 h-4 w-4" aria-hidden="true" />
               ) : null}
-              Save
+              {dirty ? 'Save now' : 'Saved'}
             </button>
           </div>
         </div>
 
-        <SaveStatus state={saveState} message={message} errors={validationErrors} dirty={dirty} onReload={() => router.refresh()} />
+        <SaveStatus
+          state={saveState}
+          message={message}
+          errors={validationErrors}
+          dirty={dirty}
+          onReload={() => { void reloadLatest(); }}
+        />
 
         {showTemplate ? (
           <div className="rounded-xl border border-line bg-surface p-4">
@@ -473,28 +641,23 @@ export function ResumeEditor({
               hiddenSections={hiddenSections}
               onTemplateChange={(key) => {
                 setTemplateKey(key);
-                setSaveState('dirty');
-                void refreshPreview({ templateKey: key });
+                markDraftChanged();
               }}
               onAccentChange={(key) => {
                 setAccentKey(key);
-                setSaveState('dirty');
-                void refreshPreview({ accentKey: key });
+                markDraftChanged();
               }}
               onDensityChange={(value) => {
                 setDensity(value);
-                setSaveState('dirty');
-                void refreshPreview({ density: value });
+                markDraftChanged();
               }}
               onPageSizeChange={(value) => {
                 setPageSize(value);
-                setSaveState('dirty');
-                void refreshPreview({ pageSize: value });
+                markDraftChanged();
               }}
               onHiddenSectionsChange={(sections) => {
                 setHiddenSections(sections);
-                setSaveState('dirty');
-                void refreshPreview({ hidden: sections });
+                markDraftChanged();
               }}
             />
           </div>
@@ -617,10 +780,12 @@ export function ResumeEditor({
               canOptimize={access.canOptimize}
               hasUnsavedChanges={dirty}
               onApplied={({ revision: nextRevision, content: nextContent, layout: nextLayout }) => {
+                revisionRef.current = nextRevision;
                 setRevision(nextRevision);
                 setContent(nextContent as ResumeContent);
                 setLayout(nextLayout as LayoutDocument);
                 savedRef.current = { ...savedRef.current, content: nextContent as ResumeContent };
+                latestDraftRef.current = { ...latestDraftRef.current, content: nextContent as ResumeContent };
                 setSaveState('idle');
                 setMessage('Saved.');
               }}
@@ -649,14 +814,19 @@ export function ResumeEditor({
                     className="btn"
                     style={{ background: 'rgb(var(--danger))', color: '#fff' }}
                     onClick={() => void remove()}
-                    disabled={busy}
+                    disabled={busy || dirty || saveState === 'saving'}
                   >
                     Delete permanently
                   </button>
                 </div>
               </div>
             ) : (
-              <button type="button" className="btn-secondary mt-3" onClick={() => setConfirmDelete(true)}>
+              <button
+                type="button"
+                className="btn-secondary mt-3"
+                onClick={() => setConfirmDelete(true)}
+                disabled={busy || dirty || saveState === 'saving'}
+              >
                 <Trash2 className="mr-1.5 h-4 w-4" aria-hidden="true" />
                 Delete this resume
               </button>
@@ -675,7 +845,7 @@ export function ResumeEditor({
               </div>
               {dirty ? (
                 <p className="mb-3 rounded-lg border border-warn/40 bg-warn/5 p-2 text-xs text-warn-text">
-                  This is your last saved version. Save to see your changes here and in the PDF.
+                  Preview and downloads update automatically after these changes save.
                 </p>
               ) : null}
               <ResumeLayoutPreview layout={layout} availableWidth={previewWidth - 40} />
@@ -721,15 +891,17 @@ function SaveStatus({
 }) {
   const text =
     state === 'saving'
-      ? 'Saving…'
+      ? 'Saving your changes…'
       : state === 'saved'
-        ? 'Saved.'
+        ? 'All changes saved.'
         : state === 'conflict'
           ? message
           : state === 'error'
             ? message
             : dirty
-              ? 'You have unsaved changes.'
+              ? state === 'dirty'
+                ? 'Saving your latest changes…'
+                : 'Changes save automatically after a short pause.'
               : 'Everything is saved.';
 
   const tone =

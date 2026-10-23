@@ -11,9 +11,9 @@
  * resume is a 404 identical in shape to one that does not exist.
  *
  * PATCH carries `expectedRevision`. A mismatch is a 409, not a silent overwrite:
- * two tabs editing the same resume must not be able to lose each other's work,
- * and an explicit save is more dependable than an autosave that cannot be made
- * safe.
+ * two tabs editing the same resume must not be able to lose each other's work.
+ * The editor serialises autosaves and uses this revision check to preserve that
+ * protection while saving each draft automatically.
  */
 
 import { auth } from '@/auth';
@@ -31,7 +31,7 @@ import { buildResumeLayoutFromRecord } from '@/lib/resume-builder/serve';
 import { RESUME_BUILDER_FEATURE } from '@/lib/resume-builder/entitlements';
 import { resumeBuilderErrorResponse } from '@/lib/resume-builder/route-errors';
 import { ACCENT_PALETTE, DENSITY_LABELS, TEMPLATE_LIST } from '@/lib/resume-builder/templates';
-import { serialiseLayout, serialiseResume, serialiseResumeDetail } from '@/lib/resume-builder/wire';
+import { serialiseLayout, serialiseResumeDetail } from '@/lib/resume-builder/wire';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -149,7 +149,7 @@ export async function PATCH(request: Request, { params }: Params) {
         return privateNoStore(
           jsonOk(
             {
-              resume: serialiseResume(updated),
+              resume: serialiseResumeDetail(updated),
               layout: serialiseLayout(layout),
             },
             request,
