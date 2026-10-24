@@ -147,10 +147,13 @@ export function ResumeOptimizationPanel({
   const loadGeneration = useRef(0);
   const answerInFlight = useRef<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (optimizationId?: string) => {
     const generation = ++loadGeneration.current;
     try {
-      const response = await fetch(`/api/resumes/${resumeId}/optimization`, {
+      const query = optimizationId
+        ? `?optimizationId=${encodeURIComponent(optimizationId)}`
+        : '';
+      const response = await fetch(`/api/resumes/${resumeId}/optimization${query}`, {
         cache: 'no-store',
         credentials: 'same-origin',
       });
@@ -206,7 +209,7 @@ export function ResumeOptimizationPanel({
       const response = await fetch(`/api/resumes/${resumeId}/optimization`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ force: true }),
         credentials: 'same-origin',
       });
       const payload = await response.json().catch(() => null);
@@ -225,7 +228,9 @@ export function ResumeOptimizationPanel({
       setRejected(new Set());
       setEditedText({});
       setPhase('idle');
-      await load();
+      await load(
+        typeof payload?.optimizationId === 'string' ? payload.optimizationId : undefined,
+      );
     } catch {
       setPhase('error');
       setMessage('Something went wrong. Your resume was not changed.');

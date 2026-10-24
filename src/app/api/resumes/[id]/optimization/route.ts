@@ -89,6 +89,7 @@ export async function GET(request: Request, { params }: Params) {
           userId,
           resumeId: id,
           optimizationId: requested ?? undefined,
+          jobId: requested ? undefined : inputs.job.id,
         });
       } catch {
         stored = null;

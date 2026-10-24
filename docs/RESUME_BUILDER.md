@@ -727,18 +727,24 @@ Ordinary saves and template changes are **not** alerted.
 | `PATCH` | `/api/resumes/[id]` | session | Requires `expectedRevision` |
 | `DELETE` | `/api/resumes/[id]` | session | This resume only |
 | `POST` | `/api/resumes/[id]/duplicate` | `RESUME_BUILDER` | Independent copy, optionally retargeted |
-| `GET` | `/api/resumes/[id]/preview` | session | Same blocks the PDF consumes. No cost. |
+| `GET`, `POST` | `/api/resumes/[id]/preview` | session | Same blocks the PDF consumes, including validated unsaved editor drafts. No cost. |
 | `GET` | `/api/resumes/[id]/export.pdf` | session | Real PDF bytes, streamed |
 | `GET` | `/api/resumes/eligible-jobs` | session | The caller's own jobs only |
 | `GET` | `/api/resumes/[id]/optimization` | session | Entitlements, readiness, stored proposal |
 | `POST` | `/api/resumes/[id]/optimization` | `RESUME_OPTIMIZATION` | Run or reuse |
 | `POST` | `/api/resumes/[id]/optimization/apply` | session | Accepted subset only |
 
-The preview endpoint renders the **stored** document. It deliberately does not
-accept draft content: sending the whole document on every keystroke would be a
-large request for a cosmetic gain, and it would open a second path for
-unvalidated content to reach the renderer. The editor previews an unsaved draft
-from the layout its own **save response** returns.
+The preview endpoint can render either the **stored** document (GET) or a
+validated **unsaved editor draft** (POST). Draft preview requests are
+debounced, session/ownership checked, bounded by the normal resume schema and
+never persisted. This lets the editor show content and whole-section visibility
+changes before autosave while using the same layout engine and geometry as PDF
+export. Saves still return the persisted layout as the authoritative result.
+
+The editor keeps all supported sections available for editing. Its include
+checkbox adds or removes the complete section—including its heading—from the
+rendered resume without deleting the underlying content; hidden sections can
+be restored at any time.
 
 ---
 

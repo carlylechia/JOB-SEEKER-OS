@@ -135,6 +135,7 @@ export function ResumeEditor({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
   const [previewWidth, setPreviewWidth] = useState(640);
+  const [previewError, setPreviewError] = useState('');
   const [draggingSection, setDraggingSection] = useState<ResumeSectionKey | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const revisionRef = useRef(resume.revision);
@@ -142,6 +143,8 @@ export function ResumeEditor({
   const saveInFlightRef = useRef(false);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previewGenerationRef = useRef(0);
   const retryCountRef = useRef(0);
   const saveRef = useRef<() => Promise<void>>(async () => {});
   const savedRef = useRef<ResumeDraft>({
@@ -318,8 +321,10 @@ export function ResumeEditor({
       savedRef.current = persistedDraft;
       revisionRef.current = payload.resume.revision as number;
       setRevision(revisionRef.current);
-      setLayout(payload.layout);
       if (draftVersionRef.current === sentVersion) {
+        previewGenerationRef.current += 1;
+        setLayout(payload.layout);
+        setPreviewError('');
         setContent(persistedDraft.content);
         setName(persistedDraft.name);
         setTemplateKey(persistedDraft.templateKey);
@@ -361,9 +366,63 @@ export function ResumeEditor({
     };
   }, [dirty, saveState, draft]);
 
+  useEffect(() => {
+    if (!dirty) {
+      setPreviewError('');
+      return;
+    }
+
+    const generation = ++previewGenerationRef.current;
+    previewTimerRef.current = setTimeout(() => {
+      previewTimerRef.current = null;
+      void (async () => {
+        try {
+          const response = await fetch(`/api/resumes/${resume.id}/preview`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              content: draft.content,
+              templateKey: draft.templateKey,
+              pageSize: draft.pageSize,
+              accentKey: draft.accentKey,
+              density: draft.density,
+              hiddenSections: draft.hiddenSections,
+              sectionOrder: draft.sectionOrder,
+            }),
+          });
+          const payload = await response.json().catch(() => null);
+          if (generation !== previewGenerationRef.current) return;
+          if (!response.ok || !payload?.layout) {
+            setPreviewError(
+              (payload?.error?.message as string | undefined) ??
+                'The preview could not be updated. Your edits are still here.',
+            );
+            return;
+          }
+          setLayout(payload.layout as LayoutDocument);
+          setPreviewError('');
+        } catch {
+          if (generation === previewGenerationRef.current) {
+            setPreviewError('The preview could not be updated. Your edits are still here.');
+          }
+        }
+      })();
+    }, 350);
+
+    return () => {
+      if (previewTimerRef.current) {
+        clearTimeout(previewTimerRef.current);
+        previewTimerRef.current = null;
+      }
+      if (previewGenerationRef.current === generation) previewGenerationRef.current += 1;
+    };
+  }, [dirty, draft, resume.id]);
+
   useEffect(() => () => {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
   }, []);
 
   useEffect(() => {
@@ -511,6 +570,15 @@ export function ResumeEditor({
     if ((RESUME_SECTION_KEYS as readonly string[]).includes(source)) reorderSection(source, target);
     setDraggingSection(null);
   }, [reorderSection]);
+
+  const toggleSectionVisibility = useCallback((section: ResumeSectionKey) => {
+    setHiddenSections((current) =>
+      current.includes(section)
+        ? current.filter((hidden) => hidden !== section)
+        : [...current, section],
+    );
+    markDraftChanged();
+  }, [markDraftChanged]);
 
   return (
     <div className="space-y-6">
@@ -683,7 +751,7 @@ export function ResumeEditor({
               with a keyboard and is announced, rather than a row of buttons
               that only looks like tabs. */}
           <nav aria-label="Resume sections">
-            <p className="sr-only">Drag sections to change their order, or use the move earlier and move later buttons.</p>
+            <p className="sr-only">Drag sections to change their order, or use the include checkbox to add or remove a whole section from the resume.</p>
             <ul className="flex flex-wrap gap-2">
               {sectionOrder.map((section, index) => {
                 const active = activeSection === section;
@@ -703,9 +771,20 @@ export function ResumeEditor({
                       aria-current={active ? 'true' : undefined}
                       className={`min-w-0 truncate px-3 py-1.5 text-sm ${active ? 'font-medium text-ink' : 'text-ink-2'}`}
                     >
-                      {SECTION_LABELS[section]}
+                      <span className={hiddenSections.includes(section) ? 'line-through text-muted' : undefined}>
+                        {SECTION_LABELS[section]}
+                      </span>
                       {count > 0 ? <span className="ml-1.5 text-xs text-muted">{count}</span> : null}
                     </button>
+                    <label className="flex h-8 shrink-0 items-center border-l border-line/70 px-2">
+                      <input
+                        type="checkbox"
+                        className="h-3.5 w-3.5 accent-[#D4AF37]"
+                        checked={!hiddenSections.includes(section)}
+                        aria-label={`Include ${SECTION_LABELS[section]} in resume`}
+                        onChange={() => toggleSectionVisibility(section)}
+                      />
+                    </label>
                     <button
                       type="button"
                       draggable
@@ -845,7 +924,12 @@ export function ResumeEditor({
               </div>
               {dirty ? (
                 <p className="mb-3 rounded-lg border border-warn/40 bg-warn/5 p-2 text-xs text-warn-text">
-                  Preview and downloads update automatically after these changes save.
+                  Preview updates as you edit. Downloads use the latest saved version.
+                </p>
+              ) : null}
+              {previewError ? (
+                <p className="mb-3 rounded-lg border border-danger/30 bg-danger/5 p-2 text-xs text-danger-text" role="alert">
+                  {previewError}
                 </p>
               ) : null}
               <ResumeLayoutPreview layout={layout} availableWidth={previewWidth - 40} />

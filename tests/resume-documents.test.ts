@@ -29,6 +29,7 @@ import {
   dateSortKey,
   emptyResumeContent,
   normalizeResumeDate,
+  previewRequestSchema,
   resumeContentSchema,
   updateResumeSchema,
   type ResumeContent,
@@ -56,6 +57,20 @@ describe('the structured resume schema', () => {
     expect(content.experiences).toHaveLength(0);
     expect(content.basics.fullName).toBeNull();
     expect(content.summary).toBeNull();
+  });
+
+  it('validates draft preview content and section visibility', () => {
+    const parsed = previewRequestSchema.safeParse({
+      content: typicalContent(),
+      hiddenSections: ['education', 'projects'],
+    });
+    expect(parsed.success).toBe(true);
+    expect(
+      previewRequestSchema.safeParse({
+        content: typicalContent(),
+        hiddenSections: ['custom-unvalidated-section'],
+      }).success,
+    ).toBe(false);
   });
 
   it('accepts a typical resume', () => {

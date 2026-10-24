@@ -729,6 +729,53 @@ describe('running an optimisation', () => {
     expect(usage._sum.units).toBe(1);
   });
 
+  it('loads the latest optimization for the selected target job', async () => {
+    const { user, resume, job } = await setup();
+    await grantPro(user.id);
+    useProvider(fakeProvider());
+
+    const first = await runOptimization({ userId: user.id, resumeId: resume.id, route: '/test' });
+    if (first.outcome !== 'COMPLETED') throw new Error('expected first optimization to complete');
+
+    const otherJob = await track(
+      prisma.jobLead.create({
+        data: {
+          userId: user.id,
+          company: 'Contoso',
+          title: 'Platform Engineer',
+          jobDescription: TYPICAL_JOB_DESCRIPTION,
+          score: {},
+          checklist: {},
+          contacts: {},
+          interviews: {},
+          prepPack: {},
+        },
+      }),
+    );
+    const latestResume = await getResume({ userId: user.id, resumeId: resume.id });
+    await updateResume({
+      userId: user.id,
+      resumeId: resume.id,
+      input: { expectedRevision: latestResume.revision, targetJobId: otherJob.id },
+    });
+
+    const second = await runOptimization({
+      userId: user.id,
+      resumeId: resume.id,
+      route: '/test',
+    });
+    if (second.outcome !== 'COMPLETED') throw new Error('expected second optimization to complete');
+
+    const selected = await getOptimizationForResume({
+      userId: user.id,
+      resumeId: resume.id,
+      jobId: otherJob.id,
+    });
+    expect(selected.optimization.id).toBe(second.optimization.id);
+    expect(selected.data.job.id).toBe(otherJob.id);
+    expect(job.id).not.toBe(otherJob.id);
+  });
+
   it('charges again for an explicitly forced re-run', async () => {
     const { user, resume } = await setup();
     await grantPro(user.id);

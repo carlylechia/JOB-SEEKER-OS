@@ -782,6 +782,7 @@ export async function getOptimizationForResume(params: {
   userId: string;
   resumeId: string;
   optimizationId?: string;
+  jobId?: string;
 }): Promise<{
   optimization: OptimizationSummary;
   data: OptimizationResult;
@@ -793,7 +794,12 @@ export async function getOptimizationForResume(params: {
         where: { id: params.optimizationId, userId: params.userId, resumeId: params.resumeId },
       })
     : await prisma.resumeOptimization.findFirst({
-        where: { userId: params.userId, resumeId: params.resumeId, status: 'COMPLETED' },
+        where: {
+          userId: params.userId,
+          resumeId: params.resumeId,
+          status: 'COMPLETED',
+          ...(params.jobId ? { jobId: params.jobId } : {}),
+        },
         orderBy: { completedAt: 'desc' },
       });
 
