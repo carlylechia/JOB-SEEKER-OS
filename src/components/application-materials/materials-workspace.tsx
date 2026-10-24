@@ -124,7 +124,7 @@ export default function ApplicationMaterialsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Application materials"
-        subtitle="Draft cover letters and messages for your job applications. Nothing is sent automatically."
+        subtitle="Manage saved cover letters and messages for your job applications. Nothing is sent automatically."
         action={
           <Link
             href="/application-materials/new"
@@ -156,7 +156,7 @@ export default function ApplicationMaterialsPage() {
       <section className="card-pad">
         <div className="flex items-center justify-between gap-2 mb-4">
           <h2 className="text-lg font-semibold text-ink">
-            {showArchived ? 'Archived materials' : 'Your drafts'}
+            {showArchived ? 'Archived materials' : 'Your materials'}
           </h2>
           {archived.length > 0 && (
             <button
@@ -173,7 +173,7 @@ export default function ApplicationMaterialsPage() {
         {visibleMaterials.length === 0 ? (
           <div className="card-pad text-center py-12">
             <div className="text-muted">
-              {showArchived ? 'No archived materials.' : 'No drafts yet.'}
+              {showArchived ? 'No archived materials.' : 'No application materials yet.'}
             </div>
             <p className="muted text-sm mt-2">
               {showArchived

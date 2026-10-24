@@ -1041,7 +1041,7 @@ model ApplicationMaterial {
   status ApplicationMaterialStatus @default(DRAFT)
   origin ApplicationMaterialOrigin @default(AI_GENERATED)
 
-  /// User-editable display name, e.g. "Cover letter — Northwind".
+  /// Generated on save from the material type, job company/title and createdAt.
   title String
 
   /// The letter or message itself. What the user edits, copies and exports.

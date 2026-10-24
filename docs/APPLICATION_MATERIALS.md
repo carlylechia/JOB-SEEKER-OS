@@ -87,6 +87,14 @@ problem.
 
 Materials are stored in the `ApplicationMaterial` table, owned by `userId`.
 
+- Verified generated text is persisted immediately, so leaving the editor
+  before explicitly saving cannot discard the draft. Reopening legacy rows
+  falls back to the verified text in their generation metadata.
+- Explicitly saving promotes a draft to `READY` and names it with the material
+  type, company, role and original creation timestamp, for example
+  `Cover letter — Northwind — Backend Engineer — 2026-10-24T00:53:46.867Z`.
+- The saved text remains editable; edits use optimistic concurrency and are
+  persisted before the material is marked ready.
 - A regeneration creates a **new row** chained through `supersedesId`; the
   previous draft is left intact. Nothing the user has reviewed is ever
   silently overwritten.

@@ -33,6 +33,16 @@ type ResumeOption = { id: string; name: string };
 
 type EditorMode = 'create' | 'edit';
 
+type StoredMaterialResult = {
+  greeting?: string;
+  senderName?: string;
+  signOff?: string;
+  warnings?: string[];
+  missingInformation?: string[];
+  unsupported?: string[];
+  claims?: Array<{ source: string; claim: string; status: string; note: string | null }>;
+};
+
 type FormValues = {
   type: MaterialType;
   jobId: string | null;
@@ -122,6 +132,7 @@ export default function MaterialEditor() {
     claims: Array<{ source: string; claim: string; status: string; note: string | null }>;
   } | null>(null);
   const [saved, setSaved] = useState(false);
+  const [materialLoading, setMaterialLoading] = useState(Boolean(materialIdFromUrl));
   const [materialId, setMaterialId] = useState<string | null>(null);
   const [editVersion, setEditVersion] = useState(1);
 
@@ -167,37 +178,42 @@ export default function MaterialEditor() {
     if (mode !== 'edit' || !materialIdFromUrl) return;
     let cancelled = false;
     void (async () => {
+      setMaterialLoading(true);
       try {
         const res = await fetch(`/api/application-materials/${materialIdFromUrl}`, {
           cache: 'no-store',
         });
         if (cancelled) return;
-        if (res.ok) {
-          const json = await res.json();
-          if (cancelled) return;
-          setForm((prev) => ({
-            ...prev,
-            type: json.type as MaterialType,
-            jobId: json.jobId ?? null,
-            resumeId: json.resumeId ?? null,
-          }));
-          setResult({
-            content: json.content,
-            subject: json.subject,
-            greeting: '',
-            senderName: '',
-            signOff: '',
-            warnings: [],
-            missingInformation: [],
-            unsupported: [],
-            claims: [],
-          });
-          setMaterialId(json.id);
-          setEditVersion(json.editVersion ?? 1);
-          setSaved(true);
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(json.error?.message ?? 'Could not load this application material.');
         }
+        if (cancelled) return;
+        const stored = (json.data ?? {}) as StoredMaterialResult;
+        setForm((prev) => ({
+          ...prev,
+          type: json.type as MaterialType,
+          jobId: json.jobId ?? null,
+          resumeId: json.resumeId ?? null,
+        }));
+        setResult({
+          content: json.content ?? '',
+          subject: json.subject,
+          greeting: stored.greeting ?? '',
+          senderName: stored.senderName ?? '',
+          signOff: stored.signOff ?? '',
+          warnings: stored.warnings ?? [],
+          missingInformation: stored.missingInformation ?? [],
+          unsupported: stored.unsupported ?? [],
+          claims: stored.claims ?? [],
+        });
+        setMaterialId(json.id);
+        setEditVersion(json.editVersion ?? 1);
+        setSaved(json.status === 'READY');
       } catch {
-        // non-fatal
+        if (!cancelled) setError('Could not load this application material. Please try again.');
+      } finally {
+        if (!cancelled) setMaterialLoading(false);
       }
     })();
     return () => {
@@ -267,31 +283,31 @@ export default function MaterialEditor() {
   const handleSave = useCallback(async () => {
     if (!result || !materialId) return;
     setSaving(true);
+    setError(null);
     try {
       const res = await fetch(`/api/application-materials/${materialId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: materialId,
-          title: form.type === 'COVER_LETTER' ? 'Cover letter' : form.type.replace(/_/g, ' '),
           content: result.content,
           subject: result.subject,
           expectedEditVersion: editVersion,
         }),
       });
+      const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError('The draft changed elsewhere. Reopen it and apply your edit again.');
+        setError(json.error?.message ?? 'Could not save this material. Please try again.');
         return;
       }
-      const json = await res.json();
       setEditVersion(json.editVersion ?? editVersion + 1);
       setSaved(true);
     } catch {
-      setError('Could not save the draft.');
+      setError('Could not save this material.');
     } finally {
       setSaving(false);
     }
-  }, [result, materialId, editVersion, form.type]);
+  }, [result, materialId, editVersion]);
 
   const handleDelete = useCallback(async () => {
     if (!materialId || !window.confirm('Permanently delete this material? This cannot be undone.')) {
@@ -321,7 +337,6 @@ export default function MaterialEditor() {
     setCopying(true);
     try {
       await navigator.clipboard.writeText(result.content);
-      setSaved(true);
     } catch {
       setError('Could not copy to clipboard.');
     } finally {
@@ -380,13 +395,17 @@ export default function MaterialEditor() {
     };
   });
 
+  if (materialLoading) {
+    return <div className="card-pad">Loading your application material…</div>;
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title={mode === 'edit' ? 'Edit draft' : 'Create material'}
+        title={mode === 'edit' ? 'Edit application material' : 'Create material'}
         subtitle={
           mode === 'edit'
-            ? 'Review, revise, and save your application material.'
+            ? 'Review, edit, and save your application material.'
             : 'Choose a material type, add context, and generate a draft.'
         }
         action={
@@ -723,8 +742,13 @@ export default function MaterialEditor() {
             <textarea
               ref={contentRef}
               className="w-full min-h-[300px] resize-y border-none bg-transparent p-0 focus:ring-0 text-sm leading-relaxed"
-              defaultValue={result.content}
-              readOnly
+              value={result.content}
+              onChange={(event) => {
+                setResult((current) =>
+                  current ? { ...current, content: event.target.value } : current,
+                );
+                setSaved(false);
+              }}
             />
             {result.signOff && <div className="mt-4">{result.signOff}</div>}
             {result.senderName && <div className="mt-1">{result.senderName}</div>}

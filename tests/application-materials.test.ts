@@ -37,6 +37,8 @@ import {
 } from '@/lib/application-materials/verify';
 import type { ModelMaterial } from '@/lib/application-materials/schema';
 import { buildMaterialContext } from '@/lib/application-materials/context';
+import { getStoredMaterialContent } from '@/lib/application-materials/wire';
+import { buildApplicationMaterialTitle } from '@/lib/application-materials/naming';
 import { createResume, updateResume } from '@/lib/resume-builder/documents';
 import { typicalContent } from './resume-builder-fixtures';
 
@@ -458,6 +460,11 @@ describe('generation', () => {
     const material = (result as { material: { content: string } }).material;
     expect(material.content).toContain('Backend Engineer');
     expect(material.content.length).toBeGreaterThan(0);
+    const stored = await prisma.applicationMaterial.findUniqueOrThrow({
+      where: { id: (result as { summary: { id: string } }).summary.id },
+    });
+    expect(stored.content).toBe(material.content);
+    expect(stored.status).toBe('DRAFT');
     expect(provider.calls).toHaveLength(1);
     expect((result as { creditsConsumed: number }).creditsConsumed).toBe(1);
   });
@@ -1016,6 +1023,37 @@ describe('persistence', () => {
     expect(reopened?.title).toBe('My cover letter');
     expect(reopened?.content).toBe('Hello world');
     expect(reopened?.userId).toBe(user.id);
+  });
+
+  it('restores text from generation metadata for legacy drafts', () => {
+    expect(
+      getStoredMaterialContent({
+        content: '',
+        generationMeta: { content: 'Previously generated text' },
+        status: 'DRAFT',
+      }),
+    ).toBe('Previously generated text');
+  });
+
+  it('does not revive cleared content from generation metadata', () => {
+    expect(
+      getStoredMaterialContent({
+        content: '',
+        generationMeta: { content: 'Previously generated text' },
+        status: 'READY',
+      }),
+    ).toBe('');
+  });
+
+  it('names saved materials with type, company, role and creation timestamp', () => {
+    expect(
+      buildApplicationMaterialTitle({
+        type: 'COVER_LETTER',
+        company: 'Northwind',
+        role: 'Backend Engineer',
+        createdAt: new Date('2026-10-24T00:53:46.867Z'),
+      }),
+    ).toBe('Cover letter — Northwind — Backend Engineer — 2026-10-24T00:53:46.867Z');
   });
 
   it('edits a material and bumps editVersion', async () => {

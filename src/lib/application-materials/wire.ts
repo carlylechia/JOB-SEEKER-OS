@@ -64,11 +64,29 @@ export function serialiseMaterial(material: {
 
 export type SerialisedMaterial = ReturnType<typeof serialiseMaterial>;
 
+export function getStoredMaterialContent(
+  material: { content: string; generationMeta: unknown; status: string },
+): string {
+  if (material.content || material.status !== 'DRAFT') return material.content;
+
+  const generatedContent =
+    material.generationMeta &&
+    typeof material.generationMeta === 'object' &&
+    'content' in material.generationMeta &&
+    typeof material.generationMeta.content === 'string'
+      ? material.generationMeta.content
+      : '';
+
+  return material.content || generatedContent;
+}
+
 /** The full editable detail, for the review screen. */
 export function serialiseMaterialDetail(material: ApplicationMaterial) {
   return {
     ...serialiseMaterial(material),
-    content: material.content,
+    // Older generated rows only stored the verified result in generationMeta.
+    // Read from there until the user saves the material again.
+    content: getStoredMaterialContent(material),
   };
 }
 

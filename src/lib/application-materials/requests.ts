@@ -75,7 +75,6 @@ export type GenerateMaterialRequest = z.infer<typeof generateMaterialRequestSche
 export const saveMaterialRequestSchema = z
   .object({
     id: z.string().min(1).max(64),
-    title: z.string().trim().min(1).max(120),
     content: z.string().max(20_000),
     subject: z.string().max(200).nullable().optional(),
     expectedEditVersion: z.number().int().min(1),

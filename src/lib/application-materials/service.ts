@@ -464,6 +464,7 @@ export async function runGeneration(
     where: { id: row.id },
     data: {
       generationStatus: 'COMPLETED',
+      content: verified.content,
       generationMeta: verified,
       errorCode: null,
       provider: provider.name,

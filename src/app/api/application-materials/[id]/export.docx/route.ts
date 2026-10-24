@@ -7,6 +7,7 @@ import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 import { logImportantError, logImportantInfo } from '@/lib/observability';
 import { prisma } from '@/lib/prisma';
 import { downloadHeaders } from '@/lib/application-materials/download';
+import { getStoredMaterialContent } from '@/lib/application-materials/wire';
 import { buildMaterialExportContext } from '@/lib/application-materials/export-context';
 import { renderMaterialDocx } from '@/lib/application-materials/docx';
 
@@ -42,7 +43,7 @@ export async function GET(request: Request, { params }: Params) {
     const material = await prisma.applicationMaterial.findFirst({
       where: { id, userId },
       select: {
-        id: true, title: true, content: true, subject: true, type: true,
+        id: true, title: true, content: true, generationMeta: true, status: true, subject: true, type: true,
         job: { select: { userId: true, title: true, company: true } },
         resume: { select: { userId: true, content: true, pageSize: true } },
       },
@@ -60,7 +61,7 @@ export async function GET(request: Request, { params }: Params) {
       const bytes = await renderMaterialDocx({
         type: material.type,
         title: material.title,
-        content: material.content,
+        content: getStoredMaterialContent(material),
         subject: material.subject,
         applicant: context.applicant,
         company: context.company,

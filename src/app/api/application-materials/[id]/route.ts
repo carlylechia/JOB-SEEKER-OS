@@ -23,6 +23,7 @@ import { prisma } from '@/lib/prisma';
 import { saveMaterialRequestSchema } from '@/lib/application-materials/requests';
 import { serialiseMaterialDetail } from '@/lib/application-materials/wire';
 import { applicationMaterialErrorResponse } from '@/lib/application-materials/route-errors';
+import { buildApplicationMaterialTitle } from '@/lib/application-materials/naming';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -146,7 +147,7 @@ export async function PATCH(request: Request, { params }: Params) {
       // Ownership is part of the query: another user's material is a 404.
       const existing = await prisma.applicationMaterial.findFirst({
         where: { id, userId },
-        select: { id: true, editVersion: true, status: true },
+        select: { id: true, editVersion: true, status: true, type: true, jobId: true, createdAt: true },
       });
       if (!existing) {
         return apiError('NOT_FOUND', 'Material not found.', { request });
@@ -161,10 +162,23 @@ export async function PATCH(request: Request, { params }: Params) {
         );
       }
 
+      const job = existing.jobId
+        ? await prisma.jobLead.findFirst({
+            where: { id: existing.jobId, userId },
+            select: { company: true, title: true },
+          })
+        : null;
+      const title = buildApplicationMaterialTitle({
+        type: existing.type,
+        company: job?.company ?? null,
+        role: job?.title ?? null,
+        createdAt: existing.createdAt,
+      });
+
       const updated = await prisma.applicationMaterial.update({
         where: { id },
         data: {
-          title: data.title,
+          title,
           content: data.content,
           subject: data.subject,
           // A manual save marks the draft as user-owned content. It keeps its

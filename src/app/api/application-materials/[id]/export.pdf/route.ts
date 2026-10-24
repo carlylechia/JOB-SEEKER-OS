@@ -20,6 +20,7 @@ import { prisma } from '@/lib/prisma';
 import { preparePdfEngine, getLayoutMetrics, renderPdfLayout } from '@/lib/resume-builder/pdf';
 import { buildLetterLayout } from '@/lib/application-materials/letter-layout';
 import { downloadHeaders } from '@/lib/application-materials/download';
+import { getStoredMaterialContent } from '@/lib/application-materials/wire';
 import { buildMaterialExportContext } from '@/lib/application-materials/export-context';
 
 export const runtime = 'nodejs';
@@ -58,7 +59,7 @@ export async function GET(request: Request, { params }: Params) {
       const material = await prisma.applicationMaterial.findFirst({
         where: { id, userId },
         select: {
-          id: true, title: true, content: true, type: true, subject: true,
+          id: true, title: true, content: true, generationMeta: true, status: true, type: true, subject: true,
           job: { select: { userId: true, title: true, company: true } },
           resume: { select: { userId: true, content: true, pageSize: true } },
         },
@@ -76,7 +77,7 @@ export async function GET(request: Request, { params }: Params) {
         await preparePdfEngine();
         const context = await buildMaterialExportContext({ userId, resume: material.resume, job: material.job });
         const layout = buildLetterLayout({
-          content: material.content,
+          content: getStoredMaterialContent(material),
           metrics: getLayoutMetrics(),
           pageSize: context.pageSize,
           applicant: material.type === 'COVER_LETTER' ? context.applicant : null,

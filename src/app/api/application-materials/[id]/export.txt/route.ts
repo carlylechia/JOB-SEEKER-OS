@@ -13,6 +13,7 @@ import { handleOptions } from '@/lib/cors';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 import { prisma } from '@/lib/prisma';
 import { downloadHeaders } from '@/lib/application-materials/download';
+import { getStoredMaterialContent } from '@/lib/application-materials/wire';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -49,7 +50,9 @@ export async function GET(request: Request, { params }: Params) {
 
       const material = await prisma.applicationMaterial.findFirst({
         where: { id, userId },
-        select: { id: true, title: true, content: true, type: true, subject: true },
+        select: {
+          id: true, title: true, content: true, generationMeta: true, status: true, type: true, subject: true,
+        },
       });
 
       if (!material) {
@@ -59,7 +62,10 @@ export async function GET(request: Request, { params }: Params) {
         });
       }
 
-      const text = buildPlainText(material);
+      const text = buildPlainText({
+        ...material,
+        content: getStoredMaterialContent(material),
+      });
       const bytes = new TextEncoder().encode(text);
 
       return new Response(bytes as unknown as BodyInit, {
