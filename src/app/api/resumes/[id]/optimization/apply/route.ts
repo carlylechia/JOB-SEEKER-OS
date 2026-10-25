@@ -25,7 +25,7 @@ import { applyAcceptedOperations } from '@/lib/resume-builder/optimization/servi
 import { applyOptimizationRequestSchema } from '@/lib/resume-builder/requests';
 import { resumeBuilderErrorResponse } from '@/lib/resume-builder/route-errors';
 import { buildResumeLayoutFromRecord } from '@/lib/resume-builder/serve';
-import { serialiseLayout, serialiseResume } from '@/lib/resume-builder/wire';
+import { serialiseLayout, serialiseResumeDetail } from '@/lib/resume-builder/wire';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -80,7 +80,7 @@ export async function POST(request: Request, { params }: Params) {
         return privateNoStore(
           jsonOk(
             {
-              resume: serialiseResume(result.resume),
+              resume: serialiseResumeDetail(result.resume),
               layout: serialiseLayout(layout),
               appliedCount: result.appliedCount,
               skipped: result.skipped,

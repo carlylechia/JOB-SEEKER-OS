@@ -131,6 +131,9 @@ export function ResumeEditor({
   const [showPreview, setShowPreview] = useState(true);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [message, setMessage] = useState('');
+  const [recentlyApplied, setRecentlyApplied] = useState<number | null>(null);
+  const [highlightedSections, setHighlightedSections] = useState<ResumeSectionKey[]>([]);
+  const [highlightedText, setHighlightedText] = useState<string[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -196,6 +199,9 @@ export function ResumeEditor({
   const markDraftChanged = useCallback(() => {
     draftVersionRef.current += 1;
     retryCountRef.current = 0;
+    setRecentlyApplied(null);
+    setHighlightedSections([]);
+    setHighlightedText([]);
     if (retryTimerRef.current) {
       clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
@@ -775,6 +781,12 @@ export function ResumeEditor({
                         {SECTION_LABELS[section]}
                       </span>
                       {count > 0 ? <span className="ml-1.5 text-xs text-muted">{count}</span> : null}
+                      {highlightedSections.includes(section) ? (
+                        <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success-text">
+                          <Check className="h-3 w-3" aria-hidden="true" />
+                          Updated
+                        </span>
+                      ) : null}
                     </button>
                     <label className="flex h-8 shrink-0 items-center border-l border-line/70 px-2">
                       <input
@@ -858,15 +870,25 @@ export function ResumeEditor({
               targetJobId={targetJobId}
               canOptimize={access.canOptimize}
               hasUnsavedChanges={dirty}
-              onApplied={({ revision: nextRevision, content: nextContent, layout: nextLayout }) => {
+              onApplied={({
+                revision: nextRevision,
+                content: nextContent,
+                layout: nextLayout,
+                appliedCount,
+                changedSections,
+                highlightedText: nextHighlightedText,
+              }) => {
                 revisionRef.current = nextRevision;
                 setRevision(nextRevision);
-                setContent(nextContent as ResumeContent);
-                setLayout(nextLayout as LayoutDocument);
-                savedRef.current = { ...savedRef.current, content: nextContent as ResumeContent };
-                latestDraftRef.current = { ...latestDraftRef.current, content: nextContent as ResumeContent };
-                setSaveState('idle');
-                setMessage('Saved.');
+                setContent(nextContent);
+                setLayout(nextLayout);
+                savedRef.current = { ...savedRef.current, content: nextContent };
+                latestDraftRef.current = { ...latestDraftRef.current, content: nextContent };
+                setRecentlyApplied(appliedCount);
+                setHighlightedSections(changedSections);
+                setHighlightedText(nextHighlightedText);
+                setSaveState('saved');
+                setMessage(`Saved ${appliedCount} accepted change${appliedCount === 1 ? '' : 's'}.`);
               }}
             />
           </OptimizationPanelBoundary>
@@ -932,26 +954,62 @@ export function ResumeEditor({
                   {previewError}
                 </p>
               ) : null}
-              <ResumeLayoutPreview layout={layout} availableWidth={previewWidth - 40} />
-              {qualityIssues.length > 0 ? (
-                <section className="mt-4 rounded-xl border border-warn/30 bg-warn/[0.05] p-3" aria-label="Resume review checks">
-                  <h3 className="flex items-center gap-2 text-sm font-semibold text-warn-text">
-                    <AlertTriangle className="h-4 w-4" aria-hidden="true" /> Review before sending
+              {recentlyApplied !== null ? (
+                <section className="mb-3 rounded-xl border border-success/35 bg-success/5 p-3" role="status">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-success-text">
+                    <Check className="h-4 w-4" aria-hidden="true" />
+                    {recentlyApplied} change{recentlyApplied === 1 ? '' : 's'} saved to this resume
                   </h3>
-                  <ul className="mt-2 space-y-2">
-                    {qualityIssues.map((issue) => (
-                      <li key={issue.code} className="text-xs text-warn-text">
-                        <span className="font-medium">{issue.title}.</span> {issue.detail}
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="mt-1 text-xs text-ink-2">
+                    Updated text is highlighted below. Download the saved PDF or DOCX, then attach it to your application.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <a className="btn-primary text-xs" href={`/api/resumes/${resume.id}/export.pdf`}>
+                      <Download className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+                      Download PDF
+                    </a>
+                    <a className="btn-secondary text-xs" href={`/api/resumes/${resume.id}/export.docx`}>
+                      Download DOCX
+                    </a>
+                    {targetJobId ? (
+                      <a className="btn-secondary text-xs" href={`/application-materials/new?job=${encodeURIComponent(targetJobId)}`}>
+                        Create accompanying message
+                      </a>
+                    ) : null}
+                  </div>
+                  {targetJobId ? (
+                    <p className="mt-2 text-xs text-muted">
+                      Create a tailored application message for this job, then send it with the downloaded resume attached.
+                    </p>
+                  ) : null}
                 </section>
               ) : null}
-              {resume.origin === 'ONE_PAGE' ? (
-                <p className="mt-3 text-xs text-muted">
-                  The PDF export is checked to stay on one page. Word-compatible apps may reflow the editable DOCX differently.
-                </p>
-              ) : null}
+              <div className="max-h-[70vh] overflow-y-auto overscroll-contain pr-2 lg:max-h-[calc(100vh-12rem)]">
+                <ResumeLayoutPreview
+                  layout={layout}
+                  availableWidth={previewWidth - 40}
+                  highlightedText={highlightedText}
+                />
+                {qualityIssues.length > 0 ? (
+                  <section className="mt-4 rounded-xl border border-warn/30 bg-warn/[0.05] p-3" aria-label="Resume review checks">
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-warn-text">
+                      <AlertTriangle className="h-4 w-4" aria-hidden="true" /> Review before sending
+                    </h3>
+                    <ul className="mt-2 space-y-2">
+                      {qualityIssues.map((issue) => (
+                        <li key={issue.code} className="text-xs text-warn-text">
+                          <span className="font-medium">{issue.title}.</span> {issue.detail}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
+                {resume.origin === 'ONE_PAGE' ? (
+                  <p className="mt-3 text-xs text-muted">
+                    The PDF export is checked to stay on one page. Word-compatible apps may reflow the editable DOCX differently.
+                  </p>
+                ) : null}
+              </div>
             </div>
           </div>
         ) : null}

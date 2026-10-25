@@ -45,6 +45,8 @@ type Props = {
   className?: string;
   /** Accessible description of what is being shown. */
   label?: string;
+  /** Recently applied proposal text to visually mark in the live preview. */
+  highlightedText?: string[];
 };
 
 /**
@@ -63,6 +65,7 @@ export function ResumeLayoutPreview({
   availableWidth,
   className,
   label = 'Resume preview',
+  highlightedText = [],
 }: Props) {
   const pageWidth = layout.pages[0]?.width ?? 595.28;
   const scale = useMemo(() => {
@@ -88,6 +91,7 @@ export function ResumeLayoutPreview({
             scale={scale}
             ascentRatio={layout.ascentRatio}
             label={`${label}, page ${page.index + 1} of ${layout.pages.length}`}
+            highlightedText={highlightedText}
           />
         ))}
       </div>
@@ -113,11 +117,13 @@ function PreviewPage({
   scale,
   ascentRatio,
   label,
+  highlightedText,
 }: {
   page: LayoutPage;
   scale: number;
   ascentRatio: number;
   label: string;
+  highlightedText: string[];
 }) {
   return (
     <div
@@ -135,14 +141,27 @@ function PreviewPage({
         }}
       >
         {page.blocks.map((block, index) => (
-          <PreviewBlock key={index} block={block} ascentRatio={ascentRatio} />
+          <PreviewBlock
+            key={index}
+            block={block}
+            ascentRatio={ascentRatio}
+            highlightedText={highlightedText}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function PreviewBlock({ block, ascentRatio }: { block: LayoutBlock; ascentRatio: number }) {
+function PreviewBlock({
+  block,
+  ascentRatio,
+  highlightedText,
+}: {
+  block: LayoutBlock;
+  ascentRatio: number;
+  highlightedText: string[];
+}) {
   if (block.kind === 'FILL') {
     return (
       <div
@@ -188,6 +207,19 @@ function PreviewBlock({ block, ascentRatio }: { block: LayoutBlock; ascentRatio:
         color: block.color,
         whiteSpace: 'pre',
       };
+  const normalizedBlockText = normalizeHighlightText(block.text);
+  const isHighlighted =
+    normalizedBlockText.length >= 10 &&
+    highlightedText.some((text) => {
+      const normalizedText = normalizeHighlightText(text);
+      return normalizedText.includes(normalizedBlockText) || normalizedBlockText.includes(normalizedText);
+    });
+
+  if (isHighlighted) {
+    style.backgroundColor = 'rgba(212, 175, 55, 0.32)';
+    style.boxShadow = '0 0 0 1.5pt rgba(212, 175, 55, 0.55)';
+    style.borderRadius = '1pt';
+  }
 
   if (block.href) {
     const label = block.text.replace(/^\s*·\s*/, '').trim();
@@ -207,4 +239,8 @@ function PreviewBlock({ block, ascentRatio }: { block: LayoutBlock; ascentRatio:
   }
 
   return <span aria-hidden="true" style={style}>{block.text}</span>;
+}
+
+function normalizeHighlightText(text: string) {
+  return text.toLocaleLowerCase().replace(/\s+/g, ' ').trim();
 }

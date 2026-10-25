@@ -42,6 +42,8 @@ import {
 } from 'lucide-react';
 
 import { optimizationResultSchema, type OptimizationResult, type ReviewOperation } from '@/lib/resume-builder/optimization/schema';
+import { resumeContentSchema, type ResumeContent, type ResumeSectionKey } from '@/lib/resume-builder/schema';
+import type { LayoutDocument } from '@/lib/resume-builder/layout';
 
 type Props = {
   resumeId: string;
@@ -49,7 +51,14 @@ type Props = {
   targetJobId: string | null;
   canOptimize: boolean;
   hasUnsavedChanges: boolean;
-  onApplied: (next: { revision: number; content: unknown; layout: unknown }) => void;
+  onApplied: (next: {
+    revision: number;
+    content: ResumeContent;
+    layout: LayoutDocument;
+    appliedCount: number;
+    changedSections: ResumeSectionKey[];
+    highlightedText: string[];
+  }) => void;
 };
 
 type Wire = {
@@ -141,6 +150,7 @@ export function ResumeOptimizationPanel({
   const [improvingGap, setImprovingGap] = useState<string | null>(null);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [syncFailed, setSyncFailed] = useState(false);
   // A ref, not state: a double-click inside one render must not be able to fire
   // two provider calls, and a ref updates synchronously.
   const inFlight = useRef(false);
@@ -243,6 +253,7 @@ export function ResumeOptimizationPanel({
     const optimization = state?.optimization;
     if (!optimization) return;
     setApplying(true);
+    setSyncFailed(false);
     setMessage('');
     try {
       const response = await fetch(`/api/resumes/${resumeId}/optimization/apply`, {
@@ -261,12 +272,52 @@ export function ResumeOptimizationPanel({
       if (!response.ok) {
         setMessage(response.status === 409
           ? 'Your resume or target job changed while these suggestions were open. The latest status is shown below; run optimisation again before applying.'
-          : (payload?.error?.message as string | undefined) ?? 'Those changes could not be saved. Nothing was changed.');
+          : (payload?.error?.message as string | undefined) ?? 'We could not confirm that those changes were saved. Reload the resume before trying again.');
         await load();
         return;
       }
 
-      const skipped = (payload?.skipped as Array<{ reason: string }> | undefined) ?? [];
+      const skipped = (payload?.skipped as Array<{ id: string; reason: string }> | undefined) ?? [];
+      const returnedContent = resumeContentSchema.safeParse(payload?.resume?.content);
+      const returnedLayout = payload?.layout;
+      if (
+        !returnedContent.success ||
+        !returnedLayout ||
+        !Array.isArray(returnedLayout.pages) ||
+        !Number.isInteger(payload?.resume?.revision) ||
+        !Number.isInteger(payload?.appliedCount)
+      ) {
+        setSyncFailed(true);
+        setMessage(
+          'The server saved your accepted changes, but the editor could not sync the preview. Reload this page to see the saved version.',
+        );
+        return;
+      }
+
+      const skippedIds = new Set(skipped.map((operation) => operation.id));
+      const applied = optimization.data.operations.filter(
+        (operation) => accepted.has(operation.id) && !skippedIds.has(operation.id),
+      );
+      const sectionMap: Record<ReviewOperation['section'], ResumeSectionKey | null> = {
+        BASICS: null,
+        SUMMARY: 'summary',
+        EXPERIENCE: 'experience',
+        SKILLS: 'skills',
+        EDUCATION: 'education',
+        PROJECTS: 'projects',
+        CREDENTIALS: 'credentials',
+      };
+      const changedSections = [
+        ...new Set(
+          applied
+            .map((operation) => sectionMap[operation.section])
+            .filter((section): section is ResumeSectionKey => section !== null),
+        ),
+      ];
+      const highlightedText = applied
+        .filter((operation) => operation.kind !== 'REMOVE_BULLET')
+        .map((operation) => editedText[operation.id]?.trim() || operation.proposedText.trim())
+        .filter((text) => text.length > 0);
       setMessage(
         skipped.length > 0
           ? `Saved ${payload.appliedCount} change${payload.appliedCount === 1 ? '' : 's'}. ${skipped.length} could not be applied.`
@@ -277,12 +328,16 @@ export function ResumeOptimizationPanel({
       setEditedText({});
       onApplied({
         revision: payload.resume.revision,
-        content: payload.resume.content,
-        layout: payload.layout,
+        content: returnedContent.data,
+        layout: returnedLayout as LayoutDocument,
+        appliedCount: payload.appliedCount,
+        changedSections,
+        highlightedText,
       });
       await load();
     } catch {
-      setMessage('Something went wrong. Your resume was not changed.');
+      setSyncFailed(true);
+      setMessage('We could not confirm whether the changes were saved. Reload the resume and check its contents before trying again.');
     } finally {
       setApplying(false);
     }
@@ -437,7 +492,14 @@ export function ResumeOptimizationPanel({
         {message}
       </p>
       {message ? (
-        <p className="rounded-xl border border-line bg-surface p-3 text-sm text-ink-2">{message}</p>
+        <div className="rounded-xl border border-line bg-surface p-3 text-sm text-ink-2">
+          <p>{message}</p>
+          {syncFailed ? (
+            <button type="button" className="mt-2 text-xs font-medium text-accent-text underline" onClick={() => window.location.reload()}>
+              Reload resume
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       {result ? (
