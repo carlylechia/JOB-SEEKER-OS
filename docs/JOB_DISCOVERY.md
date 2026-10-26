@@ -6,6 +6,11 @@ teChia Jobs discovers, normalizes, ranks and persists a daily shortlist of up to
 
 ## Sources implemented
 
+Free (no credentials required):
+- Remotive (free aggregator) — enabled by default; disable with `REMOTIVE_ENABLED=false`.
+- Arbeitnow (free aggregator) — enabled by default; disable with `ARBEITNOW_ENABLED=false`.
+
+Optional paid/credentialed:
 - Adzuna (aggregator API) — requires `ADZUNA_APP_ID`, `ADZUNA_APP_KEY`, optional `ADZUNA_COUNTRY`, `ADZUNA_ENABLED`.
 - Brave Search (web search) — requires `BRAVE_SEARCH_API_KEY`, optional `BRAVE_SEARCH_ENABLED`.
 - Greenhouse (public boards) — requires `GREENHOUSE_BOARD_TOKENS` (comma-separated), optional `GREENHOUSE_ENABLED`.
