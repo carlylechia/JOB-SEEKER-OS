@@ -118,5 +118,11 @@ function newPage(index: number, width: number, height: number, margins: LayoutPa
 }
 
 function displayUrl(value: string): string {
-  try { return new URL(value).host.replace(/^www\./, ''); } catch { return value; }
+  try {
+    const url = new URL(value);
+    const host = url.host.replace(/^www\./, '');
+    if (/linkedin\.com/i.test(host)) return 'LinkedIn';
+    if (/github\.com/i.test(host)) return 'GitHub';
+    return host;
+  } catch { return value; }
 }
