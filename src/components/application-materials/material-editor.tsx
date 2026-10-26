@@ -132,6 +132,7 @@ export default function MaterialEditor() {
     claims: Array<{ source: string; claim: string; status: string; note: string | null }>;
   } | null>(null);
   const [saved, setSaved] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
   const [materialLoading, setMaterialLoading] = useState(Boolean(materialIdFromUrl));
   const [materialId, setMaterialId] = useState<string | null>(null);
   const [editVersion, setEditVersion] = useState(1);
@@ -707,6 +708,13 @@ export default function MaterialEditor() {
               >
                 {copying ? 'Copied!' : 'Copy'}
               </button>
+              <button
+                type="button"
+                onClick={() => setShowPreview((value) => !value)}
+                className="btn-secondary text-xs"
+              >
+                {showPreview ? 'Hide preview' : 'Show preview'}
+              </button>
               {materialId && (
                 <button
                   type="button"
@@ -753,6 +761,29 @@ export default function MaterialEditor() {
             {result.signOff && <div className="mt-4">{result.signOff}</div>}
             {result.senderName && <div className="mt-1">{result.senderName}</div>}
           </div>
+
+          {showPreview && (
+            <div className="rounded-2xl border border-line bg-white p-8 shadow-sm">
+              <div className="mx-auto max-w-[680px] space-y-4 font-serif text-[15px] leading-relaxed text-[#17191E]">
+                {result.senderName && (
+                  <div className="text-lg font-semibold">{result.senderName}</div>
+                )}
+                {result.greeting && (
+                  <div className="mt-4 font-medium">{result.greeting}</div>
+                )}
+                {result.subject && (
+                  <div className="mt-2 font-semibold">Re: {result.subject}</div>
+                )}
+                <div className="mt-4 whitespace-pre-wrap">{result.content}</div>
+                {result.signOff && (
+                  <div className="mt-6">{result.signOff}</div>
+                )}
+                {result.senderName && (
+                  <div className="mt-1">{result.senderName}</div>
+                )}
+              </div>
+            </div>
+          )}
 
           {result.warnings.length > 0 && (
             <div className="rounded-xl border border-line-strong bg-surface-sunken p-3">

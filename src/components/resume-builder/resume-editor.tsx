@@ -624,7 +624,7 @@ export function ResumeEditor({
             </p>
           </div>
 
-          <div className="flex min-w-0 flex-wrap items-center gap-2 border-t border-line pt-4">
+          <div className="sticky top-0 z-20 -mx-4 flex min-w-0 flex-wrap items-center gap-2 border-t border-line bg-card/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-card/80">
             <button
               type="button"
               className="btn-secondary"
