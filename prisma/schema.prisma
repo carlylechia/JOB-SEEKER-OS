@@ -56,6 +56,8 @@ model User {
   practiceAttempts          InterviewPracticeAttempt[]
   applicationMaterials      ApplicationMaterial[]
   careerActions             CareerAction[]
+  jobDiscoveryRuns          JobDiscoveryRun[]
+  dailyJobRecommendations   DailyJobRecommendation[]
 
   @@index([createdAt])
   @@index([emailVerificationToken])
@@ -1173,4 +1175,113 @@ model CareerAction {
   @@index([userId, dueDate])
   @@index([userId, createdAt])
   @@index([relatedJobId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INTELLIGENT DAILY JOB DISCOVERY
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ExternalJob {
+  id                  String    @id @default(cuid())
+  source              String
+  sourceJobId         String
+  canonicalUrl        String?
+  applicationUrl      String?
+  employerUrl         String?
+  title               String
+  company             String
+  location            String?
+  remoteType          String?
+  workArrangement     String?
+  employmentType      String?
+  description         String?
+  salaryMin           Int?
+  salaryMax           Int?
+  currency            String?   @default("USD")
+  publishedAt         DateTime?
+  firstSeenAt         DateTime  @default(now())
+  lastSeenAt          DateTime  @default(now())
+  lastVerifiedAt      DateTime?
+  status              String    @default("OPEN")
+  contentFingerprint  String?
+  attribution         String?
+  normalizedSkills    Json?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  recommendations     DailyJobRecommendation[]
+
+  @@unique([source, sourceJobId])
+  @@index([company, title])
+  @@index([status])
+  @@index([lastVerifiedAt])
+  @@index([canonicalUrl])
+}
+
+model JobDiscoveryRun {
+  id                    String    @id @default(cuid())
+  userId                String
+  localDate             String
+  timezone              String
+  status                String    @default("PENDING")
+  startedAt             DateTime  @default(now())
+  completedAt           DateTime?
+  candidateCount        Int       @default(0)
+  eligibleCount         Int       @default(0)
+  recommendationCount   Int       @default(0)
+  sourcesAttempted      Int       @default(0)
+  sourcesSucceeded      Int       @default(0)
+  inputFingerprint      String?
+  lastError             String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recommendations       DailyJobRecommendation[]
+
+  @@unique([userId, localDate])
+  @@index([status])
+  @@index([userId, localDate])
+}
+
+model DailyJobRecommendation {
+  id                String    @id @default(cuid())
+  runId             String
+  userId            String
+  externalJobId     String
+  rank              Int
+  fitScore          Float
+  confidence        Float?
+  scoreBreakdown    Json
+  explanation       Json?
+  status            String    @default("RECOMMENDED")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  run               JobDiscoveryRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  externalJob       ExternalJob      @relation(fields: [externalJobId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, externalJobId])
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([runId, rank])
+}
+
+model JobSourceHealth {
+  id                  String    @id @default(cuid())
+  sourceId            String    @unique
+  displayName         String
+  connectorType       String
+  enabled             Boolean   @default(false)
+  configured          Boolean   @default(false)
+  lastSuccessAt       DateTime?
+  lastFailureAt       DateTime?
+  failureCategory     String?
+  lastError           String?
+  jobsRetrieved       Int       @default(0)
+  jobsAccepted        Int       @default(0)
+  duplicatesDiscarded Int       @default(0)
+  updatedAt           DateTime  @updatedAt
+  createdAt           DateTime  @default(now())
 }

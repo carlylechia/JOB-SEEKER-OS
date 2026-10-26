@@ -69,6 +69,7 @@ export const FEATURE_KEYS = [
   'JOB_TRACKING',
   'PUBLIC_JOB_IMPORT',
   'ADVANCED_JOB_MATCHING',
+  'DAILY_JOB_DISCOVERY',
   'RESUME_BUILDER',
   'RESUME_UPLOAD',
   'RESUME_OPTIMIZATION',
@@ -128,6 +129,12 @@ export const FEATURE_ENTITLEMENTS: Record<
     label: 'Advanced job matching',
     released: true,
     description: 'Personalised fit scoring against your profile and preferences.',
+  },
+  DAILY_JOB_DISCOVERY: {
+    plans: ['PRO', 'PREMIUM'],
+    label: 'Daily job discovery',
+    released: true,
+    description: 'Daily personalised shortlist of strong job opportunities from available sources.',
   },
   RESUME_UPLOAD: {
     plans: ['FREE', 'PRO', 'PREMIUM'],
