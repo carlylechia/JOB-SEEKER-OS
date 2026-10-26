@@ -11,6 +11,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { PageHeader } from '@/components/shared/page-header';
+import { ResumeLayoutPreview } from '@/components/resume-builder/resume-layout-preview';
+import type { LayoutDocument } from '@/lib/resume-builder/layout';
 import {
   MATERIAL_TYPES,
   type MaterialType,
@@ -133,6 +135,8 @@ export default function MaterialEditor() {
   } | null>(null);
   const [saved, setSaved] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+  const [previewLayout, setPreviewLayout] = useState<LayoutDocument | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [materialLoading, setMaterialLoading] = useState(Boolean(materialIdFromUrl));
   const [materialId, setMaterialId] = useState<string | null>(null);
   const [editVersion, setEditVersion] = useState(1);
@@ -211,6 +215,7 @@ export default function MaterialEditor() {
         setMaterialId(json.id);
         setEditVersion(json.editVersion ?? 1);
         setSaved(json.status === 'READY');
+        void loadPreview(json.id);
       } catch {
         if (!cancelled) setError('Could not load this application material. Please try again.');
       } finally {
@@ -274,6 +279,7 @@ export default function MaterialEditor() {
       });
       setMaterialId(json.materialId);
       setSaved(false);
+      if (json.materialId) void loadPreview(json.materialId);
     } catch {
       setError('Generation failed. Please try again.');
     } finally {
@@ -303,6 +309,7 @@ export default function MaterialEditor() {
       }
       setEditVersion(json.editVersion ?? editVersion + 1);
       setSaved(true);
+      if (materialId) void loadPreview(materialId);
     } catch {
       setError('Could not save this material.');
     } finally {
@@ -332,6 +339,20 @@ export default function MaterialEditor() {
       setDeleting(false);
     }
   }, [materialId, router]);
+
+  const loadPreview = useCallback(async (id: string) => {
+    setPreviewLoading(true);
+    try {
+      const res = await fetch(`/api/application-materials/${id}/preview`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('preview failed');
+      const json = await res.json();
+      setPreviewLayout(json.layout ?? null);
+    } catch {
+      setPreviewLayout(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, []);
 
   const handleCopy = async () => {
     if (!result) return;
@@ -763,25 +784,14 @@ export default function MaterialEditor() {
           </div>
 
           {showPreview && (
-            <div className="rounded-2xl border border-line bg-white p-8 shadow-sm">
-              <div className="mx-auto max-w-[680px] space-y-4 font-serif text-[15px] leading-relaxed text-[#17191E]">
-                {result.senderName && (
-                  <div className="text-lg font-semibold">{result.senderName}</div>
-                )}
-                {result.greeting && (
-                  <div className="mt-4 font-medium">{result.greeting}</div>
-                )}
-                {result.subject && (
-                  <div className="mt-2 font-semibold">Re: {result.subject}</div>
-                )}
-                <div className="mt-4 whitespace-pre-wrap">{result.content}</div>
-                {result.signOff && (
-                  <div className="mt-6">{result.signOff}</div>
-                )}
-                {result.senderName && (
-                  <div className="mt-1">{result.senderName}</div>
-                )}
-              </div>
+            <div className="rounded-2xl border border-line bg-white p-4 shadow-sm">
+              {previewLoading ? (
+                <div className="py-8 text-center text-sm text-muted">Loading preview…</div>
+              ) : previewLayout ? (
+                <ResumeLayoutPreview layout={previewLayout} availableWidth={640} />
+              ) : (
+                <div className="py-8 text-center text-sm text-muted">Preview unavailable. Save the draft first.</div>
+              )}
             </div>
           )}
 
