@@ -8,6 +8,7 @@ import { Logo } from '@/components/shared/logo';
 const items = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/jobs', label: 'Jobs', icon: Briefcase },
+  { href: '/daily-jobs', label: 'Daily Top 5', icon: Sparkles },
   { href: '/queue', label: 'Queue', icon: Target },
   { href: '/pipeline', label: 'Pipeline', icon: KanbanSquare },
   { href: '/contacts', label: 'Contacts', icon: Users },

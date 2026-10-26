@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { requireAdmin } from '@/lib/authz';
 import { prisma } from '@/lib/prisma';
 import { getEmailOutboxHealth } from '@/lib/billing/email-outbox';
+import { listSourceHealth } from '@/lib/job-discovery/source-health';
 
 export const metadata: Metadata = {
   title: 'System — Admin — teChia Jobs',
@@ -13,9 +14,8 @@ export const dynamic = 'force-dynamic';
 export default async function AdminSystemPage() {
   await requireAdmin();
 
-  const [email, dbCheck, monetization, plans, failedEmails] = await Promise.all([
+  const [email, dbCheck, monetization, plans, failedEmails, sourceHealth] = await Promise.all([
     getEmailOutboxHealth(),
-    // Lightweight connectivity probe — no secrets, no full scans.
     prisma.$queryRaw<Array<{ ok: number }>>`SELECT 1 as ok`.then(
       () => true,
       () => false,
@@ -25,13 +25,13 @@ export default async function AdminSystemPage() {
       orderBy: { sortOrder: 'asc' },
       select: { code: true, name: true, active: true, monthlyPrice: true, yearlyPrice: true, currency: true },
     }),
-    // Only the safe error string — never payload or recipient.
     prisma.emailOutbox.findMany({
       where: { status: 'FAILED' },
       take: 10,
       orderBy: { updatedAt: 'desc' },
       select: { id: true, type: true, attempts: true, lastError: true, updatedAt: true },
     }),
+    listSourceHealth(),
   ]);
 
   const health = [
@@ -145,6 +145,37 @@ export default async function AdminSystemPage() {
             </ul>
           </div>
         ) : null}
+      </section>
+      <section aria-labelledby="sources-heading" className="card-pad">
+        <h2 id="sources-heading" className="text-sm font-semibold text-ink">
+          Job discovery sources
+        </h2>
+        <div className="table-wrap mt-3">
+          <table className="table">
+            <thead>
+              <tr>
+                <th scope="col">Source</th>
+                <th scope="col">Type</th>
+                <th scope="col">Configured</th>
+                <th scope="col">Enabled</th>
+                <th scope="col">Last success</th>
+                <th scope="col">Last failure</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sourceHealth.map((s) => (
+                <tr key={s.sourceId}>
+                  <td>{s.displayName}</td>
+                  <td>{s.connectorType}</td>
+                  <td>{s.configured ? 'Yes' : 'No'}</td>
+                  <td>{s.enabled ? 'Yes' : 'No'}</td>
+                  <td>{s.lastSuccessAt ? new Date(s.lastSuccessAt).toLocaleString() : '—'}</td>
+                  <td>{s.lastFailureAt ? `${s.failureCategory ?? ''}` : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );
