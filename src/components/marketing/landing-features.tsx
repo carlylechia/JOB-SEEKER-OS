@@ -3,10 +3,20 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   LayoutDashboard, Star, ListChecks, Users, BookOpen,
-  GitBranch, BellRing, BarChart2, Zap,
+  GitBranch, BellRing, BarChart2, Zap, FileText, Brain,
+  Target, Calendar, Sparkles, TrendingUp, Search,
 } from 'lucide-react';
 
 const features = [
+  {
+    icon: Search,
+    title: 'Daily Top 5 Job Discovery',
+    description:
+      'Receive a focused, personalized shortlist of relevant opportunities with fit signals and links to official application pages.',
+    accent: 'text-accent-text',
+    glow: 'shadow-accent/10',
+    border: 'hover:border-accent/30',
+  },
   {
     icon: Star,
     title: 'AI Fit Scoring',
@@ -17,10 +27,55 @@ const features = [
     border: 'hover:border-warn/30',
   },
   {
+    icon: Brain,
+    title: 'AI Job Intelligence',
+    description:
+      'Understand why a job fits, which requirements need attention, and what to do next, with evidence-backed explanations that never override hard eligibility rules.',
+    accent: 'text-accent-text',
+    glow: 'shadow-accent/10',
+    border: 'hover:border-accent/30',
+  },
+  {
+    icon: FileText,
+    title: 'Resume Intelligence',
+    description:
+      'Upload a resume and build a structured, reviewable career profile that powers matching, tailoring, and application materials.',
+    accent: 'text-muted',
+    glow: 'shadow-black/10',
+    border: 'hover:border-line-strong',
+  },
+  {
+    icon: FileText,
+    title: 'Resume Builder & Optimization',
+    description:
+      'Build structured resumes, create role-specific variants, and apply evidence-backed suggestions without inventing experience.',
+    accent: 'text-success-text',
+    glow: 'shadow-success/10',
+    border: 'hover:border-success/30',
+  },
+  {
+    icon: FileText,
+    title: 'AI Application Materials',
+    description:
+      'Draft cover letters, recruiter outreach, and follow-ups from your real profile and job details, then review and edit before use.',
+    accent: 'text-danger-text',
+    glow: 'shadow-danger/10',
+    border: 'hover:border-danger/30',
+  },
+  {
+    icon: Calendar,
+    title: 'Interview Preparation',
+    description:
+      'Generate role-specific preparation packs, structure answers, and practise with feedback linked to the correct job.',
+    accent: 'text-muted',
+    glow: 'shadow-black/10',
+    border: 'hover:border-line-strong',
+  },
+  {
     icon: ListChecks,
     title: 'Daily Smart Queue',
     description:
-      'A curated, AI-ranked list of jobs that need your attention today. Follow-ups, new applications, and stale leads — organized and actionable.',
+      'A curated, ranked list of jobs and actions that need your attention today, including follow-ups and stale leads.',
     accent: 'text-accent-text',
     glow: 'shadow-accent/10',
     border: 'hover:border-accent/30',
@@ -45,30 +100,12 @@ const features = [
   },
   {
     icon: BookOpen,
-    title: 'Interview Prep',
+    title: 'Weekly Review & Progress',
     description:
-      'Attach notes, role-specific questions, and preparation materials directly to each job — so you walk into every interview fully prepared.',
+      'Review real activity, completed tasks, and next actions to keep your search consistent and informed.',
     accent: 'text-muted',
     glow: 'shadow-black/10',
     border: 'hover:border-line-strong',
-  },
-  {
-    icon: BellRing,
-    title: 'Smart Notifications',
-    description:
-      'Automated reminders for follow-ups, deadlines, and stale applications — so nothing falls through the cracks.',
-    accent: 'text-danger-text',
-    glow: 'shadow-danger/10',
-    border: 'hover:border-danger/30',
-  },
-  {
-    icon: BarChart2,
-    title: 'Search Analytics',
-    description:
-      'See your application velocity, response rate, and pipeline health at a glance. Know whether you\'re executing with discipline.',
-    accent: 'text-accent-text',
-    glow: 'shadow-accent/10',
-    border: 'hover:border-accent/30',
   },
   {
     icon: LayoutDashboard,

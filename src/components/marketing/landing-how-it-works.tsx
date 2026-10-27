@@ -137,28 +137,15 @@ export function LandingHowItWorks() {
           {/* Visual accent */}
           <div className="mt-10 rounded-2xl border border-line bg-surface-sunken p-5">
             <div className="text-xs font-semibold uppercase tracking-widest text-accent-text mb-3">
-              Average user outcome
+              What the workflow covers
             </div>
-            <div className="space-y-3">
-              {[
-                { label: 'Fewer missed follow-ups', pct: 94 },
-                { label: 'Faster application decisions', pct: 78 },
-                { label: 'Clearer priority ranking', pct: 88 },
-              ].map(({ label, pct }) => (
-                <div key={label}>
-                  <div className="mb-1 flex justify-between text-xs text-muted">
-                    <span>{label}</span>
-                    <span className="text-accent-text font-semibold">{pct}%</span>
-                  </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-sunken">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-accent to-accent-hover"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ul className="space-y-2 text-sm text-muted">
+              <li>Discover and import relevant jobs</li>
+              <li>Understand fit and gaps</li>
+              <li>Prepare resumes and application materials</li>
+              <li>Practise interviews</li>
+              <li>Track, follow up, and review progress</li>
+            </ul>
           </div>
         </div>
 
