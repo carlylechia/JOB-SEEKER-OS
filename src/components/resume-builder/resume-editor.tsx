@@ -264,7 +264,13 @@ export function ResumeEditor({
       });
       const applyPayload = await applyResponse.json().catch(() => null);
       if (!applyResponse.ok) {
-        setMessage(applyPayload?.error?.message ?? 'Could not apply the summary suggestion.');
+        const skipped = applyPayload?.meta?.skipped;
+        setMessage(applyPayload?.error?.message ?? (skipped ? skipped.map((s: any) => s.reason).join(' ') : 'Could not apply the summary suggestion.'));
+        return;
+      }
+      if (typeof applyPayload.appliedCount === 'number' && applyPayload.appliedCount === 0) {
+        const reasons = (applyPayload.skipped ?? []).map((s: any) => s.reason).join(' ');
+        setMessage(reasons || 'No summary change was applied.');
         return;
       }
       const nextContent = applyPayload.resume.content as ResumeContent;
