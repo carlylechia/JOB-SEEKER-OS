@@ -270,22 +270,17 @@ function SlideGraphic({ slide }: { slide: Slide }) {
             <div className="grid gap-4">
               <div className="grid gap-3 rounded-3xl border border-line bg-surface-sunken p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
                 {[
-                  { title: 'Smart resume builder', desc: 'Generate and refine role-specific resumes from your tracked experience and target role.' },
-                  { title: 'AI job fetching', desc: 'Continuously pull, filter, and score fresh roles that match your preferences before you go looking.' },
-                  { title: 'Auto-apply + suggestions', desc: 'AI-assisted application drafting, workflow suggestions, and deeper daily decision support.' },
+                  { title: 'Resume intelligence', desc: 'Extract a structured career profile from an uploaded resume and review every field before it is saved.' },
+                  { title: 'AI job intelligence', desc: 'Understand why a job fits, which requirements need attention, and what to do next.' },
+                  { title: 'Resume builder & optimization', desc: 'Build structured resumes and tailor variants for specific jobs without inventing experience.' },
+                  { title: 'Application materials', desc: 'Draft cover letters, outreach, and follow-ups from your real profile and job details.' },
+                  { title: 'Interview preparation', desc: 'Generate role-specific prep packs and practice answers with feedback.' },
                 ].map((x) => (
                   <div key={x.title} className="rounded-2xl border border-line bg-surface-sunken-hover p-4">
                     <p className="text-sm font-semibold text-ink">{x.title}</p>
                     <p className="mt-2 text-sm text-ink-2/90">{x.desc}</p>
                   </div>
                 ))}
-              </div>
-              <div className="rounded-3xl border border-line bg-surface-sunken p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
-                <p className="text-xs text-muted">Next releases</p>
-                <p className="mt-2 text-sm text-ink-2/90">
-                  The next wave is intentionally AI-heavy: stronger resume generation, proactive job discovery, AI auto-apply assistance,
-                  and smart suggestions that reduce busywork without hiding the workflow.
-                </p>
               </div>
             </div>
           )}
@@ -301,9 +296,9 @@ export function DemoSlideshow() {
       {
         id: 'scoring',
         kicker: 'Core feature',
-        title: 'AI fit scoring you can trust',
-        description: 'Understand exactly why a role is a match — and what to do next to increase your odds.',
-        bullets: ['Explainable scoring', 'Strengths + gaps', 'Actionable next steps'],
+        title: 'AI fit scoring that explains the match',
+        description: 'Understand exactly why a role is a strong fit, where the gaps are, and what to do next to improve your odds.',
+        bullets: ['Transparent scoring', 'Stack and seniority fit', 'Actionable signals'],
         accent: 'cyan',
         status: 'Now',
         icon: Sparkles,
@@ -311,9 +306,9 @@ export function DemoSlideshow() {
       {
         id: 'queue',
         kicker: 'Daily execution',
-        title: 'A smart queue that keeps you moving',
-        description: 'Your best next action, ranked by impact. No more guessing what matters today.',
-        bullets: ['Fit + urgency ranking', 'Follow-up reminders', 'Clear outcomes'],
+        title: 'A daily queue ranked around your real priorities',
+        description: 'Your next best actions are surfaced by urgency, fit, and momentum — so the work stays focused and manageable.',
+        bullets: ['Priority ranking', 'Follow-up reminders', 'Daily momentum'],
         accent: 'indigo',
         status: 'Now',
         icon: ClipboardList,
@@ -321,9 +316,9 @@ export function DemoSlideshow() {
       {
         id: 'pipeline',
         kicker: 'Clarity',
-        title: 'Pipeline tracking, end-to-end',
-        description: 'Every stage visible. Every step captured. Your job search stops feeling chaotic.',
-        bullets: ['Stages + timelines', 'Notes and artifacts', 'Fast status updates'],
+        title: 'Pipeline tracking from first save to final offer',
+        description: 'Every job moves through a visible process with notes, artifacts, and clear status updates — no more scattered chaos.',
+        bullets: ['Stage visibility', 'Notes and evidence', 'Fast status changes'],
         accent: 'emerald',
         status: 'Now',
         icon: Network,
@@ -331,9 +326,9 @@ export function DemoSlideshow() {
       {
         id: 'onboarding',
         kicker: 'Setup flow',
-        title: 'Onboarding that builds the workspace for you',
-        description: 'Users can upload a resume, set fit preferences, save progress between sessions, and land in a workspace that already knows what to prioritize.',
-        bullets: ['Resume parsing', 'Autosaved setup steps', 'Profile-aware queue and scoring'],
+        title: 'Onboarding that builds your workspace for you',
+        description: 'Upload a resume, configure your preferences, save progress between sessions, and arrive in a workspace already tailored to your search.',
+        bullets: ['Resume parsing', 'Autosaved setup', 'Profile-aware queue'],
         accent: 'emerald',
         status: 'Now',
         icon: Rocket,
@@ -341,22 +336,72 @@ export function DemoSlideshow() {
       {
         id: 'contacts',
         kicker: 'Relationships',
-        title: 'Contact CRM with real context',
-        description: 'Treat relationships like first-class objects — with follow-ups that don’t slip.',
-        bullets: ['People + history', 'Follow-up cadence', 'Attachments and notes'],
+        title: 'A contact CRM that keeps context with every conversation',
+        description: 'Track recruiters, hiring managers, and warm intros with the follow-up cadence and notes needed to keep momentum alive.',
+        bullets: ['People + history', 'Follow-up reminders', 'Context attached to every lead'],
         accent: 'cyan',
         status: 'Now',
         icon: Users,
       },
       {
-        id: 'coming',
-        kicker: 'AI roadmap',
-        title: 'The next releases get far more AI-intensive',
-        description: 'We’re pushing beyond tracking into real AI assistance: smarter resumes, proactive job fetching, auto-apply support, and suggestion engines that help users move faster.',
-        bullets: ['Smart resume building', 'AI job fetching', 'Auto-apply and AI suggestions'],
-        accent: 'amber',
-        status: 'Coming soon',
+        id: 'resume-intelligence',
+        kicker: 'Career profile',
+        title: 'Resume intelligence that builds a reusable career profile',
+        description: 'Upload a resume, review extracted experience, education, skills, and projects, and confirm only what is accurate before it informs matching and materials.',
+        bullets: ['Evidence-backed extraction', 'Review and correct', 'Reusable profile'],
+        accent: 'indigo',
+        status: 'Now',
+        icon: FileText,
+      },
+      {
+        id: 'job-intelligence',
+        kicker: 'Fit analysis',
+        title: 'AI job intelligence that explains the match',
+        description: 'See dimension-by-dimension fit explanations, gaps to address, and next steps while keeping hard eligibility rules authoritative.',
+        bullets: ['Match explanations', 'Gap analysis', 'Actionable next steps'],
+        accent: 'cyan',
+        status: 'Now',
         icon: BrainCircuit,
+      },
+      {
+        id: 'resume-builder',
+        kicker: 'Resumes',
+        title: 'Resume builder and job-specific optimization',
+        description: 'Build structured resumes, create variants per role, and apply evidence-backed suggestions without fabricating experience.',
+        bullets: ['Structured editing', 'Role-specific variants', 'Anti-fabrication checks'],
+        accent: 'emerald',
+        status: 'Now',
+        icon: FileText,
+      },
+      {
+        id: 'materials',
+        kicker: 'Application materials',
+        title: 'AI application materials under your control',
+        description: 'Draft cover letters, recruiter outreach, and follow-ups from your real profile and job details, then review and edit before use.',
+        bullets: ['Tailored drafts', 'Versioned content', 'No automatic sending'],
+        accent: 'amber',
+        status: 'Now',
+        icon: FileText,
+      },
+      {
+        id: 'interview-prep',
+        kicker: 'Interviews',
+        title: 'Interview preparation packs and practice',
+        description: 'Generate role-specific questions, structure answers, and practice with feedback linked to the correct job and user.',
+        bullets: ['Role-specific questions', 'Answer frameworks', 'Progress tracking'],
+        accent: 'indigo',
+        status: 'Now',
+        icon: CalendarClock,
+      },
+      {
+        id: 'daily-discovery',
+        kicker: 'Discovery',
+        title: 'Daily Top 5 personalized job discovery',
+        description: 'Receive a focused shortlist of relevant opportunities with fit signals and links to official application pages.',
+        bullets: ['Personalized shortlist', 'Source attribution', 'Save to workspace'],
+        accent: 'emerald',
+        status: 'Now',
+        icon: Sparkles,
       },
     ],
     [],

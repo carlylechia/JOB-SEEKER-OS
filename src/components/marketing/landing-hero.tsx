@@ -71,7 +71,7 @@ export function LandingHero() {
               </div>
 
               <div className="hero-l5 mt-8 grid gap-3 sm:grid-cols-2">
-                {['AI fit scoring', 'Smart daily queue', 'Pipeline tracking', 'Interview prep'].map((feat) => (
+                {['AI fit scoring', 'Daily Top 5 discovery', 'Resume intelligence', 'AI job intelligence', 'Resume builder', 'Application materials', 'Interview prep', 'Pipeline tracking'].map((feat) => (
                   <div key={feat} className="flex items-center gap-2 text-sm text-ink-2">
                     <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-accent-text" />
                     {feat}

@@ -17,6 +17,7 @@
  */
 
 import { auth } from '@/auth';
+import { touchStreak } from '@/lib/streak';
 import { apiError, handleRoute, jsonOk, privateNoStore } from '@/lib/api';
 import { handleOptions } from '@/lib/cors';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
@@ -142,6 +143,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
       try {
         const updated = await updateResume({ userId, resumeId: id, input: parsed.data });
+        await touchStreak(userId).catch(() => null);
         // The layout comes back with the save so the preview reflects exactly
         // what was stored, without a second round trip that could race.
         const layout = await buildResumeLayoutFromRecord(updated);

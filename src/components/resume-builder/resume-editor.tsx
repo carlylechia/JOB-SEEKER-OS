@@ -833,7 +833,21 @@ export function ResumeEditor({
             </h2>
 
             {activeSection === 'summary' ? (
-              <SummaryEditor summary={content.summary} onChange={(value) => setSection({ summary: value })} />
+              <>
+                <SummaryEditor summary={content.summary} onChange={(value) => setSection({ summary: value })} />
+                <div className="mt-4 rounded-xl border border-line bg-surface-sunken p-4">
+                  <p className="text-xs font-semibold text-ink-2">Improve this summary for a job</p>
+                  <p className="mt-1 text-xs leading-5 text-muted">
+                    Select a target job above, then use the optimization panel below to generate evidence-backed summary suggestions. You can edit the text precisely here at any time.
+                  </p>
+                </div>
+                <details className="mt-6" open>
+                  <summary className="cursor-pointer text-xs text-muted">Edit basic information (job title and links)</summary>
+                  <div className="mt-4">
+                    <BasicsEditor basics={content.basics} onChange={(basics) => setSection({ basics })} />
+                  </div>
+                </details>
+              </>
             ) : null}
             {activeSection === 'experience' ? (
               <ExperienceEditor entries={content.experiences} onChange={(entries) => setSection({ experiences: entries })} />
@@ -852,7 +866,7 @@ export function ResumeEditor({
             ) : null}
 
             {activeSection !== 'summary' ? (
-              <details className="mt-6">
+              <details className="mt-6" open>
                 <summary className="cursor-pointer text-xs text-muted">
                   {activeSection === 'credentials' ? 'Edit basic information instead' : 'Edit basic information'}
                 </summary>

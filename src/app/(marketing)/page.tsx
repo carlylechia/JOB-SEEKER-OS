@@ -6,7 +6,6 @@ import { LandingNav } from '@/components/marketing/landing-nav';
 import { LandingFeatures } from '@/components/marketing/landing-features';
 import { LandingHowItWorks } from '@/components/marketing/landing-how-it-works';
 import { LandingDashboardPreview } from '@/components/marketing/landing-dashboard-preview';
-import { LandingTestimonials } from '@/components/marketing/landing-testimonials';
 import { LandingFaq } from '@/components/marketing/landing-faq';
 import { LandingCta } from '@/components/marketing/landing-cta';
 import { SiteFooter } from '@/components/marketing/site-footer';
@@ -64,8 +63,6 @@ export default function LandingPage() {
           <LandingFeatures />
           <LandingHowItWorks />
           <LandingDashboardPreview />
-          <LandingTestimonials />
-
           <Suspense fallback={<PlatformJobsPreviewFallback />}>
             <PlatformJobsPreview />
           </Suspense>

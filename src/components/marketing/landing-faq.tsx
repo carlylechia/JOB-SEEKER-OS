@@ -25,8 +25,8 @@ const faqs = [
     a: 'The core workspace is free. Create an account, set up your preferences, and start capturing jobs immediately — no credit card required.',
   },
   {
-    q: 'What is coming next?',
-    a: 'The product roadmap includes stronger job ingestion from arbitrary URLs, AI-assisted fit explanations, resume tailoring suggestions per job, and collaboration features for working with career coaches.',
+    q: 'What is available today?',
+    a: 'Job tracking, personalized scoring, daily queue, pipeline management, recruiter contacts, interview prep, resume intelligence, AI job intelligence, resume builder and optimization, and application materials are available. Collaboration features for career coaches are not yet available.',
   },
 ];
 

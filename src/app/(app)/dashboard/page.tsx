@@ -73,6 +73,30 @@ export default function DashboardPage() {
     !profile?.profileCompleted,
   ].filter(Boolean).length;
 
+  const activationSteps = [
+    {
+      label: 'Complete onboarding',
+      done: onboardingCompleted && !onboardingSkipped,
+      href: '/onboarding',
+      note: 'Set your targets, stack, and location fit.',
+    },
+    {
+      label: 'Finish your profile',
+      done: Boolean(profile?.profileCompleted),
+      href: '/profile',
+      note: 'Add your headline, links, and photo.',
+    },
+    {
+      label: 'Add your first job',
+      done: hasJobs,
+      href: '/jobs/new',
+      note: 'Paste a URL or description to start tracking.',
+    },
+  ];
+  const activationProgress = Math.round(
+    (activationSteps.filter((step) => step.done).length / activationSteps.length) * 100,
+  );
+
   return (
     <div className="space-y-6 pb-8">
 
@@ -155,6 +179,52 @@ export default function DashboardPage() {
 
       {/* ── Streak (prominent, only when active) ────────────────────── */}
       {streakCount > 0 && <StreakWidget streakCount={streakCount} />}
+
+      <section className="rounded-2xl border border-line bg-gradient-to-r from-surface-sunken via-background to-card p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-text">Activation progress</p>
+            <h2 className="mt-1 text-lg font-semibold text-ink">Build momentum in your first week</h2>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-2.5 w-28 overflow-hidden rounded-full bg-surface-base">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-accent to-accent-strong transition-all duration-300"
+                style={{ width: `${activationProgress}%` }}
+              />
+            </div>
+            <span className="text-sm font-semibold text-ink">{activationProgress}%</span>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {activationSteps.map((step) => (
+            <Link
+              key={step.label}
+              href={step.href}
+              className={`rounded-2xl border p-4 transition ${
+                step.done
+                  ? 'border-success/25 bg-success/[0.08] text-success-text'
+                  : 'border-line bg-surface-base text-ink hover:border-accent/40'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold">{step.label}</p>
+                <span
+                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
+                    step.done ? 'bg-success/20 text-success-text' : 'bg-surface-sunken text-muted'
+                  }`}
+                >
+                  {step.done ? '✓' : step.label.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <p className={`mt-2 text-xs leading-5 ${step.done ? 'text-success-text/80' : 'text-muted'}`}>
+                {step.note}
+              </p>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {/* ── KPI row ──────────────────────────────────────────────────── */}
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">

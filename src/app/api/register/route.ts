@@ -58,6 +58,13 @@ export async function POST(req: Request) {
       },
     });
 
+    // Best-effort analytics: never fail registration.
+    try {
+      await prisma.productEvent.create({ data: { userId: user.id, name: 'signup_completed' } });
+    } catch {
+      // ignore
+    }
+
     // ✅ STEP 2: Seed workspace (non-critical)
     try {
       await seedUserWorkspace(user.id);

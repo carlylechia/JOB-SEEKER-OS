@@ -79,6 +79,7 @@ export async function POST(request: Request) {
     });
 
     await logImportantInfo({ event: 'job_created', userId: session.user.id, jobId: created.id, route: '/api/jobs', context: { company: created.company, title: created.title } });
+    try { await prisma.productEvent.create({ data: { userId: session.user.id, name: 'job_saved', properties: { jobId: created.id } } }); } catch { /* ignore */ }
     await touchStreak(session.user.id).catch(() => null); // non-critical
     return jsonOk({ job: mapDbJob(created) }, request, { status: 201 });
   } catch (error) {
