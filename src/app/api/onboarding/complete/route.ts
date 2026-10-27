@@ -3,6 +3,7 @@ import { jsonError, jsonOk } from '@/lib/api';
 import { handleOptions } from '@/lib/cors';
 import { logImportantError, logImportantInfo } from '@/lib/observability';
 import { prisma } from '@/lib/prisma';
+import { touchStreak } from '@/lib/streak';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 import { sanitizeArray, sanitizeText, sanitizeUrl } from '@/lib/sanitize';
 import { createNotification } from '@/lib/notifications';
@@ -88,6 +89,7 @@ export async function POST(request: Request) {
       userId: session.user.id,
       route: '/api/onboarding/complete',
     });
+    await touchStreak(session.user.id).catch(() => null);
 
     try {
       await prisma.productEvent.create({ data: { userId: session.user.id, name: 'onboarding_completed' } });

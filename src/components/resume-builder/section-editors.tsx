@@ -70,7 +70,7 @@ export function BasicsEditor({
     <div className="grid gap-4 sm:grid-cols-2">
       <TextField label="Full name" value={basics.fullName ?? ''} autoComplete="name" onChange={(v) => onChange({ ...basics, fullName: v })} />
       <TextField
-        label="Professional headline"
+        label="Professional headline / job title"
         value={basics.headline ?? ''}
         maxLength={400}
         hint="One line: your role and what you are known for."
