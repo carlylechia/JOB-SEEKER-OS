@@ -51,6 +51,7 @@ type Props = {
   targetJobId: string | null;
   canOptimize: boolean;
   hasUnsavedChanges: boolean;
+  onRegisterRun?: (run: () => void) => void;
   onApplied: (next: {
     revision: number;
     content: ResumeContent;
@@ -135,6 +136,7 @@ export function ResumeOptimizationPanel({
   targetJobId,
   canOptimize,
   hasUnsavedChanges,
+  onRegisterRun,
   onApplied,
 }: Props) {
   const [state, setState] = useState<Wire | null>(null);
@@ -406,6 +408,10 @@ export function ResumeOptimizationPanel({
   const result = state?.optimization?.data ?? null;
   const operations = result?.operations ?? [];
   const visible = operations.filter((operation) => !rejected.has(operation.id));
+
+  useEffect(() => {
+    onRegisterRun?.(run);
+  }, [run, onRegisterRun]);
 
   return (
     <section aria-labelledby="optimization-heading" className="card-pad space-y-4">

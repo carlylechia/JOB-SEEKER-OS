@@ -141,6 +141,7 @@ export function ResumeEditor({
   const [previewError, setPreviewError] = useState('');
   const [draggingSection, setDraggingSection] = useState<ResumeSectionKey | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
+  const optimizationRunRef = useRef<(() => void) | null>(null);
   const revisionRef = useRef(resume.revision);
   const draftVersionRef = useRef(0);
   const saveInFlightRef = useRef(false);
@@ -838,8 +839,20 @@ export function ResumeEditor({
                 <div className="mt-4 rounded-xl border border-line bg-surface-sunken p-4">
                   <p className="text-xs font-semibold text-ink-2">Improve this summary for a job</p>
                   <p className="mt-1 text-xs leading-5 text-muted">
-                    Select a target job above, then use the optimization panel below to generate evidence-backed summary suggestions. You can edit the text precisely here at any time.
+                    Select a target job above, then generate evidence-backed summary suggestions. You can edit the text precisely here at any time.
                   </p>
+                  <button
+                    type="button"
+                    className="btn-primary mt-3 text-xs"
+                    disabled={!targetJobId || !access.canOptimize || dirty}
+                    onClick={() => {
+                      const panel = document.getElementById('resume-optimization-panel');
+                      panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      optimizationRunRef.current?.();
+                    }}
+                  >
+                    Improve summary with AI
+                  </button>
                 </div>
                 <details className="mt-6" open>
                   <summary className="cursor-pointer text-xs text-muted">Edit basic information (job title and links)</summary>
@@ -878,12 +891,14 @@ export function ResumeEditor({
           </section>
 
           <OptimizationPanelBoundary>
+            <div id="resume-optimization-panel">
             <ResumeOptimizationPanel
               resumeId={resume.id}
               revision={revision}
               targetJobId={targetJobId}
               canOptimize={access.canOptimize}
               hasUnsavedChanges={dirty}
+              onRegisterRun={(run) => { optimizationRunRef.current = run; }}
               onApplied={({
                 revision: nextRevision,
                 content: nextContent,
@@ -905,6 +920,7 @@ export function ResumeEditor({
                 setMessage(`Saved ${appliedCount} accepted change${appliedCount === 1 ? '' : 's'}.`);
               }}
             />
+            </div>
           </OptimizationPanelBoundary>
 
           <section aria-labelledby="danger-heading" className="card-pad">
