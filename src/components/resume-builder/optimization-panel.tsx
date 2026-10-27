@@ -251,6 +251,10 @@ export function ResumeOptimizationPanel({
     }
   }, [resumeId, load]);
 
+  useEffect(() => {
+    onRegisterRun?.(run);
+  }, [run, onRegisterRun]);
+
   const apply = useCallback(async () => {
     const optimization = state?.optimization;
     if (!optimization) return;
@@ -408,10 +412,6 @@ export function ResumeOptimizationPanel({
   const result = state?.optimization?.data ?? null;
   const operations = result?.operations ?? [];
   const visible = operations.filter((operation) => !rejected.has(operation.id));
-
-  useEffect(() => {
-    onRegisterRun?.(run);
-  }, [run, onRegisterRun]);
 
   return (
     <section aria-labelledby="optimization-heading" className="card-pad space-y-4">
