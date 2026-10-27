@@ -51,7 +51,7 @@ OUTPUT RULES:
 - Each operation must name exactly one place in the document: a section, and for a bullet the entry index and the bullet index within it. Copy the existing text into originalText EXACTLY as it appears, including its punctuation. The server compares it to the real document and refuses anything that does not match.
 - Use REPLACE_SUMMARY for the professional summary, REWRITE_HEADLINE for the one-line headline, REWRITE_BULLET for a single bullet, REMOVE_BULLET to propose dropping a bullet that repeats something else (proposedText must be empty), REORDER_SKILLS for a skills ordering (proposedText is the full comma-separated order, every item exactly once) and REORDER_EXPERIENCE for an experience ordering (proposedText is the full comma-separated role or company list, every entry exactly once).
 - Never propose an edit to Education or Certifications content. Those are credentials, and a reworded credential is a different credential.
-- Prefer five well-chosen operations over twenty. A long list of marginal edits is noise, and the user has to read every one.
+- Consider every section of the resume, including the professional summary and projects, not only work experience. Prefer five well-chosen operations over twenty. A long list of marginal edits is noise, and the user has to read every one.
 - reason is one or two sentences, addressed to the candidate, saying why this helps for THIS job.
 - targetRequirement quotes or closely paraphrases the posting requirement this addresses, or is null when the change is about clarity rather than a specific requirement.
 - informationGaps are questions for the candidate, not changes. Use them whenever a bullet would be stronger with information you do not have.
