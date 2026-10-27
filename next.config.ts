@@ -21,8 +21,8 @@ const csp = [
   // Next.js injects inline bootstrap scripts; dev additionally needs eval for
   // React Fast Refresh.
   isDev
-    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-    : "script-src 'self' 'unsafe-inline'",
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com"
+    : "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
   // Tailwind and the design system use inline styles extensively.
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://*.vercel-storage.com https://*.linkedin.com",
@@ -32,7 +32,7 @@ const csp = [
   "base-uri 'self'",
   "form-action 'self' https://www.linkedin.com",
   // Only origins the BROWSER talks to. Resend and Postgres are server-side.
-  "connect-src 'self' https://*.linkedin.com https://*.analytics.com https://vitals.vercel-insights.com",
+  "connect-src 'self' https://*.linkedin.com https://*.analytics.com https://vitals.vercel-insights.com https://va.vercel-scripts.com",
   "frame-src 'none'",
   "frame-ancestors 'none'",
   "worker-src 'self' blob:",
