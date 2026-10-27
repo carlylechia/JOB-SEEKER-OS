@@ -231,7 +231,10 @@ export function ResumeEditor({
   }, []);
 
   const improveSummary = useCallback(async () => {
-    if (!targetJobId || !access.canOptimize || dirty || improvingSummary) return;
+    if (!targetJobId || !access.canOptimize || improvingSummary) return;
+    if (dirty) {
+      await save();
+    }
     setImprovingSummary(true);
     setMessage('');
     try {
@@ -908,7 +911,7 @@ export function ResumeEditor({
                   <button
                     type="button"
                     className="btn-primary mt-3 text-xs"
-                    disabled={!targetJobId || !access.canOptimize || dirty || improvingSummary}
+                    disabled={!targetJobId || !access.canOptimize || improvingSummary}
                     onClick={() => void improveSummary()}
                   >
                     {improvingSummary ? 'Improving…' : 'Improve summary with AI'}
