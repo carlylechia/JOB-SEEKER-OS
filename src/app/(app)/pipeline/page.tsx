@@ -74,20 +74,20 @@ function JobCard({
       style={isDragOverlay ? { cursor: 'grabbing' } : style}
       {...listeners}
       {...attributes}
-      className={`rounded-xl border border-line bg-surface-sunken p-3 space-y-2 select-none touch-none
+      className={`min-w-0 max-w-full rounded-xl border border-line bg-surface-sunken p-3 space-y-2 select-none touch-none
         ${isDragOverlay ? 'shadow-soft ring-1 ring-accent/40 rotate-1 scale-[1.02]' : 'hover:border-line transition-colors'}`}
     >
       <Link
         href={`/jobs/${job.id}`}
-        className="block hover:text-accent-text"
+        className="block min-w-0 max-w-full hover:text-accent-text"
         onClick={(e) => e.stopPropagation()}
         // prevent drag from navigating
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <div className="font-medium leading-tight">{job.title}</div>
-        <div className="text-sm text-muted">{job.company}</div>
+        <div className="font-medium leading-tight [overflow-wrap:anywhere]">{job.title}</div>
+        <div className="truncate text-sm text-muted" title={job.company}>{job.company}</div>
       </Link>
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
         <ScoreBadge score={job.score.fitScore} tier={job.score.fitTier} />
         {/* stop drag from triggering when interacting with the select */}
         <div onPointerDown={(e) => e.stopPropagation()}>
@@ -105,7 +105,7 @@ function JobCard({
         </div>
       </div>
       {job.nextFollowUp && (
-        <div className="text-xs text-muted">Follow-up: {job.nextFollowUp}</div>
+        <div className="text-xs text-muted [overflow-wrap:anywhere]">Follow-up: {job.nextFollowUp}</div>
       )}
     </div>
   );
@@ -129,7 +129,7 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-2xl border p-3 transition-colors min-h-[120px]
+      className={`min-w-0 rounded-2xl border p-3 transition-colors min-h-[120px]
         ${col.color}
         ${isOver ? 'ring-2 ring-accent/50 brightness-110' : ''}`}
     >
@@ -137,7 +137,7 @@ function KanbanColumn({
         <h3 className="font-semibold text-sm">{col.label}</h3>
         <span className="text-xs text-muted bg-surface-sunken rounded-full px-2 py-0.5">{jobs.length}</span>
       </div>
-      <div className="space-y-3">
+      <div className="min-w-0 space-y-3">
         {jobs.length ? (
           jobs.map((job) => (
             <JobCard key={job.id} job={job} onMove={onMove} />
@@ -200,7 +200,7 @@ export default function PipelinePage() {
         onDragEnd={handleDragEnd}
         onDragCancel={() => { setActiveId(null); setOverId(null); }}
       >
-        <div className="grid gap-4 lg:grid-cols-5">
+        <div className="grid min-w-0 gap-4 lg:grid-cols-5">
           {COLUMNS.map((col) => {
             const colJobs = jobs.filter((j) => col.statuses.includes(j.status as JobStatus));
             return (
@@ -226,4 +226,3 @@ export default function PipelinePage() {
     </div>
   );
 }
-
