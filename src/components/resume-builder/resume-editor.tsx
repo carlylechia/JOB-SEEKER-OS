@@ -261,7 +261,7 @@ export function ResumeEditor({
         body: JSON.stringify({
           optimizationId: optPayload.optimizationId,
           acceptedOperationIds: [summaryOp.id],
-          expectedRevision: revision,
+          expectedRevision: revisionRef.current,
         }),
         credentials: 'same-origin',
       });
