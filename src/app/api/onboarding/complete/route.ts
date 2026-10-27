@@ -89,6 +89,12 @@ export async function POST(request: Request) {
       route: '/api/onboarding/complete',
     });
 
+    try {
+      await prisma.productEvent.create({ data: { userId: session.user.id, name: 'onboarding_completed' } });
+    } catch {
+      // ignore
+    }
+
     // Send in-app welcome notification
     try {
       const user = await prisma.user.findUnique({

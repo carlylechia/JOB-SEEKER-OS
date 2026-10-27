@@ -25,6 +25,14 @@ export async function POST(request: Request, { params }: Params) {
 
     const jobId = await clonePublicJobForUser(id, session.user.id);
 
+    try {
+      await (await import('@/lib/prisma')).prisma.productEvent.create({
+        data: { userId: session.user.id, name: 'job_imported', properties: { sourceJobId: id } },
+      });
+    } catch {
+      // ignore
+    }
+
     await logImportantInfo({
       event: "public_job_saved_to_workspace",
       userId: session.user.id,
