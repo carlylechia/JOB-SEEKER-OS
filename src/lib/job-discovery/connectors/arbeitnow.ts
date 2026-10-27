@@ -33,7 +33,7 @@ export class ArbeitnowConnector implements Connector {
     const errors: string[] = [];
     const seen = new Set<string>();
 
-    for (const title of input.titles.slice(0, 3)) {
+    for (const title of input.titles) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
       try {
@@ -55,8 +55,8 @@ export class ArbeitnowConnector implements Connector {
             title: String(r?.title ?? title).trim(),
             company: String(r?.company_name ?? 'Unknown employer').trim(),
             location: r?.location ? String(r.location) : null,
-            remoteType: r?.remote ? 'Remote' : null,
-            workArrangement: r?.remote ? 'Remote' : null,
+            remoteType: r?.remote === true ? 'Remote' : r?.remote === false ? 'Onsite' : null,
+            workArrangement: r?.remote === true ? 'Remote' : r?.remote === false ? 'Onsite' : null,
             employmentType: Array.isArray(r?.job_types) ? r.job_types.join(', ') : null,
             description: r?.description ? String(r.description).replace(/<[^>]+>/g, ' ').trim().slice(0, 2000) : null,
             salaryMin: null,

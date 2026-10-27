@@ -234,26 +234,27 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
     setError('');
     setIsSaving(true);
     try {
-      // Best-effort save of current progress
-      await saveStep(step, getStepPayload(step));
-    } catch {
-      // Non-critical — proceed anyway
-    } finally {
-      setIsSaving(false);
-    }
-    // Mark as skipped (allows dashboard access, dashboard shows resume prompt)
-    try {
-      await fetch('/api/onboarding/skip', {
+      const response = await fetch('/api/onboarding/skip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
-    } catch {
-      // Best-effort
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(
+          payload?.error?.message ??
+            payload?.error ??
+            'We could not skip onboarding. Please try again.',
+        );
+      }
+      startTransition(() => {
+        router.push('/dashboard');
+        router.refresh();
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Something went wrong.');
+    } finally {
+      setIsSaving(false);
     }
-    startTransition(() => {
-      router.push('/dashboard');
-      router.refresh();
-    });
   }
 
   // ── Resume extracted data handler ──
@@ -403,6 +404,8 @@ export function OnboardingShell({ initialData }: { initialData: OnboardingInitia
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               className="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger-text"
+              role="alert"
+              aria-live="assertive"
             >
               {error}
             </motion.div>

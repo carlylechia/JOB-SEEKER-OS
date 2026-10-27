@@ -3,8 +3,8 @@ import { getConnectors } from './registry';
 import { normalizeJob } from './normalize';
 import { dedupeExternalJobs } from './dedupe';
 import { buildSearchPlan } from './search-plan';
-import { scoreExternalJob } from './scoring';
-import { getUserPreferences } from '@/lib/db-helpers';
+import { buildMatchExplanation, scoreExternalJob } from './scoring';
+import { selectDiverseTop } from './ranking';
 import { mapDbPreferences } from '@/lib/db-helpers';
 import { logImportantInfo, logImportantError } from '@/lib/observability';
 import { updateSourceHealth } from './source-health';
@@ -43,6 +43,18 @@ export async function runDiscoveryForUser(userId: string, options: RunDiscoveryO
     return run;
   }
 
+  const excludedHistory = await prisma.dailyJobRecommendation.findMany({
+    where: {
+      userId,
+      OR: [
+        { status: 'SAVED' },
+        { status: 'DISMISSED', createdAt: { gte: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) } },
+      ],
+    },
+    select: { externalJobId: true },
+  });
+  const excludedIds = new Set(excludedHistory.map((recommendation) => recommendation.externalJobId));
+
   if (!run) {
     run = await prisma.jobDiscoveryRun.create({
       data: { userId, localDate, timezone, status: 'RUNNING' },
@@ -61,7 +73,15 @@ export async function runDiscoveryForUser(userId: string, options: RunDiscoveryO
   try {
     await logImportantInfo({ event: 'job_discovery_run_started', userId, context: { runId, localDate } });
 
-    const plan = buildSearchPlan(profile, preferences);
+    const plan = buildSearchPlan(
+      profile && typeof profile === 'object'
+        ? {
+            location: 'location' in profile && typeof profile.location === 'string' ? profile.location : null,
+            headline: 'headline' in profile && typeof profile.headline === 'string' ? profile.headline : null,
+          }
+        : null,
+      preferences,
+    );
 
     if (plan.titles.length === 0) {
       await prisma.jobDiscoveryRun.update({
@@ -110,7 +130,7 @@ export async function runDiscoveryForUser(userId: string, options: RunDiscoveryO
     const { jobs: deduped, discarded } = dedupeExternalJobs(allJobs);
 
     // Persist external jobs
-    const externalIds: string[] = [];
+    const persistedJobs: Array<Awaited<ReturnType<typeof prisma.externalJob.findUnique>>> = [];
     for (const job of deduped) {
       const existing = await prisma.externalJob.findUnique({
         where: { source_sourceJobId: { source: job.source, sourceJobId: job.sourceJobId } },
@@ -165,41 +185,94 @@ export async function runDiscoveryForUser(userId: string, options: RunDiscoveryO
           },
         });
       }
-      externalIds.push(record.id);
+      persistedJobs.push(record);
     }
 
-    // Score and select
-    const candidates: Array<{ externalId: string; job: any; fitScore: number; fitTier: string; scoreFields: any }> = [];
-    for (let i = 0; i < deduped.length; i++) {
-      const job = deduped[i];
-      const recordId = externalIds[i];
-      // hard exclusions
-      if (!job.applicationUrl && !job.canonicalUrl) continue;
+    // Reuse recently verified listings from the shared free-source index so
+    // discovery does not depend on one user's exact query being in the feed.
+    const cacheSince = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const publishedSince = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const cachedJobs = await prisma.externalJob.findMany({
+      where: {
+        status: 'OPEN',
+        lastSeenAt: { gte: cacheSince },
+        OR: [{ publishedAt: null }, { publishedAt: { gte: publishedSince } }],
+        AND: [{ OR: [{ applicationUrl: { not: null } }, { canonicalUrl: { not: null } }] }],
+      },
+      orderBy: { lastSeenAt: 'desc' },
+      take: 500,
+    });
+    const pooledJobs = new Map(
+      [...persistedJobs, ...cachedJobs].filter((job): job is NonNullable<typeof job> => job !== null)
+        .map((job) => [job.id, job]),
+    );
+    const externalByKey = new Map<string, (typeof cachedJobs)[number]>();
+    const uniquePool = dedupeExternalJobs(
+      [...pooledJobs.values()].map((job) => {
+        externalByKey.set(`${job.source}:${job.sourceJobId}`, job);
+        return {
+          source: job.source,
+          sourceJobId: job.sourceJobId,
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          applicationUrl: job.applicationUrl,
+          canonicalUrl: job.canonicalUrl,
+          contentFingerprint: job.contentFingerprint,
+        };
+      }),
+    );
+    const uniqueJobs = uniquePool.jobs
+      .map((job) => externalByKey.get(`${job.source}:${job.sourceJobId}`))
+      .filter((job): job is (typeof cachedJobs)[number] => job !== undefined);
+
+    // Score once per listing using its actual posting text and the user's saved
+    // role, skill, location, seniority and compensation preferences.
+    const candidates: Array<{
+      externalId: string;
+      job: (typeof cachedJobs)[number];
+      fitScore: number;
+      fitTier: string;
+      scoreFields: ReturnType<typeof scoreExternalJob>['scoreFields'];
+    }> = [];
+    for (const external of uniqueJobs) {
+      if (excludedIds.has(external.id)) continue;
       const { scoreFields, fitScore, fitTier } = scoreExternalJob(
         {
-          title: job.title,
-          location: job.location ?? null,
-          remoteType: job.remoteType ?? null,
+          title: external.title,
+          location: external.location,
+          remoteType: external.remoteType,
+          workArrangement: external.workArrangement,
           eligibilityRegion: null,
-          salaryMin: job.salaryMin ?? null,
-          salaryMax: job.salaryMax ?? null,
-          currency: job.currency ?? null,
+          salaryMin: external.salaryMin,
+          salaryMax: external.salaryMax,
+          currency: external.currency,
+          description: external.description,
+          publishedAt: external.publishedAt,
+          applicationUrl: external.applicationUrl,
+          canonicalUrl: external.canonicalUrl,
         },
         preferences,
       );
       if (fitScore < 30) continue;
-      const external = await prisma.externalJob.findUnique({ where: { id: recordId } });
-      candidates.push({ externalId: recordId, job: external, fitScore, fitTier, scoreFields });
+      if (scoreFields.postedWithinThirtyDays === false) continue;
+      candidates.push({ externalId: external.id, job: external, fitScore, fitTier, scoreFields });
     }
 
-    candidates.sort((a, b) => b.fitScore - a.fitScore || (b.job?.publishedAt?.getTime() ?? 0) - (a.job?.publishedAt?.getTime() ?? 0));
-
-    const top = candidates.slice(0, 5);
+    const top = selectDiverseTop(
+      candidates.map((candidate) => ({
+        ...candidate,
+        company: candidate.job.company,
+        title: candidate.job.title,
+        publishedAt: candidate.job.publishedAt,
+      })),
+      5,
+    );
 
     // Create recommendations
     for (let i = 0; i < top.length; i++) {
       const c = top[i];
-      const confidence = c.job?.description ? 0.7 : 0.4;
+      const confidence = c.scoreFields.score.signalQuality / 5;
       await prisma.dailyJobRecommendation.create({
         data: {
           runId,
@@ -209,12 +282,7 @@ export async function runDiscoveryForUser(userId: string, options: RunDiscoveryO
           fitScore: c.fitScore,
           confidence,
           scoreBreakdown: c.scoreFields,
-          explanation: {
-            reasons: [
-              c.fitScore >= 80 ? 'Strong overall fit' : 'Potential fit',
-            ],
-            gaps: [],
-          },
+          explanation: buildMatchExplanation(c.job, preferences, c.scoreFields, c.fitScore),
           status: 'RECOMMENDED',
         },
       });
@@ -226,7 +294,7 @@ export async function runDiscoveryForUser(userId: string, options: RunDiscoveryO
       data: {
         status,
         completedAt: new Date(),
-        candidateCount: deduped.length,
+        candidateCount: uniqueJobs.length,
         eligibleCount: candidates.length,
         recommendationCount: top.length,
         sourcesAttempted,
@@ -238,7 +306,13 @@ export async function runDiscoveryForUser(userId: string, options: RunDiscoveryO
     await logImportantInfo({
       event: 'job_discovery_run_completed',
       userId,
-      context: { runId, status, candidates: deduped.length, recommendations: top.length, discarded },
+      context: {
+        runId,
+        status,
+        candidates: uniqueJobs.length,
+        recommendations: top.length,
+        discarded: discarded + uniquePool.discarded,
+      },
     });
 
     return prisma.jobDiscoveryRun.findUnique({ where: { id: runId } });

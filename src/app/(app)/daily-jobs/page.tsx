@@ -43,6 +43,7 @@ export default function DailyJobsPage() {
   const [recs, setRecs] = useState<Rec[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -102,8 +103,16 @@ export default function DailyJobsPage() {
   }
 
   async function dismiss(rec: Rec) {
-    await fetch(`/api/job-discovery/recommendations/${rec.id}/dismiss`, { method: 'POST' });
-    setRecs((prev) => prev.filter((r) => r.id !== rec.id));
+    setDismissingId(rec.id);
+    try {
+      const response = await fetch(`/api/job-discovery/recommendations/${rec.id}/dismiss`, { method: 'POST' });
+      if (!response.ok) throw new Error('We could not update this recommendation. Please try again.');
+      setRecs((prev) => prev.filter((r) => r.id !== rec.id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'We could not update this recommendation. Please try again.');
+    } finally {
+      setDismissingId(null);
+    }
   }
 
   if (loading) {
@@ -143,18 +152,41 @@ export default function DailyJobsPage() {
 
       {status === 'no_run' ? (
         <div className="rounded-xl border border-line bg-surface p-6 text-muted">
-          No recommendations yet. Click Refresh to run discovery.
+          <h2 className="font-semibold text-ink">Your first shortlist is ready to find</h2>
+          <p className="mt-1 text-sm">We compare live listings with your target roles, skills and work preferences. Start a search now, or update your profile for a more relevant shortlist.</p>
+          <a href="/settings/profile" className="mt-3 inline-flex text-sm font-medium text-accent-text underline underline-offset-2">Review job preferences</a>
         </div>
       ) : null}
 
       {recs.length === 0 && status !== 'no_run' ? (
         <div className="rounded-xl border border-line bg-surface p-6 text-muted">
-          No qualifying jobs found in the latest run. Try updating your profile and preferences.
+          <h2 className="font-semibold text-ink">
+            {run?.status === 'FAILED' ? 'Today’s search could not complete' : 'We didn’t find enough strong matches this time'}
+          </h2>
+          <p className="mt-1 text-sm">
+            {run?.status === 'FAILED'
+              ? 'The free job sources were temporarily unavailable. Try refreshing later; your profile and saved jobs are safe.'
+              : 'We don’t pad your list with unrelated or stale vacancies. Add a few related role titles, broaden your work regions, or refresh when new listings arrive.'}
+          </p>
+          <a href="/settings/profile" className="mt-3 inline-flex text-sm font-medium text-accent-text underline underline-offset-2">Improve your match profile</a>
         </div>
       ) : null}
 
       <div className="grid gap-4">
-        {recs.map((rec) => (
+        {recs.map((rec) => {
+          const dimensions = rec.scoreBreakdown?.score ?? rec.scoreBreakdown ?? {};
+          const dimensionLabels: Record<string, string> = {
+            roleAlignment: 'Role',
+            coreStackMatch: 'Skills',
+            seniorityFit: 'Level',
+            geographyEligibility: 'Location',
+            compensationFit: 'Salary',
+            signalQuality: 'Posting details',
+          };
+          const visibleDimensions = Object.entries(dimensionLabels)
+            .filter(([key]) => typeof dimensions[key] === 'number')
+            .map(([key, label]) => ({ label, score: dimensions[key] as number }));
+          return (
           <div key={rec.id} className="rounded-xl border border-line bg-surface p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
@@ -175,9 +207,9 @@ export default function DailyJobsPage() {
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-ink">{Math.round(rec.fitScore)}</div>
-                <div className="text-xs text-muted">Fit score</div>
+                <div className="text-xs text-muted">Preference match</div>
                 {rec.confidence != null ? (
-                  <div className="text-xs text-muted">Confidence {Math.round(rec.confidence * 100)}%</div>
+                  <div className="text-xs text-muted">Data completeness {Math.round(rec.confidence * 100)}%</div>
                 ) : null}
               </div>
             </div>
@@ -188,11 +220,22 @@ export default function DailyJobsPage() {
               </ul>
             ) : null}
 
-            {rec.scoreBreakdown ? (
+            {visibleDimensions.length > 0 ? (
               <details className="mt-3 text-xs text-muted">
-                <summary className="cursor-pointer">Score breakdown</summary>
-                <pre className="mt-2 overflow-auto rounded bg-surface-sunken p-2">{JSON.stringify(rec.scoreBreakdown, null, 2)}</pre>
+                <summary className="cursor-pointer">How this matches your preferences</summary>
+                <ul className="mt-2 flex flex-wrap gap-2">
+                  {visibleDimensions.map(({ label, score }) => (
+                    <li key={label} className="rounded-full bg-surface-sunken px-2.5 py-1">
+                      {label}: {Math.round(score)}/5
+                    </li>
+                  ))}
+                </ul>
               </details>
+            ) : null}
+            {Array.isArray(rec.explanation?.gaps) && rec.explanation.gaps.length > 0 ? (
+              <p className="mt-3 text-xs text-muted">
+                Details to verify: {rec.explanation.gaps.join(' · ')}
+              </p>
             ) : null}
 
             <div className="mt-4 flex flex-wrap gap-2">
@@ -208,12 +251,18 @@ export default function DailyJobsPage() {
               ) : (
                 <span className="text-sm text-green-600">Saved to workspace</span>
               )}
-              <button onClick={() => dismiss(rec)} className="inline-flex items-center gap-1 rounded-lg border border-line px-3 py-1.5 text-sm text-muted hover:bg-surface-sunken">
-                <XCircle className="h-4 w-4" /> Dismiss
+              <button
+                onClick={() => void dismiss(rec)}
+                disabled={dismissingId === rec.id}
+                className="inline-flex items-center gap-1 rounded-lg border border-line px-3 py-1.5 text-sm text-muted hover:bg-surface-sunken disabled:opacity-50"
+              >
+                <XCircle className="h-4 w-4" />
+                {dismissingId === rec.id ? 'Updating…' : 'Not for me'}
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

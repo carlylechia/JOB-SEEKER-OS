@@ -33,7 +33,7 @@ export class RemotiveConnector implements Connector {
     const errors: string[] = [];
     const seen = new Set<string>();
 
-    for (const title of input.titles.slice(0, 3)) {
+    for (const title of input.titles) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
       try {

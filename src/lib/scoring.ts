@@ -23,15 +23,33 @@ function includesAny(text: string, needles: string[]): boolean {
   return needles.some((needle) => hay.includes(needle.toLowerCase()));
 }
 
-function hasTitleMatch(job: JobLead, preferences: UserPreferences) {
+function hasTitleMatch(job: Pick<JobLead, 'title'>, preferences: UserPreferences) {
   const targets = [...preferences.targetRoles, ...preferences.preferredTitles].filter(Boolean);
   if (!targets.length) return true;
   return titleMatchesAny(job.title, targets);
 }
 
-function getPersonalizationModifier(job: JobLead, preferences: UserPreferences): number {
+type FitScoreInput = Omit<
+  Pick<
+    JobLead,
+    | 'title'
+    | 'notes'
+    | 'location'
+    | 'eligibilityRegion'
+    | 'remoteType'
+    | 'timezoneRequirement'
+    | 'salaryMin'
+    | 'salaryMax'
+    | 'score'
+  >,
+  'score'
+> & {
+  score: ScoreFields;
+  prepPack?: Pick<NonNullable<JobLead['prepPack']>, 'topFitPoints'> | null;
+};
+
+function getPersonalizationModifier(job: FitScoreInput, preferences: UserPreferences): number {
   let modifier = 1;
-  const titleAndNotes = `${job.title} ${job.notes}`;
   const locationFields = `${job.location} ${job.eligibilityRegion} ${job.remoteType}`;
   const stackAndNotes = `${job.title} ${job.notes} ${job.prepPack?.topFitPoints ?? ''}`;
   const timezoneFields = `${job.timezoneRequirement} ${job.notes}`;
@@ -61,6 +79,14 @@ export function calculateBaseFitScore(score: ScoreFields): number {
 }
 
 export function calculateFitScore(job: JobLead, preferences: UserPreferences = defaultPreferences): number {
+  return calculateCandidateFitScore(job, preferences);
+}
+
+/** Score a normalized external vacancy using the same weighted fit model as tracked jobs. */
+export function calculateCandidateFitScore(
+  job: FitScoreInput,
+  preferences: UserPreferences = defaultPreferences,
+): number {
   if (job.score.geographyEligibility === 0 || job.score.timezoneCompatibility === 0) return 0;
   const baseScore = calculateBaseFitScore(job.score);
   const seniorityPenalty = getPenaltyMultiplier(job.score.seniorityFit, 'seniority');

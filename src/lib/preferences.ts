@@ -58,10 +58,18 @@ export function normalizeTitle(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
+function canonicalTitle(value: string) {
+  return normalizeTitle(value)
+    .replace(/\bsoftware developer\b/g, 'software engineer')
+    .replace(/\bfront end\b/g, 'frontend')
+    .replace(/\bback end\b/g, 'backend')
+    .replace(/\bfull stack\b/g, 'fullstack');
+}
+
 export function titleMatchesAny(title: string, values: string[]) {
-  const normalizedTitle = normalizeTitle(title);
+  const normalizedTitle = canonicalTitle(title);
   return values.some((value) => {
-    const candidate = normalizeTitle(value);
+    const candidate = canonicalTitle(value);
     return candidate && (normalizedTitle.includes(candidate) || candidate.includes(normalizedTitle));
   });
 }
