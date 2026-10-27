@@ -90,6 +90,7 @@ export default async function AdminOverviewPage() {
       <nav aria-label="Admin sections" className="flex flex-wrap gap-2">
         {[
           { href: '/admin', label: 'Overview' },
+          { href: '/admin/analytics', label: 'Analytics' },
           { href: '/admin/users', label: 'Users' },
           { href: '/admin/upgrade-requests', label: 'Upgrade requests' },
           { href: '/admin/subscription-history', label: 'Subscription history' },

@@ -58,6 +58,7 @@ model User {
   careerActions             CareerAction[]
   jobDiscoveryRuns          JobDiscoveryRun[]
   dailyJobRecommendations   DailyJobRecommendation[]
+  productEvents             ProductEvent[]
 
   @@index([createdAt])
   @@index([emailVerificationToken])
@@ -1284,4 +1285,18 @@ model JobSourceHealth {
   duplicatesDiscarded Int       @default(0)
   updatedAt           DateTime  @updatedAt
   createdAt           DateTime  @default(now())
+}
+
+model ProductEvent {
+  id         String   @id @default(cuid())
+  userId     String?
+  name       String
+  properties Json?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([name, createdAt])
+  @@index([userId, createdAt])
+  @@index([createdAt])
 }
