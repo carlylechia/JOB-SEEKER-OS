@@ -132,6 +132,7 @@ export function ResumeEditor({
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [message, setMessage] = useState('');
   const [recentlyApplied, setRecentlyApplied] = useState<number | null>(null);
+  const [improvingSummary, setImprovingSummary] = useState(false);
   const [highlightedSections, setHighlightedSections] = useState<ResumeSectionKey[]>([]);
   const [highlightedText, setHighlightedText] = useState<string[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -228,6 +229,63 @@ export function ResumeEditor({
       void saveRef.current();
     }, delay);
   }, []);
+
+  const improveSummary = useCallback(async () => {
+    if (!targetJobId || !access.canOptimize || dirty || improvingSummary) return;
+    setImprovingSummary(true);
+    setMessage('');
+    try {
+      const optResponse = await fetch(`/api/resumes/${resume.id}/optimization`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: true }),
+        credentials: 'same-origin',
+      });
+      const optPayload = await optResponse.json().catch(() => null);
+      if (!optResponse.ok) {
+        setMessage(optPayload?.error?.message ?? 'Could not generate a summary suggestion.');
+        return;
+      }
+      const operations = (optPayload?.data?.operations ?? []) as Array<{ id: string; section: string; kind: string; proposedText: string }>;
+      const summaryOp = operations.find((op) => op.section === 'SUMMARY' || op.kind === 'REPLACE_SUMMARY');
+      if (!summaryOp) {
+        setMessage('No summary suggestion was generated for this job.');
+        return;
+      }
+      const applyResponse = await fetch(`/api/resumes/${resume.id}/optimization/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          optimizationId: optPayload.optimizationId,
+          acceptedOperationIds: [summaryOp.id],
+          expectedRevision: revision,
+        }),
+        credentials: 'same-origin',
+      });
+      const applyPayload = await applyResponse.json().catch(() => null);
+      if (!applyResponse.ok) {
+        setMessage(applyPayload?.error?.message ?? 'Could not apply the summary suggestion.');
+        return;
+      }
+      const nextContent = applyPayload.resume.content as ResumeContent;
+      const nextRevision = applyPayload.resume.revision as number;
+      revisionRef.current = nextRevision;
+      setRevision(nextRevision);
+      setContent(nextContent);
+      setLayout(applyPayload.layout);
+      savedRef.current = { ...savedRef.current, content: nextContent };
+      latestDraftRef.current = { ...latestDraftRef.current, content: nextContent };
+      setRecentlyApplied(applyPayload.appliedCount ?? 1);
+      setHighlightedSections(['summary']);
+      setHighlightedText([summaryOp.proposedText]);
+      setSaveState('saved');
+      setMessage('Professional summary updated.');
+    } catch {
+      setMessage('Something went wrong while improving the summary.');
+    } finally {
+      setImprovingSummary(false);
+    }
+  }, [resume.id, targetJobId, access.canOptimize, dirty, improvingSummary, revision]);
 
   const save = useCallback(async () => {
     if (saveInFlightRef.current) return;
@@ -844,14 +902,10 @@ export function ResumeEditor({
                   <button
                     type="button"
                     className="btn-primary mt-3 text-xs"
-                    disabled={!targetJobId || !access.canOptimize || dirty}
-                    onClick={() => {
-                      const panel = document.getElementById('resume-optimization-panel');
-                      panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      optimizationRunRef.current?.();
-                    }}
+                    disabled={!targetJobId || !access.canOptimize || dirty || improvingSummary}
+                    onClick={() => void improveSummary()}
                   >
-                    Improve summary with AI
+                    {improvingSummary ? 'Improving…' : 'Improve summary with AI'}
                   </button>
                 </div>
                 <details className="mt-6" open>
