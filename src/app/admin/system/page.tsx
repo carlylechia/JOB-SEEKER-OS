@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { requireAdmin } from '@/lib/authz';
 import { prisma } from '@/lib/prisma';
 import { getEmailOutboxHealth } from '@/lib/billing/email-outbox';
-import { listSourceHealth } from '@/lib/job-discovery/source-health';
+import { listSourceHealth, recentCatalogRuns } from '@/lib/job-discovery/source-health';
 
 export const metadata: Metadata = {
   title: 'System — Admin — teChia Jobs',
@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 export default async function AdminSystemPage() {
   await requireAdmin();
 
-  const [email, dbCheck, monetization, plans, failedEmails, sourceHealth] = await Promise.all([
+  const [email, dbCheck, monetization, plans, failedEmails, sourceHealth, catalogRuns, jobSourcesCount] = await Promise.all([
     getEmailOutboxHealth(),
     prisma.$queryRaw<Array<{ ok: number }>>`SELECT 1 as ok`.then(
       () => true,
@@ -32,6 +32,8 @@ export default async function AdminSystemPage() {
       select: { id: true, type: true, attempts: true, lastError: true, updatedAt: true },
     }),
     listSourceHealth(),
+    recentCatalogRuns(5),
+    prisma.jobSource.count(),
   ]);
 
   const health = [
@@ -147,36 +149,87 @@ export default async function AdminSystemPage() {
         ) : null}
       </section>
       <section aria-labelledby="sources-heading" className="card-pad">
-        <h2 id="sources-heading" className="text-sm font-semibold text-ink">
-          Job discovery sources
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 id="sources-heading" className="text-sm font-semibold text-ink">
+            Job discovery providers
+          </h2>
+          <span className="text-xs text-muted">{jobSourcesCount} employer boards registered</span>
+        </div>
         <div className="table-wrap mt-3">
           <table className="table">
             <thead>
               <tr>
-                <th scope="col">Source</th>
+                <th scope="col">Provider</th>
                 <th scope="col">Type</th>
                 <th scope="col">Configured</th>
                 <th scope="col">Enabled</th>
+                <th scope="col">Boards</th>
+                <th scope="col">Jobs Accepted</th>
+                <th scope="col">Avg Latency</th>
+                <th scope="col">Quota / Rate Limit</th>
                 <th scope="col">Last success</th>
-                <th scope="col">Last failure</th>
               </tr>
             </thead>
             <tbody>
               {sourceHealth.map((s) => (
                 <tr key={s.sourceId}>
-                  <td>{s.displayName}</td>
-                  <td>{s.connectorType}</td>
-                  <td>{s.configured ? 'Yes' : 'No'}</td>
-                  <td>{s.enabled ? 'Yes' : 'No'}</td>
-                  <td>{s.lastSuccessAt ? new Date(s.lastSuccessAt).toLocaleString() : '—'}</td>
-                  <td>{s.lastFailureAt ? `${s.failureCategory ?? ''}` : '—'}</td>
+                  <td className="font-medium">{s.displayName}</td>
+                  <td className="text-xs">{s.connectorType}</td>
+                  <td className="text-xs">{s.configured ? 'Yes' : 'No'}</td>
+                  <td className="text-xs">{s.enabled ? 'Yes' : 'No'}</td>
+                  <td className="text-xs">{s.boardsAttempted > 0 ? `${s.boardsSucceeded}/${s.boardsAttempted}` : '—'}</td>
+                  <td className="text-xs">{s.catalogJobsAccepted > 0 ? s.catalogJobsAccepted : '—'}</td>
+                  <td className="text-xs">{s.avgLatencyMs ? `${s.avgLatencyMs}ms` : '—'}</td>
+                  <td className="text-xs">{s.quotaState ?? (s.rateLimitRemaining != null ? `${s.rateLimitRemaining} left` : 'Normal')}</td>
+                  <td className="text-xs">{s.lastSuccessAt ? new Date(s.lastSuccessAt).toLocaleString() : '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </section>
+
+      {catalogRuns.length > 0 ? (
+        <section aria-labelledby="catalog-runs-heading" className="card-pad">
+          <h2 id="catalog-runs-heading" className="text-sm font-semibold text-ink">
+            Recent catalog sync runs
+          </h2>
+          <div className="table-wrap mt-3">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th scope="col">Time</th>
+                  <th scope="col">Trigger</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Retrieved</th>
+                  <th scope="col">Created</th>
+                  <th scope="col">Updated</th>
+                  <th scope="col">Closed</th>
+                  <th scope="col">Duration</th>
+                </tr>
+              </thead>
+              <tbody>
+                {catalogRuns.map((run) => (
+                  <tr key={run.id}>
+                    <td className="text-xs">{new Date(run.startedAt).toLocaleString()}</td>
+                    <td className="text-xs">{run.trigger}</td>
+                    <td className="text-xs font-medium">
+                      <span className={run.status === 'COMPLETED' ? 'text-success-text' : run.status === 'PARTIAL' ? 'text-amber-600' : 'text-danger-text'}>
+                        {run.status}
+                      </span>
+                    </td>
+                    <td className="text-xs">{run.jobsRetrieved}</td>
+                    <td className="text-xs">{run.jobsCreated}</td>
+                    <td className="text-xs">{run.jobsUpdated}</td>
+                    <td className="text-xs">{run.jobsClosed}</td>
+                    <td className="text-xs">{run.durationMs ? `${(run.durationMs / 1000).toFixed(1)}s` : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

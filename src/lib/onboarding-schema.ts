@@ -15,6 +15,11 @@ export const preferencesPayloadSchema = z.object({
   salaryMin: z.coerce.number().min(0).max(1_000_000).default(0),
   salaryTarget: z.coerce.number().min(0).max(1_000_000).default(0),
   timezoneToleranceHours: z.coerce.number().min(0).max(12).default(4),
+  timezone: z.string().max(64).default('UTC'),
+  workCountries: z.array(z.unknown()).transform((values) => sanitizeArray(values, 30)).default([]),
+  employmentTypes: z.array(z.enum(['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERNSHIP', 'TEMPORARY', 'VOLUNTEER'])).max(6).default([]),
+  preferredIndustries: z.array(z.unknown()).transform((values) => sanitizeArray(values, 12)).default([]),
+  visaSponsorshipRequired: z.coerce.boolean().default(false),
   onboardingCompleted: z.coerce.boolean().optional().default(false),
 });
 

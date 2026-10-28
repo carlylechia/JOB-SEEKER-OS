@@ -9,6 +9,9 @@ type RecJob = {
   title: string;
   company: string;
   location: string | null;
+  countryCodes?: string[];
+  locationRestrictions?: string[];
+  timezoneRestrictions?: number[];
   remoteType: string | null;
   workArrangement: string | null;
   employmentType: string | null;
@@ -20,6 +23,8 @@ type RecJob = {
   applicationUrl: string | null;
   source: string;
   attribution: string | null;
+  attributionUrl?: string | null;
+  attributionRequired?: boolean;
   status: string;
 };
 
@@ -28,6 +33,10 @@ type Rec = {
   rank: number;
   fitScore: number;
   confidence: number | null;
+  listingQuality?: number | null;
+  sourceConfidence?: number | null;
+  dataConfidence?: number | null;
+  rankingScore?: number | null;
   scoreBreakdown: any;
   explanation: any;
   status: string;
@@ -141,7 +150,7 @@ export default function DailyJobsPage() {
             Daily Top 5
           </h1>
           <p className="text-sm text-muted">
-            {run ? `Generated ${new Date(run.completedAt ?? run.startedAt).toLocaleString()}` : 'No run yet'}
+            {run ? `Shortlist for ${run.localDate || new Date().toISOString().slice(0, 10)}${run.timezone ? ` (${run.timezone})` : ''} · Updated ${new Date(run.completedAt ?? run.startedAt).toLocaleTimeString()}` : 'No run yet'}
           </p>
         </div>
         <button onClick={refresh} disabled={refreshing} className="inline-flex items-center rounded-lg bg-accent px-4 py-2 text-sm text-accent-ink disabled:opacity-50">
@@ -202,13 +211,35 @@ export default function DailyJobsPage() {
                     <span>{rec.job.salaryMin ?? '?'}–{rec.job.salaryMax ?? '?'} {rec.job.currency}</span>
                   ) : null}
                   {rec.job.publishedAt ? <span>Published {new Date(rec.job.publishedAt).toLocaleDateString()}</span> : null}
-                  <span>Source: {rec.job.source}</span>
+                  {rec.job.attribution ? (
+                    <span>
+                      Source:{' '}
+                      {rec.job.attributionUrl ? (
+                        <a href={rec.job.attributionUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-ink">
+                          {rec.job.attribution}
+                        </a>
+                      ) : (
+                        rec.job.attribution
+                      )}
+                    </span>
+                  ) : (
+                    <span>Source: {rec.job.source}</span>
+                  )}
+                  {rec.job.locationRestrictions && rec.job.locationRestrictions.length > 0 ? (
+                    <span className="rounded bg-surface-sunken px-1.5 py-0.5">Eligibility: {rec.job.locationRestrictions.join(', ')}</span>
+                  ) : null}
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-ink">{Math.round(rec.fitScore)}</div>
                 <div className="text-xs text-muted">Preference match</div>
-                {rec.confidence != null ? (
+                {rec.listingQuality != null || rec.sourceConfidence != null ? (
+                  <div className="mt-1 flex flex-col gap-0.5 text-right text-[11px] text-muted">
+                    {rec.listingQuality != null ? <span>Quality {Math.round(rec.listingQuality * 100)}%</span> : null}
+                    {rec.sourceConfidence != null ? <span>Source trust {Math.round(rec.sourceConfidence * 100)}%</span> : null}
+                    {rec.dataConfidence != null ? <span>Completeness {Math.round(rec.dataConfidence * 100)}%</span> : null}
+                  </div>
+                ) : rec.confidence != null ? (
                   <div className="text-xs text-muted">Data completeness {Math.round(rec.confidence * 100)}%</div>
                 ) : null}
               </div>

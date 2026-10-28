@@ -80,6 +80,11 @@ export function mapDbPreferences(profile: any): UserPreferences {
     salaryMin: profile.salaryMin,
     salaryTarget: profile.salaryTarget,
     timezoneToleranceHours: profile.timezoneToleranceHours,
+    timezone: profile.timezone ?? 'UTC',
+    workCountries: profile.workCountries ?? [],
+    employmentTypes: profile.employmentTypes ?? [],
+    preferredIndustries: profile.preferredIndustries ?? [],
+    visaSponsorshipRequired: Boolean(profile.visaSponsorshipRequired),
   };
 }
 

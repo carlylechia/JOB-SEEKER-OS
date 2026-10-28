@@ -30,6 +30,14 @@ export type UserPreferences = {
   salaryMin: number;
   salaryTarget: number;
   timezoneToleranceHours: number;
+  /** IANA timezone; controls the user's local snapshot day. */
+  timezone: string;
+  /** ISO 3166-1 alpha-2 work countries, empty means unrestricted. */
+  workCountries: string[];
+  /** Normalized employment types the user will consider, empty means all. */
+  employmentTypes: string[];
+  preferredIndustries: string[];
+  visaSponsorshipRequired: boolean;
 };
 
 export type UserProfileDetails = {
