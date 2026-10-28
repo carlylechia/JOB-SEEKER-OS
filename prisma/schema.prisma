@@ -87,6 +87,16 @@ model UserProfile {
   salaryMin              Int       @default(0)
   salaryTarget           Int       @default(0)
   timezoneToleranceHours Int       @default(4)
+  /// IANA timezone used to decide the user's local snapshot day.
+  timezone               String    @default("UTC")
+  /// ISO 3166-1 alpha-2 countries the user can work from. Empty means no
+  /// country restriction was expressed, not "nowhere".
+  workCountries          String[]
+  /// Normalized employment types the user will consider (FULL_TIME, ...).
+  /// Empty means all types are acceptable.
+  employmentTypes        String[]
+  preferredIndustries    String[]
+  visaSponsorshipRequired Boolean  @default(false)
   onboardingCompleted    Boolean   @default(false)
   onboardingCompletedAt  DateTime?
   onboardingSkipped      Boolean   @default(false)
@@ -1192,21 +1202,39 @@ model ExternalJob {
   title               String
   company             String
   location            String?
+  countryCodes        String[]
+  locationRestrictions String[]
+  timezoneRestrictions Int[]
   remoteType          String?
   workArrangement     String?
   employmentType      String?
+  seniority           String?
+  industry            String?
+  category            String?
+  skills              String[]
+  visaSponsorship     String?
   description         String?
   salaryMin           Int?
   salaryMax           Int?
   currency            String?   @default("USD")
+  salaryPeriod        String?
   publishedAt         DateTime?
+  expiresAt           DateTime?
   firstSeenAt         DateTime  @default(now())
   lastSeenAt          DateTime  @default(now())
   lastVerifiedAt      DateTime?
+  closedAt            DateTime?
   status              String    @default("OPEN")
   contentFingerprint  String?
   attribution         String?
+  attributionUrl      String?
+  attributionRequired Boolean   @default(false)
+  allowStructuredData Boolean   @default(false)
+  retentionDays       Int?
   normalizedSkills    Json?
+  listingQuality      Float?
+  sourceConfidence    Float?
+  dataConfidence      Float?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -1215,8 +1243,76 @@ model ExternalJob {
   @@unique([source, sourceJobId])
   @@index([company, title])
   @@index([status])
+  @@index([status, lastSeenAt])
   @@index([lastVerifiedAt])
   @@index([canonicalUrl])
+  @@index([expiresAt])
+  @@index([source])
+}
+
+model JobSource {
+  id                  String    @id
+  provider            String
+  sourceType          String
+  displayName         String
+  employerName        String?
+  boardToken          String?
+  careersUrl          String?
+  country             String?
+  region              String?
+  industry            String?
+  enabled             Boolean   @default(true)
+  verifiedAt          DateTime?
+  verificationNote    String?
+  /// "full" fetches descriptions where the provider supports it; "metadata"
+  /// uses the cheaper inventory endpoint for very large boards.
+  descriptionMode     String    @default("full")
+  attribution         String?
+  attributionUrl      String?
+  attributionRequired Boolean   @default(false)
+  allowStructuredData Boolean   @default(false)
+  retentionDays       Int?
+  lastSyncedAt        DateTime?
+  lastSuccessAt       DateTime?
+  lastFailureAt       DateTime?
+  lastError           String?
+  failureCategory     String?
+  jobsRetrieved       Int       @default(0)
+  jobsAccepted        Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([provider, boardToken])
+  @@index([provider, enabled])
+  @@index([lastSyncedAt])
+}
+
+model JobCatalogSyncRun {
+  id                    String    @id @default(cuid())
+  trigger               String    @default("cron")
+  status                String    @default("RUNNING")
+  startedAt             DateTime  @default(now())
+  completedAt           DateTime?
+  durationMs            Int?
+  providersAttempted    Int       @default(0)
+  providersSucceeded    Int       @default(0)
+  providersFailed       Int       @default(0)
+  boardsAttempted       Int       @default(0)
+  boardsSucceeded       Int       @default(0)
+  jobsRetrieved         Int       @default(0)
+  jobsCreated           Int       @default(0)
+  jobsUpdated           Int       @default(0)
+  jobsClosed            Int       @default(0)
+  duplicatesDiscarded   Int       @default(0)
+  timeBudgetExhausted   Boolean   @default(false)
+  quotaStopped          Boolean   @default(false)
+  lastError             String?
+  metrics               Json?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([startedAt])
+  @@index([status])
 }
 
 model JobDiscoveryRun {
@@ -1233,6 +1329,7 @@ model JobDiscoveryRun {
   sourcesAttempted      Int       @default(0)
   sourcesSucceeded      Int       @default(0)
   inputFingerprint      String?
+  catalogSyncRunId      String?
   lastError             String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
@@ -1243,6 +1340,7 @@ model JobDiscoveryRun {
   @@unique([userId, localDate])
   @@index([status])
   @@index([userId, localDate])
+  @@index([catalogSyncRunId])
 }
 
 model DailyJobRecommendation {
@@ -1253,7 +1351,12 @@ model DailyJobRecommendation {
   rank              Int
   fitScore          Float
   confidence        Float?
+  listingQuality    Float?
+  sourceConfidence  Float?
+  dataConfidence    Float?
+  rankingScore      Float?
   scoreBreakdown    Json
+  eligibility       Json?
   explanation       Json?
   status            String    @default("RECOMMENDED")
   createdAt         DateTime  @default(now())
@@ -1283,6 +1386,15 @@ model JobSourceHealth {
   jobsRetrieved       Int       @default(0)
   jobsAccepted        Int       @default(0)
   duplicatesDiscarded Int       @default(0)
+  lastCatalogSyncAt   DateTime?
+  lastCatalogRunId    String?
+  catalogJobsRetrieved Int      @default(0)
+  catalogJobsAccepted Int       @default(0)
+  boardsAttempted     Int       @default(0)
+  boardsSucceeded     Int       @default(0)
+  avgLatencyMs        Int?
+  rateLimitRemaining  Int?
+  quotaState          String?
   updatedAt           DateTime  @updatedAt
   createdAt           DateTime  @default(now())
 }
