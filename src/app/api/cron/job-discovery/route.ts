@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isCronAuthorized } from '@/lib/cron-auth';
 import { hasEntitlement } from '@/lib/billing/subscriptions';
-import { runDiscoveryForUser } from '@/lib/job-discovery/service';
+import { runDiscoveryForUser, localDateKey } from '@/lib/job-discovery/service';
+import { runCatalogSync } from '@/lib/job-discovery/catalog/sync';
 import { logImportantInfo, logImportantError } from '@/lib/observability';
 
 export const runtime = 'nodejs';
@@ -15,18 +16,39 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' }).format(new Date());
   const now = new Date();
-  const summary = { processed: 0, succeeded: 0, failed: 0, skipped: 0 };
+  const summary = {
+    catalogSync: null as any,
+    processed: 0,
+    succeeded: 0,
+    failed: 0,
+    skipped: 0,
+  };
 
   try {
+    // 1. Run shared catalog sync once before scoring users
+    try {
+      const syncRun = await runCatalogSync({ trigger: 'cron', timeBudgetMs: 50_000 });
+      summary.catalogSync = {
+        id: syncRun.id,
+        status: syncRun.status,
+        jobsRetrieved: syncRun.jobsRetrieved,
+        jobsCreated: syncRun.jobsCreated,
+        jobsUpdated: syncRun.jobsUpdated,
+      };
+    } catch (syncErr) {
+      await logImportantError({ event: 'job_discovery_cron_catalog_sync_failed', error: syncErr });
+      summary.catalogSync = { error: syncErr instanceof Error ? syncErr.message : 'Unknown sync error' };
+    }
+
+    // 2. Query eligible active subscribers and admins
     const users = await prisma.user.findMany({
-      select: { id: true },
+      select: {
+        id: true,
+        profile: { select: { timezone: true } },
+      },
       where: {
         emailVerified: { not: null },
-        jobDiscoveryRuns: {
-          none: { localDate: today, status: { in: ['COMPLETED', 'PARTIAL'] } },
-        },
         OR: [
           { role: 'ADMIN' },
           {
@@ -64,13 +86,18 @@ export async function GET(request: Request) {
           summary.skipped += 1;
           continue;
         }
+
+        const userTimezone = user.profile?.timezone || 'UTC';
+        const userLocalDate = localDateKey(userTimezone, now);
+
         const existing = await prisma.jobDiscoveryRun.findUnique({
-          where: { userId_localDate: { userId: user.id, localDate: today } },
+          where: { userId_localDate: { userId: user.id, localDate: userLocalDate } },
         });
         if (existing && ['COMPLETED', 'PARTIAL', 'RUNNING'].includes(existing.status)) {
           summary.skipped += 1;
           continue;
         }
+
         await runDiscoveryForUser(user.id, { force: Boolean(existing) });
         summary.processed += 1;
         summary.succeeded += 1;

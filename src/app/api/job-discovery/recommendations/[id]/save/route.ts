@@ -65,12 +65,18 @@ export async function POST(request: Request, { params }: Params) {
       jobUrl: applicationUrl,
       location: ext.location ?? '',
       remoteType: ext.remoteType ?? '',
-      timezoneRequirement: '',
-      eligibilityRegion: '',
+      timezoneRequirement: ext.timezoneRestrictions?.length
+        ? ext.timezoneRestrictions.map((t) => `UTC${t >= 0 ? '+' : ''}${t}`).join(', ')
+        : '',
+      eligibilityRegion: ext.countryCodes?.length ? ext.countryCodes.join(', ') : '',
       salaryMin: ext.salaryMin ?? '',
       salaryMax: ext.salaryMax ?? '',
       currency: ext.currency ?? 'USD',
-      notes: ext.attribution ?? '',
+      notes: ext.attribution
+        ? ext.attributionUrl
+          ? `${ext.attribution} (${ext.attributionUrl})`
+          : ext.attribution
+        : '',
       jobDescription: ext.description ?? '',
       status: 'LEAD',
       dateFound: new Date().toISOString().slice(0, 10),

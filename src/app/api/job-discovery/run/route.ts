@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { prisma } from '@/lib/prisma';
 import { hasEntitlement } from '@/lib/billing/subscriptions';
-import { runDiscoveryForUser } from '@/lib/job-discovery/service';
+import { runDiscoveryForUser, localDateKey } from '@/lib/job-discovery/service';
 import { jsonError, jsonOk } from '@/lib/api';
 import { logImportantError, logImportantInfo } from '@/lib/observability';
 
@@ -14,22 +15,32 @@ export async function POST(request: Request) {
   const userId = session.user.id;
   try {
     await hasEntitlement(userId, 'DAILY_JOB_DISCOVERY');
-  } catch (e) {
+  } catch {
     return jsonError('Plan required', 403, undefined, request);
   }
 
-  // simple cooldown: if run completed within last 6 hours, block
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' }).format(new Date());
-  const existing = await (await import('@/lib/prisma')).prisma.jobDiscoveryRun.findUnique({ where: { userId_localDate: { userId, localDate: today } } });
-  if (existing?.completedAt) {
-    const ageMs = Date.now() - new Date(existing.completedAt).getTime();
-    if (ageMs < 6 * 60 * 60 * 1000) {
-      return jsonError('Refresh cooldown active', 429, undefined, request);
-    }
+  const profile = await prisma.userProfile.findUnique({
+    where: { userId },
+    select: { timezone: true },
+  });
+  const today = localDateKey(profile?.timezone || 'UTC');
+
+  const existing = await prisma.jobDiscoveryRun.findUnique({
+    where: { userId_localDate: { userId, localDate: today } },
+  });
+
+  // Re-use completed snapshots for today without regeneration
+  if (existing && ['COMPLETED', 'PARTIAL'].includes(existing.status)) {
+    return jsonOk({ ok: true, runId: existing.id, reused: true }, request);
+  }
+
+  // If a run is currently in-flight, avoid duplicate simultaneous runs
+  if (existing?.status === 'RUNNING') {
+    return jsonOk({ ok: true, runId: existing.id, inProgress: true }, request);
   }
 
   try {
-    const run = await runDiscoveryForUser(userId, { force: true });
+    const run = await runDiscoveryForUser(userId, { force: false });
     await logImportantInfo({ event: 'job_discovery_manual_refresh', userId, context: { runId: run?.id } });
     return jsonOk({ ok: true, runId: run?.id }, request);
   } catch (error) {
