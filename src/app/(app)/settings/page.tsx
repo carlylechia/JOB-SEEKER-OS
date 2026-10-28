@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react';
 import { PageHeader } from '@/components/shared/page-header';
 import { useJobs } from '@/hooks/use-job-data';
-import { defaultPreferences, defaultTimezoneOptions } from '@/lib/preferences';
+import { defaultPreferences, defaultTimezoneOptions, parseCommaList, stringifyList } from '@/lib/preferences';
 import { SeniorityLevel, UserPreferences, WorkRegion } from '@/types';
 import { MultiSelectCombobox } from '@/components/shared/multi-select-combobox';
 import { ThemePicker } from '@/components/shared/theme-picker';
 
 const seniorityOptions: SeniorityLevel[] = ['ENTRY', 'MID', 'SENIOR', 'FLEXIBLE'];
 const regionOptions: WorkRegion[] = ['US', 'EU', 'AFRICA', 'WORLDWIDE', 'FLEXIBLE'];
+const employmentTypeOptions = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERNSHIP', 'TEMPORARY', 'VOLUNTEER'];
 const preferredRegionOptions = ['Africa', 'Europe', 'EMEA', 'LATAM', 'Worldwide', 'United States', 'Remote-first'];
 const stackOptions = ['TypeScript', 'JavaScript', 'Next.js', 'React', 'Node.js', 'NestJS', 'PostgreSQL', 'Docker', 'Redis', 'AWS', 'GCP'];
 
@@ -85,6 +86,30 @@ export default function SettingsPage() {
         <div>
           <label className="mb-2 block text-sm text-muted">Timezone tolerance (hours)</label>
           <input className="input" type="number" min={0} max={12} value={form.timezoneToleranceHours} onChange={(e) => setField('timezoneToleranceHours', Number(e.target.value) || 0)} />
+        </div>
+        <div>
+          <label className="mb-2 block text-sm text-muted">Primary timezone (IANA)</label>
+          <input className="input" type="text" placeholder="UTC, America/New_York, Europe/London" value={form.timezone ?? 'UTC'} onChange={(e) => setField('timezone', e.target.value)} />
+        </div>
+        <div>
+          <label className="mb-2 block text-sm text-muted">Work countries (ISO alpha-2 codes)</label>
+          <input className="input" type="text" placeholder="US, CA, GB, DE" value={stringifyList(form.workCountries ?? [])} onChange={(e) => setField('workCountries', parseCommaList(e.target.value))} />
+          <p className="mt-1 text-xs text-muted">Leave empty to accept all countries.</p>
+        </div>
+        <div>
+          <label className="mb-2 block text-sm text-muted">Preferred industries</label>
+          <input className="input" type="text" placeholder="Technology, Financial services, Healthcare" value={stringifyList(form.preferredIndustries ?? [])} onChange={(e) => setField('preferredIndustries', parseCommaList(e.target.value))} />
+        </div>
+        <div>
+          <label className="mb-2 block text-sm text-muted">Employment types</label>
+          <select className="select min-h-24" multiple value={form.employmentTypes ?? []} onChange={(e) => setField('employmentTypes', Array.from(e.target.selectedOptions).map((option) => option.value))}>
+            {employmentTypeOptions.map((type) => <option key={type} value={type}>{type.replace('_', ' ')}</option>)}
+          </select>
+          <p className="mt-1 text-xs text-muted">Leave unselected to accept any type.</p>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border border-line px-4 py-3">
+          <input id="visaSponsorshipRequired" type="checkbox" checked={form.visaSponsorshipRequired ?? false} onChange={(e) => setField('visaSponsorshipRequired', e.target.checked)} />
+          <label htmlFor="visaSponsorshipRequired" className="text-sm text-ink">I require visa sponsorship</label>
         </div>
         <div className="flex items-center gap-3 rounded-2xl border border-line px-4 py-3">
           <input id="remoteOnly" type="checkbox" checked={form.remoteOnly} onChange={(e) => setField('remoteOnly', e.target.checked)} />

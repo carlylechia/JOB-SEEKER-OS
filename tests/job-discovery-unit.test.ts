@@ -4,6 +4,13 @@ import { normalizeJob, fingerprintJob, normalizeCompany, normalizeTitle } from '
 import { buildSearchPlan } from '@/lib/job-discovery/search-plan';
 import { scoreExternalJob } from '@/lib/job-discovery/scoring';
 import { selectDiverseTop } from '@/lib/job-discovery/ranking';
+import { checkHardEligibility } from '@/lib/job-discovery/eligibility';
+import { computeListingQuality, computeSourceConfidence, computeDataConfidence, compositeRankingScore } from '@/lib/job-discovery/confidence';
+import { localDateKey } from '@/lib/job-discovery/service';
+import { mapAshbyJob } from '@/lib/job-discovery/catalog/providers/ashby';
+import { mapGreenhouseJob } from '@/lib/job-discovery/catalog/providers/greenhouse';
+import { mapLeverPosting } from '@/lib/job-discovery/catalog/providers/lever';
+import { mapUsaJobsItem } from '@/lib/job-discovery/catalog/providers/usajobs';
 import { titleMatchesAny } from '@/lib/preferences';
 
 describe('job discovery deduplication', () => {

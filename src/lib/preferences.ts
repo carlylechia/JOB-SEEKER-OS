@@ -41,6 +41,11 @@ export const defaultPreferences: UserPreferences = {
   salaryMin: 0,
   salaryTarget: 0,
   timezoneToleranceHours: 6,
+  timezone: 'UTC',
+  workCountries: [],
+  employmentTypes: [],
+  preferredIndustries: [],
+  visaSponsorshipRequired: false,
 };
 
 export function parseCommaList(value: string): string[] {

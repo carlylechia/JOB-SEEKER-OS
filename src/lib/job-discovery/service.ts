@@ -1,20 +1,17 @@
 import { prisma } from '@/lib/prisma';
-import { getConnectors } from './registry';
-import { normalizeJob } from './normalize';
-import { dedupeExternalJobs } from './dedupe';
-import { buildSearchPlan } from './search-plan';
+import { normalizeCompany, normalizeTitle } from './normalize';
 import { buildMatchExplanation, scoreExternalJob } from './scoring';
 import { selectDiverseTop } from './ranking';
+import { checkHardEligibility } from './eligibility';
+import { computeConfidences, compositeRankingScore } from './confidence';
 import { mapDbPreferences } from '@/lib/db-helpers';
 import { logImportantInfo, logImportantError } from '@/lib/observability';
-import { updateSourceHealth } from './source-health';
-import type { NormalizedExternalJob } from './types';
 
-function localDateKey(timezone: string): string {
+export function localDateKey(timezone: string, date = new Date()): string {
   try {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
+    return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(date);
   } catch {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' }).format(new Date());
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' }).format(date);
   }
 }
 
@@ -31,15 +28,15 @@ export async function runDiscoveryForUser(userId: string, options: RunDiscoveryO
 
   const profile = user.profile;
   const preferences = mapDbPreferences(profile);
-  const timezone = 'UTC'; // documented fallback; profile has no tz field
+  const timezone = preferences.timezone || 'UTC';
   const localDate = localDateKey(timezone);
 
-  // Idempotency: reuse existing run unless force.
+  // Idempotency: reuse existing completed/partial snapshot unless force.
   let run = await prisma.jobDiscoveryRun.findUnique({
     where: { userId_localDate: { userId, localDate } },
   });
 
-  if (run && !options.force) {
+  if (run && ['COMPLETED', 'PARTIAL'].includes(run.status) && !options.force) {
     return run;
   }
 
@@ -71,235 +68,211 @@ export async function runDiscoveryForUser(userId: string, options: RunDiscoveryO
   const runId = run.id;
 
   try {
-    await logImportantInfo({ event: 'job_discovery_run_started', userId, context: { runId, localDate } });
+    await logImportantInfo({ event: 'job_discovery_run_started', userId, context: { runId, localDate, timezone } });
 
-    const plan = buildSearchPlan(
-      profile && typeof profile === 'object'
-        ? {
-            location: 'location' in profile && typeof profile.location === 'string' ? profile.location : null,
-            headline: 'headline' in profile && typeof profile.headline === 'string' ? profile.headline : null,
-          }
-        : null,
-      preferences,
-    );
+    const latestCatalogRun = await prisma.jobCatalogSyncRun.findFirst({
+      where: { status: { in: ['COMPLETED', 'PARTIAL'] } },
+      orderBy: { startedAt: 'desc' },
+      select: { id: true },
+    });
 
-    if (plan.titles.length === 0) {
-      await prisma.jobDiscoveryRun.update({
-        where: { id: runId },
-        data: { status: 'COMPLETED', completedAt: new Date(), candidateCount: 0, eligibleCount: 0, recommendationCount: 0 },
-      });
-      return prisma.jobDiscoveryRun.findUnique({ where: { id: runId } }) as any;
-    }
+    // Read active catalogue listings from PostgreSQL
+    const now = new Date();
+    const freshnessCutoff = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+    const sourceFreshnessCutoff = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000);
 
-    const connectors = getConnectors();
-    const enabled = connectors.filter((c) => c.isEnabled());
-
-    let allJobs: NormalizedExternalJob[] = [];
-    let sourcesAttempted = 0;
-    let sourcesSucceeded = 0;
-    const errors: string[] = [];
-
-    for (const connector of enabled) {
-      sourcesAttempted += 1;
-      try {
-        const result = await connector.search({
-          titles: plan.titles,
-          locations: plan.locations,
-          remoteOnly: plan.remoteOnly,
-          limit: plan.limit,
-        });
-        if (result.errors?.includes('NOT_CONFIGURED')) {
-          await updateSourceHealth(connector, false, 'NOT_CONFIGURED');
-          continue;
-        }
-        const normalized = result.jobs.map(normalizeJob);
-        allJobs = allJobs.concat(normalized);
-        sourcesSucceeded += 1;
-        await updateSourceHealth(connector, true, undefined, result.jobs.length);
-      } catch (err) {
-        errors.push(`${connector.id}: ${err instanceof Error ? err.message : 'unknown'}`);
-        await updateSourceHealth(connector, false, 'PROVIDER_ERROR', 0, err instanceof Error ? err.message : 'unknown');
-      }
-    }
-
-    // Also record health for disabled/unconfigured connectors
-    for (const connector of connectors.filter((c) => !c.isEnabled())) {
-      await updateSourceHealth(connector, false, connector.isConfigured() ? 'DISABLED' : 'NOT_CONFIGURED');
-    }
-
-    const { jobs: deduped, discarded } = dedupeExternalJobs(allJobs);
-
-    // Persist external jobs
-    const persistedJobs: Array<Awaited<ReturnType<typeof prisma.externalJob.findUnique>>> = [];
-    for (const job of deduped) {
-      const existing = await prisma.externalJob.findUnique({
-        where: { source_sourceJobId: { source: job.source, sourceJobId: job.sourceJobId } },
-      });
-      let record;
-      if (existing) {
-        record = await prisma.externalJob.update({
-          where: { id: existing.id },
-          data: {
-            title: job.title,
-            company: job.company,
-            location: job.location,
-            remoteType: job.remoteType,
-            workArrangement: job.workArrangement,
-            employmentType: job.employmentType,
-            description: job.description,
-            salaryMin: job.salaryMin,
-            salaryMax: job.salaryMax,
-            currency: job.currency,
-            publishedAt: job.publishedAt,
-            canonicalUrl: job.canonicalUrl,
-            applicationUrl: job.applicationUrl,
-            employerUrl: job.employerUrl,
-            lastSeenAt: new Date(),
-            contentFingerprint: job.contentFingerprint,
-            attribution: job.attribution,
-            status: 'OPEN',
-          },
-        });
-      } else {
-        record = await prisma.externalJob.create({
-          data: {
-            source: job.source,
-            sourceJobId: job.sourceJobId,
-            title: job.title,
-            company: job.company,
-            location: job.location,
-            remoteType: job.remoteType,
-            workArrangement: job.workArrangement,
-            employmentType: job.employmentType,
-            description: job.description,
-            salaryMin: job.salaryMin,
-            salaryMax: job.salaryMax,
-            currency: job.currency,
-            publishedAt: job.publishedAt,
-            canonicalUrl: job.canonicalUrl,
-            applicationUrl: job.applicationUrl,
-            employerUrl: job.employerUrl,
-            contentFingerprint: job.contentFingerprint,
-            attribution: job.attribution,
-            status: 'OPEN',
-          },
-        });
-      }
-      persistedJobs.push(record);
-    }
-
-    // Reuse recently verified listings from the shared free-source index so
-    // discovery does not depend on one user's exact query being in the feed.
-    const cacheSince = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const publishedSince = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const cachedJobs = await prisma.externalJob.findMany({
+    const pool = await prisma.externalJob.findMany({
       where: {
         status: 'OPEN',
-        lastSeenAt: { gte: cacheSince },
-        OR: [{ publishedAt: null }, { publishedAt: { gte: publishedSince } }],
-        AND: [{ OR: [{ applicationUrl: { not: null } }, { canonicalUrl: { not: null } }] }],
+        lastSeenAt: { gte: sourceFreshnessCutoff },
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: now } },
+        ],
+        AND: [
+          {
+            OR: [
+              { publishedAt: null },
+              { publishedAt: { gte: freshnessCutoff } },
+            ],
+          },
+          {
+            OR: [
+              { applicationUrl: { not: null } },
+              { canonicalUrl: { not: null } },
+            ],
+          },
+        ],
       },
-      orderBy: { lastSeenAt: 'desc' },
-      take: 500,
+      orderBy: [{ lastSeenAt: 'desc' }, { publishedAt: 'desc' }],
+      take: 1000,
     });
-    const pooledJobs = new Map(
-      [...persistedJobs, ...cachedJobs].filter((job): job is NonNullable<typeof job> => job !== null)
-        .map((job) => [job.id, job]),
-    );
-    const externalByKey = new Map<string, (typeof cachedJobs)[number]>();
-    const uniquePool = dedupeExternalJobs(
-      [...pooledJobs.values()].map((job) => {
-        externalByKey.set(`${job.source}:${job.sourceJobId}`, job);
-        return {
-          source: job.source,
-          sourceJobId: job.sourceJobId,
-          title: job.title,
-          company: job.company,
-          location: job.location,
-          applicationUrl: job.applicationUrl,
-          canonicalUrl: job.canonicalUrl,
-          contentFingerprint: job.contentFingerprint,
-        };
-      }),
-    );
-    const uniqueJobs = uniquePool.jobs
-      .map((job) => externalByKey.get(`${job.source}:${job.sourceJobId}`))
-      .filter((job): job is (typeof cachedJobs)[number] => job !== undefined);
 
-    // Score once per listing using its actual posting text and the user's saved
-    // role, skill, location, seniority and compensation preferences.
-    const candidates: Array<{
-      externalId: string;
-      job: (typeof cachedJobs)[number];
+    // Deduplicate any cross-source duplicates in memory by canonical key
+    const seenDedupeKeys = new Set<string>();
+    const uniquePool = pool.filter((job) => {
+      const keys = [
+        job.applicationUrl ? `url:${job.applicationUrl}` : null,
+        job.canonicalUrl ? `canon:${job.canonicalUrl}` : null,
+        `ct:${normalizeCompany(job.company)}|${normalizeTitle(job.title)}|${(job.location ?? '').toLowerCase().trim()}`,
+      ].filter(Boolean) as string[];
+
+      if (keys.some((k) => seenDedupeKeys.has(k))) {
+        return false;
+      }
+      for (const k of keys) seenDedupeKeys.add(k);
+      return true;
+    });
+
+    const eligibleCandidates: Array<{
+      job: (typeof pool)[number];
       fitScore: number;
       fitTier: string;
       scoreFields: ReturnType<typeof scoreExternalJob>['scoreFields'];
+      eligibility: ReturnType<typeof checkHardEligibility>;
+      confidences: ReturnType<typeof computeConfidences>;
+      rankingScore: number;
+      company: string;
+      title: string;
+      source: string;
+      publishedAt: Date | null;
     }> = [];
-    for (const external of uniqueJobs) {
-      if (excludedIds.has(external.id)) continue;
+
+    for (const job of uniquePool) {
+      if (excludedIds.has(job.id)) continue;
+
+      const eligibility = checkHardEligibility(
+        {
+          status: job.status,
+          title: job.title,
+          applicationUrl: job.applicationUrl,
+          canonicalUrl: job.canonicalUrl,
+          expiresAt: job.expiresAt,
+          publishedAt: job.publishedAt,
+          lastSeenAt: job.lastSeenAt,
+          workArrangement: job.workArrangement,
+          remoteType: job.remoteType,
+          location: job.location,
+          countryCodes: job.countryCodes,
+          locationRestrictions: job.locationRestrictions,
+          employmentType: job.employmentType,
+          visaSponsorship: job.visaSponsorship,
+        },
+        {
+          remoteOnly: preferences.remoteOnly,
+          workCountries: preferences.workCountries,
+          employmentTypes: preferences.employmentTypes,
+          visaSponsorshipRequired: preferences.visaSponsorshipRequired,
+          now,
+        },
+      );
+
+      if (!eligibility.eligible) continue;
+
       const { scoreFields, fitScore, fitTier } = scoreExternalJob(
         {
-          title: external.title,
-          location: external.location,
-          remoteType: external.remoteType,
-          workArrangement: external.workArrangement,
+          title: job.title,
+          location: job.location,
+          remoteType: job.remoteType,
+          workArrangement: job.workArrangement,
+          countryCodes: job.countryCodes,
+          locationRestrictions: job.locationRestrictions,
+          timezoneRestrictions: job.timezoneRestrictions,
+          employmentType: job.employmentType,
+          seniority: job.seniority,
+          industry: job.industry,
+          category: job.category,
+          visaSponsorship: job.visaSponsorship,
           eligibilityRegion: null,
-          salaryMin: external.salaryMin,
-          salaryMax: external.salaryMax,
-          currency: external.currency,
-          description: external.description,
-          publishedAt: external.publishedAt,
-          applicationUrl: external.applicationUrl,
-          canonicalUrl: external.canonicalUrl,
+          salaryMin: job.salaryMin,
+          salaryMax: job.salaryMax,
+          currency: job.currency,
+          salaryPeriod: job.salaryPeriod,
+          description: job.description,
+          publishedAt: job.publishedAt,
+          applicationUrl: job.applicationUrl,
+          canonicalUrl: job.canonicalUrl,
         },
         preferences,
       );
+
       if (fitScore < 30) continue;
       if (scoreFields.postedWithinThirtyDays === false) continue;
-      candidates.push({ externalId: external.id, job: external, fitScore, fitTier, scoreFields });
+
+      const confidences = computeConfidences({
+        company: job.company,
+        title: job.title,
+        description: job.description,
+        location: job.location,
+        salaryMin: job.salaryMin,
+        salaryMax: job.salaryMax,
+        applicationUrl: job.applicationUrl,
+        attribution: job.attribution,
+        employmentType: job.employmentType,
+        seniority: job.seniority,
+        publishedAt: job.publishedAt,
+        countryCodes: job.countryCodes,
+        industry: job.industry,
+        category: job.category,
+        source: job.source,
+        lastSeenAt: job.lastSeenAt,
+      });
+
+      const rankingScore = compositeRankingScore(fitScore, confidences);
+
+      eligibleCandidates.push({
+        job,
+        fitScore,
+        fitTier,
+        scoreFields,
+        eligibility,
+        confidences,
+        rankingScore,
+        company: job.company,
+        title: job.title,
+        source: job.source,
+        publishedAt: job.publishedAt,
+      });
     }
 
-    const top = selectDiverseTop(
-      candidates.map((candidate) => ({
-        ...candidate,
-        company: candidate.job.company,
-        title: candidate.job.title,
-        publishedAt: candidate.job.publishedAt,
-      })),
-      5,
-    );
+    const top = selectDiverseTop(eligibleCandidates, 5);
 
-    // Create recommendations
+    // Create daily recommendations
     for (let i = 0; i < top.length; i++) {
       const c = top[i];
-      const confidence = c.scoreFields.score.signalQuality / 5;
       await prisma.dailyJobRecommendation.create({
         data: {
           runId,
           userId,
-          externalJobId: c.externalId,
+          externalJobId: c.job.id,
           rank: i + 1,
           fitScore: c.fitScore,
-          confidence,
+          confidence: c.confidences.dataConfidence,
+          listingQuality: c.confidences.listingQuality,
+          sourceConfidence: c.confidences.sourceConfidence,
+          dataConfidence: c.confidences.dataConfidence,
+          rankingScore: c.rankingScore,
           scoreBreakdown: c.scoreFields,
+          eligibility: c.eligibility.checks as any,
           explanation: buildMatchExplanation(c.job, preferences, c.scoreFields, c.fitScore),
           status: 'RECOMMENDED',
         },
       });
     }
 
-    const status = sourcesSucceeded === sourcesAttempted ? 'COMPLETED' : sourcesSucceeded > 0 ? 'PARTIAL' : 'FAILED';
+    const distinctSources = new Set(uniquePool.map((j) => j.source)).size;
     await prisma.jobDiscoveryRun.update({
       where: { id: runId },
       data: {
-        status,
+        status: 'COMPLETED',
         completedAt: new Date(),
-        candidateCount: uniqueJobs.length,
-        eligibleCount: candidates.length,
+        candidateCount: uniquePool.length,
+        eligibleCount: eligibleCandidates.length,
         recommendationCount: top.length,
-        sourcesAttempted,
-        sourcesSucceeded,
-        lastError: errors.length ? errors.join('; ') : null,
+        catalogSyncRunId: latestCatalogRun?.id ?? null,
+        sourcesAttempted: distinctSources,
+        sourcesSucceeded: distinctSources,
+        lastError: null,
       },
     });
 
@@ -308,10 +281,10 @@ export async function runDiscoveryForUser(userId: string, options: RunDiscoveryO
       userId,
       context: {
         runId,
-        status,
-        candidates: uniqueJobs.length,
+        localDate,
+        candidates: uniquePool.length,
+        eligible: eligibleCandidates.length,
         recommendations: top.length,
-        discarded: discarded + uniquePool.discarded,
       },
     });
 
