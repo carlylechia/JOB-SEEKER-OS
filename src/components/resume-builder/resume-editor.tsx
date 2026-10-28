@@ -238,55 +238,27 @@ export function ResumeEditor({
     setImprovingSummary(true);
     setMessage('');
     try {
-      const optResponse = await fetch(`/api/resumes/${resume.id}/optimization`, {
+      const response = await fetch(`/api/resumes/${resume.id}/summary-improve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ force: true }),
         credentials: 'same-origin',
       });
-      const optPayload = await optResponse.json().catch(() => null);
-      if (!optResponse.ok) {
-        setMessage(optPayload?.error?.message ?? 'Could not generate a summary suggestion.');
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        setMessage(payload?.error?.message ?? 'Could not improve the summary.');
         return;
       }
-      const operations = (optPayload?.data?.operations ?? []) as Array<{ id: string; section: string; kind: string; proposedText: string }>;
-      const summaryOp = operations.find((op) => op.section === 'SUMMARY' || op.kind === 'REPLACE_SUMMARY');
-      if (!summaryOp) {
-        setMessage('No summary suggestion was generated for this job.');
-        return;
-      }
-      const applyResponse = await fetch(`/api/resumes/${resume.id}/optimization/apply`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          optimizationId: optPayload.optimizationId,
-          acceptedOperationIds: [summaryOp.id],
-          expectedRevision: revisionRef.current,
-        }),
-        credentials: 'same-origin',
-      });
-      const applyPayload = await applyResponse.json().catch(() => null);
-      if (!applyResponse.ok) {
-        const skipped = applyPayload?.meta?.skipped;
-        setMessage(applyPayload?.error?.message ?? (skipped ? skipped.map((s: any) => s.reason).join(' ') : 'Could not apply the summary suggestion.'));
-        return;
-      }
-      if (typeof applyPayload.appliedCount === 'number' && applyPayload.appliedCount === 0) {
-        const reasons = (applyPayload.skipped ?? []).map((s: any) => s.reason).join(' ');
-        setMessage(reasons || 'No summary change was applied.');
-        return;
-      }
-      const nextContent = applyPayload.resume.content as ResumeContent;
-      const nextRevision = applyPayload.resume.revision as number;
+      const nextContent = payload.resume.content as ResumeContent;
+      const nextRevision = payload.resume.revision as number;
       revisionRef.current = nextRevision;
       setRevision(nextRevision);
       setContent(nextContent);
-      setLayout(applyPayload.layout);
+      setLayout(payload.layout);
       savedRef.current = { ...savedRef.current, content: nextContent };
       latestDraftRef.current = { ...latestDraftRef.current, content: nextContent };
-      setRecentlyApplied(applyPayload.appliedCount ?? 1);
+      setRecentlyApplied(payload.appliedCount ?? 1);
       setHighlightedSections(['summary']);
-      setHighlightedText([summaryOp.proposedText]);
+      setHighlightedText([]);
       setSaveState('saved');
       setMessage('Professional summary updated.');
     } catch {
