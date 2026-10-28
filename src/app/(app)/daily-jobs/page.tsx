@@ -163,21 +163,27 @@ export default function DailyJobsPage() {
         <div className="rounded-xl border border-line bg-surface p-6 text-muted">
           <h2 className="font-semibold text-ink">Your first shortlist is ready to find</h2>
           <p className="mt-1 text-sm">We compare live listings with your target roles, skills and work preferences. Start a search now, or update your profile for a more relevant shortlist.</p>
-          <a href="/settings/profile" className="mt-3 inline-flex text-sm font-medium text-accent-text underline underline-offset-2">Review job preferences</a>
+          <a href="/settings" className="mt-3 inline-flex text-sm font-medium text-accent-text underline underline-offset-2">Review job preferences</a>
         </div>
       ) : null}
 
       {recs.length === 0 && status !== 'no_run' ? (
         <div className="rounded-xl border border-line bg-surface p-6 text-muted">
           <h2 className="font-semibold text-ink">
-            {run?.status === 'FAILED' ? 'Today’s search could not complete' : 'We didn’t find enough strong matches this time'}
+            {run?.status === 'FAILED'
+              ? 'Today’s search could not complete'
+              : run?.recommendationCount > 0
+                ? 'You’ve cleared today’s shortlist'
+                : 'We didn’t find enough strong matches this time'}
           </h2>
           <p className="mt-1 text-sm">
             {run?.status === 'FAILED'
               ? 'The free job sources were temporarily unavailable. Try refreshing later; your profile and saved jobs are safe.'
-              : 'We don’t pad your list with unrelated or stale vacancies. Add a few related role titles, broaden your work regions, or refresh when new listings arrive.'}
+              : run?.recommendationCount > 0
+                ? 'Dismissed jobs stay out of your recommendations. Refresh to look for another set from available listings, or adjust your preferences to improve future matches.'
+                : 'We don’t pad your list with unrelated or stale vacancies. Add a few related role titles, broaden your work regions, or refresh when new listings arrive.'}
           </p>
-          <a href="/settings/profile" className="mt-3 inline-flex text-sm font-medium text-accent-text underline underline-offset-2">Improve your match profile</a>
+          <a href="/settings" className="mt-3 inline-flex text-sm font-medium text-accent-text underline underline-offset-2">Improve your match profile</a>
         </div>
       ) : null}
 

@@ -30,6 +30,7 @@ export async function GET(request: Request) {
         recommendations: {
           include: { externalJob: true },
           orderBy: { rank: 'asc' },
+          where: { status: { notIn: ['DISMISSED', 'SUPERSEDED'] } },
         },
       },
     });

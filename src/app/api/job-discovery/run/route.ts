@@ -14,7 +14,8 @@ export async function POST(request: Request) {
   if (!session?.user?.id) return jsonError('Unauthorized', 401, undefined, request);
   const userId = session.user.id;
   try {
-    await hasEntitlement(userId, 'DAILY_JOB_DISCOVERY');
+    const allowed = await hasEntitlement(userId, 'DAILY_JOB_DISCOVERY');
+    if (!allowed) return jsonError('Plan required', 403, undefined, request);
   } catch {
     return jsonError('Plan required', 403, undefined, request);
   }
@@ -29,18 +30,16 @@ export async function POST(request: Request) {
     where: { userId_localDate: { userId, localDate: today } },
   });
 
-  // Re-use completed snapshots for today without regeneration
-  if (existing && ['COMPLETED', 'PARTIAL'].includes(existing.status)) {
-    return jsonOk({ ok: true, runId: existing.id, reused: true }, request);
-  }
-
   // If a run is currently in-flight, avoid duplicate simultaneous runs
   if (existing?.status === 'RUNNING') {
     return jsonOk({ ok: true, runId: existing.id, inProgress: true }, request);
   }
 
   try {
-    const run = await runDiscoveryForUser(userId, { force: false });
+    // Manual refresh creates a fresh shortlist from the current catalogue.
+    // The discovery service carries forward dismissed/saved exclusions and
+    // skips the previous shortlist so refresh does not simply repeat it.
+    const run = await runDiscoveryForUser(userId, { force: true });
     await logImportantInfo({ event: 'job_discovery_manual_refresh', userId, context: { runId: run?.id } });
     return jsonOk({ ok: true, runId: run?.id }, request);
   } catch (error) {

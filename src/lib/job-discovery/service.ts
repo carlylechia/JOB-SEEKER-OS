@@ -52,6 +52,19 @@ export async function runDiscoveryForUser(userId: string, options: RunDiscoveryO
   });
   const excludedIds = new Set(excludedHistory.map((recommendation) => recommendation.externalJobId));
 
+  // A manual refresh should offer the next best available listings instead of
+  // deterministically returning the same five. These are only excluded for
+  // this refresh; unlike a dismissal, this does not affect future daily runs.
+  if (options.force && run) {
+    const previousRecommendations = await prisma.dailyJobRecommendation.findMany({
+      where: { runId: run.id },
+      select: { externalJobId: true },
+    });
+    for (const recommendation of previousRecommendations) {
+      excludedIds.add(recommendation.externalJobId);
+    }
+  }
+
   if (!run) {
     run = await prisma.jobDiscoveryRun.create({
       data: { userId, localDate, timezone, status: 'RUNNING' },
@@ -61,8 +74,16 @@ export async function runDiscoveryForUser(userId: string, options: RunDiscoveryO
       where: { id: run.id },
       data: { status: 'RUNNING', lastError: null, completedAt: null },
     });
-    // clear previous recs
-    await prisma.dailyJobRecommendation.deleteMany({ where: { runId: run.id } });
+    if (options.force && ['COMPLETED', 'PARTIAL'].includes(run.status)) {
+      // Keep prior rows as history so repeated refreshes cannot cycle back to
+      // jobs already shown today. Dismissed and saved rows retain their state.
+      await prisma.dailyJobRecommendation.updateMany({
+        where: { runId: run.id, status: 'RECOMMENDED' },
+        data: { status: 'SUPERSEDED' },
+      });
+    } else {
+      await prisma.dailyJobRecommendation.deleteMany({ where: { runId: run.id } });
+    }
   }
 
   const runId = run.id;
