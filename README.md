@@ -92,6 +92,19 @@ Full behaviour, architecture, limits and troubleshooting: [docs/RESUME_BUILDER.m
 Full behaviour, architecture, limits and troubleshooting:
 [docs/APPLICATION_MATERIALS.md](docs/APPLICATION_MATERIALS.md).
 
+### Intelligent Daily Job Discovery (Pro)
+
+- high-relevance daily job shortlist (up to 5 roles) ranked specifically for your confirmed career profile and preferences
+- multi-source global catalog continuously syncing directly with verified employer ATS boards (Ashby, Greenhouse, Lever) and compliant public feeds (Himalayas, Arbeitnow, Remote OK, 4dayweek, USAJOBS, Headcount Labs)
+- 80 verified tech and startup employer boards pre-configured with automatic stale-posting closure
+- hard eligibility gating before scoring: workplace model, target country restrictions, clearance, and visa sponsorship compatibility
+- transparent multi-factor scoring: 9-dimension fit analysis paired with independent confidence metrics (Listing Quality, Source Reliability, Data Completeness)
+- timezone-stable daily snapshots: recommendations are locked to your local calendar day and never reshuffle or regenerate on page refresh
+- one-click save directly into your private job tracker with direct source attribution links and unmodified application URLs
+
+Full behaviour, architecture, sources, and configuration:
+[docs/JOB_DISCOVERY.md](docs/JOB_DISCOVERY.md).
+
 ### Intake and onboarding
 
 - multi-step onboarding flow with autosaved progress
