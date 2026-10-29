@@ -26,6 +26,7 @@ import { getUsage } from '@/lib/billing/usage';
 import {
   INTERVIEW_PREP_FEATURE,
   InterviewPrepPackNotFoundError,
+  PrepValidationError,
   createPracticeSession,
   createPrepPack,
   generatePracticeFeedback,
@@ -749,6 +750,100 @@ describe('generation and persistence', () => {
     const same = await createPrepPack({ userId: user.id, jobId: job.id, context: 'BALANCED' });
     expect(same.reused).toBe(true);
     expect(same.pack.id).toBe(pack.id);
+  });
+
+  it('reuses a pack whose dedupe key predates the stored fingerprint', async () => {
+    const provider = fakeProvider();
+    const { user, job, pack } = await generatedPack(provider);
+
+    // The intelligence migration backfilled dedupeKey with the row id. A later
+    // regeneration moved inputFingerprint without moving the key, so resolving
+    // the same inputs by dedupeKey missed and the composite unique index threw.
+    await prisma.interviewPrepPack.update({
+      where: { id: pack.id },
+      data: { dedupeKey: pack.id },
+    });
+
+    const same = await createPrepPack({ userId: user.id, jobId: job.id, context: 'BALANCED' });
+    expect(same.pack.id).toBe(pack.id);
+    expect(same.reused).toBe(true);
+
+    // The lookup self-heals the stale key so the next create takes the fast path.
+    const healed = await prisma.interviewPrepPack.findUniqueOrThrow({ where: { id: pack.id } });
+    expect(healed.dedupeKey === healed.id).toBe(false);
+    expect(healed.dedupeKey.length).toBe(64);
+  });
+
+  it('keeps the dedupe key aligned when regeneration changes the fingerprint', async () => {
+    const provider = fakeProvider();
+    const { user, job, pack } = await generatedPack(provider);
+    const before = await prisma.interviewPrepPack.findUniqueOrThrow({ where: { id: pack.id } });
+
+    await prisma.userProfile.update({
+      where: { userId: user.id },
+      data: { careerProfileVersion: { increment: 1 } },
+    });
+
+    const regenerated = await generatePrepPack({
+      userId: user.id,
+      packId: pack.id,
+      provider,
+      route: ROUTE,
+    });
+    expect(regenerated.outcome).toBe('COMPLETED');
+
+    const after = await prisma.interviewPrepPack.findUniqueOrThrow({ where: { id: pack.id } });
+    expect(after.inputFingerprint === before.inputFingerprint).toBe(false);
+    expect(after.dedupeKey === before.dedupeKey).toBe(false);
+
+    const same = await createPrepPack({ userId: user.id, jobId: job.id, context: 'BALANCED' });
+    expect(same.pack.id).toBe(pack.id);
+    expect(same.reused).toBe(true);
+  });
+
+  it('deduplicates concurrent creates for the same inputs', async () => {
+    const { user, job } = await setup({ plan: 'PRO' });
+
+    const results = await Promise.all([
+      createPrepPack({ userId: user.id, jobId: job.id, context: 'BALANCED' }),
+      createPrepPack({ userId: user.id, jobId: job.id, context: 'BALANCED' }),
+    ]);
+    expect(results[0].pack.id).toBe(results[1].pack.id);
+
+    const rows = await prisma.interviewPrepPack.findMany({
+      where: { userId: user.id, jobId: job.id },
+      select: { id: true },
+    });
+    expect(rows).toHaveLength(1);
+  });
+
+  it('refuses to regenerate a pack into an identity another pack owns', async () => {
+    const provider = fakeProvider();
+    const { user, job } = await setup({ plan: 'PRO' });
+
+    const balanced = await createPrepPack({ userId: user.id, jobId: job.id, context: 'BALANCED' });
+    await generatePrepPack({ userId: user.id, packId: balanced.pack.id, provider, route: ROUTE });
+
+    const technical = await createPrepPack({ userId: user.id, jobId: job.id, context: 'TECHNICAL' });
+    await generatePrepPack({ userId: user.id, packId: technical.pack.id, provider, route: ROUTE });
+    expect(provider.packCalls).toBe(2);
+    expect(await getUsage(user.id, INTERVIEW_PREP_FEATURE)).toBe(2);
+
+    // Point the second pack at the first pack's exact inputs. Persisting its
+    // new fingerprint would violate the composite unique index, so the service
+    // must refuse before the identity collision reaches Prisma or the ledger.
+    await updatePrepPack({
+      userId: user.id,
+      packId: technical.pack.id,
+      input: { context: 'BALANCED', interviewFormat: 'BALANCED' },
+    });
+
+    await expect(
+      generatePrepPack({ userId: user.id, packId: technical.pack.id, provider, route: ROUTE }),
+    ).rejects.toBeInstanceOf(PrepValidationError);
+
+    expect(provider.packCalls).toBe(2);
+    expect(await getUsage(user.id, INTERVIEW_PREP_FEATURE)).toBe(2);
   });
 
   it('handles provider failure safely and records a FAILED pack', async () => {

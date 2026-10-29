@@ -711,6 +711,90 @@ async function resolveCreateInputs(input: CreatePrepPackInput): Promise<Resolved
 }
 
 /**
+ * Find the pack that represents one exact input set.
+ *
+ * `dedupeKey` is the primary lookup, but two kinds of rows only match on the
+ * composite `(userId, jobId, inputFingerprint)` identity:
+ *
+ *  - rows created before `dedupeKey` existed, whose key was backfilled to the
+ *    row id by the intelligence migration; and
+ *  - rows whose fingerprint moved during a regeneration but whose key did not
+ *    (older builds updated one column without the other).
+ *
+ * Falling back to the composite lookup keeps those rows reusable instead of
+ * turning a duplicate into a 500 from the composite unique index.
+ */
+async function findPackByIdentity(params: {
+  userId: string;
+  jobId: string | null;
+  inputFingerprint: string;
+  dedupeKey: string;
+}): Promise<PackRow | null> {
+  const byKey = await prisma.interviewPrepPack.findUnique({
+    where: { dedupeKey: params.dedupeKey },
+  });
+  if (byKey) return byKey as PackRow;
+
+  const byInputs = await prisma.interviewPrepPack.findFirst({
+    where: {
+      userId: params.userId,
+      jobId: params.jobId,
+      inputFingerprint: params.inputFingerprint,
+    },
+    orderBy: { updatedAt: 'desc' },
+  });
+  return (byInputs as PackRow | null) ?? null;
+}
+
+/**
+ * Bring a legacy row's `dedupeKey` in line with the fingerprint it now stores.
+ * The write is best-effort: if another row already owns the canonical key, the
+ * row we matched is still the correct pack for this request.
+ */
+async function adoptDedupeKey(row: PackRow, dedupeKey: string): Promise<PackRow> {
+  if (row.dedupeKey === dedupeKey) return row;
+
+  try {
+    return (await prisma.interviewPrepPack.update({
+      where: { id: row.id },
+      data: {
+        dedupeKey,
+        // A key repair must not move the processing-staleness clock.
+        updatedAt: row.updatedAt,
+      },
+    })) as PackRow;
+  } catch (error) {
+    if (!hasPrismaUniqueViolation(error)) throw error;
+    return row;
+  }
+}
+
+/**
+ * Decide whether an existing row already answers this request. A row that is
+ * mid-generation is a conflict; a completed row is reused without charging;
+ * a draft or failed row is handed back so the caller can generate it.
+ *
+ * This same rule applies to the insert-race path, so two simultaneous creates
+ * cannot make the loser report an empty draft as a finished pack.
+ */
+function reuseExisting(row: PackRow, force: boolean): { reused: boolean } {
+  if (
+    (row.status === 'RESEARCHING' || row.status === 'GENERATING') &&
+    !isStale(row.updatedAt) &&
+    !force
+  ) {
+    throw new DuplicatePrepGenerationInFlightError();
+  }
+
+  return {
+    reused:
+      !force &&
+      (row.status === 'READY' || row.status === 'PARTIALLY_READY') &&
+      Boolean(row.content),
+  };
+}
+
+/**
  * Create or reuse a pack row. This is intentionally cheap: no provider call.
  * The route decides whether to generate immediately or leave the pack as a
  * draft the candidate can review first.
@@ -718,20 +802,16 @@ async function resolveCreateInputs(input: CreatePrepPackInput): Promise<Resolved
 export async function createPrepPack(input: CreatePrepPackInput): Promise<CreatePrepPackResult> {
   const inputs = await resolveCreateInputs(input);
 
-  const existing = await prisma.interviewPrepPack.findUnique({ where: { dedupeKey: inputs.dedupeKey } });
+  const existing = await findPackByIdentity({
+    userId: input.userId,
+    jobId: inputs.jobId,
+    inputFingerprint: inputs.inputFingerprint,
+    dedupeKey: inputs.dedupeKey,
+  });
   if (existing) {
-    if (
-      (existing.status === 'RESEARCHING' || existing.status === 'GENERATING') &&
-      !isStale(existing.updatedAt) &&
-      !input.force
-    ) {
-      throw new DuplicatePrepGenerationInFlightError();
-    }
-    const reused =
-      !input.force &&
-      (existing.status === 'READY' || existing.status === 'PARTIALLY_READY') &&
-      Boolean(existing.content);
-    return { pack: toSummary(existing as PackRow, true), reused };
+    const { reused } = reuseExisting(existing, input.force === true);
+    const row = await adoptDedupeKey(existing, inputs.dedupeKey);
+    return { pack: toSummary(row, true), reused };
   }
 
   try {
@@ -769,9 +849,16 @@ export async function createPrepPack(input: CreatePrepPackInput): Promise<Create
     return { pack: toSummary(created as PackRow, true), reused: false };
   } catch (error) {
     if (!hasPrismaUniqueViolation(error)) throw error;
-    const raced = await prisma.interviewPrepPack.findUnique({ where: { dedupeKey: inputs.dedupeKey } });
+    const raced = await findPackByIdentity({
+      userId: input.userId,
+      jobId: inputs.jobId,
+      inputFingerprint: inputs.inputFingerprint,
+      dedupeKey: inputs.dedupeKey,
+    });
     if (!raced) throw error;
-    return { pack: toSummary(raced as PackRow, true), reused: true };
+    const row = await adoptDedupeKey(raced, inputs.dedupeKey);
+    const { reused } = reuseExisting(row, input.force === true);
+    return { pack: toSummary(row, true), reused };
   }
 }
 
@@ -948,6 +1035,17 @@ export async function generatePrepPack(options: RunPrepGenerationOptions): Promi
 
   const candidate = await buildCandidateContext({ userId, jobId: row.jobId });
   const currentFingerprint = fingerprintFor({ pack: row, candidate });
+  // The key and the fingerprint describe the same identity. Keep them in step
+  // whenever regeneration stores a new fingerprint; otherwise a later create
+  // finds the old key and collides with the composite unique index.
+  const currentDedupeKey = dedupeKeyFor({
+    userId: row.userId,
+    jobId: row.jobId,
+    company: row.company,
+    roleTitle: row.roleTitle,
+    jobUrl: row.jobUrl,
+    fingerprint: currentFingerprint,
+  });
 
   if (!options.force && currentFingerprint === row.inputFingerprint && row.content) {
     if (row.status === 'READY' || row.status === 'PARTIALLY_READY') {
@@ -955,6 +1053,28 @@ export async function generatePrepPack(options: RunPrepGenerationOptions): Promi
       if (!detail) throw new InterviewPrepPackNotFoundError();
       return { outcome: 'REUSED', pack: detail.pack, data: detail.data };
     }
+  }
+
+  // If the current inputs now match a sibling pack, regenerating this row
+  // cannot persist the new fingerprint (or key) without violating a unique
+  // index. Fail before spending a credit and point at the pack that already
+  // covers these inputs.
+  const identityCollision = await prisma.interviewPrepPack.findFirst({
+    where: {
+      id: { not: row.id },
+      userId,
+      OR: [
+        { dedupeKey: currentDedupeKey },
+        { jobId: row.jobId, inputFingerprint: currentFingerprint },
+      ],
+    },
+    select: { id: true },
+  });
+  if (identityCollision) {
+    throw new PrepValidationError(
+      'Another preparation pack already covers these exact inputs. Open that pack instead, or change the interview context or job details before regenerating this one.',
+      'INVALID_PREP_REQUEST',
+    );
   }
 
   const researchUrls = normaliseResearchUrlsFromRow(row);
@@ -1314,6 +1434,7 @@ export async function generatePrepPack(options: RunPrepGenerationOptions): Promi
               : `${research.fetchedCount} of ${research.attemptedCount} research sources read.`,
         researchErrorCode: research.errorCodes[0] ?? null,
         inputFingerprint: currentFingerprint,
+        dedupeKey: currentDedupeKey,
         schemaVersion: INTERVIEW_PREP_SCHEMA_VERSION,
         promptVersion: INTERVIEW_PREP_PROMPT_VERSION,
         generatedAt: new Date(),

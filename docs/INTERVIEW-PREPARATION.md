@@ -202,7 +202,10 @@ parallel tracker:
   interview metadata, status, research status, input fingerprint, dedupe key,
   validated section content, guidance, limitations, progress counters and
   timestamps. A unique `dedupeKey` prevents duplicate generation for identical
-  inputs.
+  inputs. It is derived from the same identity as the
+  `(userId, jobId, inputFingerprint)` composite unique index and is rewritten
+  whenever regeneration stores a new fingerprint. Creation also falls back to
+  that composite index so packs written before the key existed stay reusable.
 - `InterviewResearchSource` — one row per retained source, with position,
   provenance, fetch status, verification and excerpt.
 - `InterviewQuestion` — versioned questions. Regeneration deactivates the old
