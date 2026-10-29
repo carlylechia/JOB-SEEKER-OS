@@ -5,7 +5,7 @@ import {
   Briefcase, CheckSquare, Calendar, TrendingUp,
   Star, BarChart2, ArrowRight, Zap, Bell,
   UserCircle, Settings, Clock, ListChecks,
-  Mail,
+  Mail, BookOpenCheck,
 } from 'lucide-react';
 import { DailyQueue } from '@/components/dashboard/daily-queue';
 import { KpiCard } from '@/components/dashboard/kpi-card';
@@ -127,6 +127,9 @@ export default function DashboardPage() {
             </Link>
             <Link href="/queue" className="btn-secondary gap-1.5 text-sm">
               <ListChecks className="h-3.5 w-3.5" /> View queue
+            </Link>
+            <Link href="/interview-prep" className="btn-secondary gap-1.5 text-sm">
+              <BookOpenCheck className="h-3.5 w-3.5" /> Interview prep
             </Link>
             <Link href="/pipeline" className="btn-secondary gap-1.5 text-sm">
               <BarChart2 className="h-3.5 w-3.5" /> Pipeline
