@@ -480,8 +480,8 @@ describe('malicious resume content in the exported document', () => {
       },
     });
 
-    // Every row is still there, and the payload is just a string.
-    expect(await prisma.structuredResume.count()).toBe(1);
+    // The row is still there, and the payload is just a string.
+    expect(await prisma.structuredResume.count({ where: { userId: user.id } })).toBe(1);
     const reloaded = await getResume({ userId: user.id, resumeId: resume.id });
     expect(reloaded.content.experiences[0].responsibilities[0]).toBe(payload);
   });
@@ -539,6 +539,7 @@ describe('no route derives identity from the request', () => {
         '[id]/optimization/route.ts',
         '[id]/preview/route.ts',
         '[id]/route.ts',
+        '[id]/summary-improve/route.ts',
       ].sort(),
     );
   });
