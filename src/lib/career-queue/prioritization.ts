@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { ACTIVE_JOB_STATUSES } from '@/lib/job-status';
 import { CareerActionInput, CareerActionType } from './types';
 
 function fitScore(job: { score: unknown }): number {
@@ -30,7 +31,7 @@ export async function buildCareerActionCandidates(userId: string): Promise<Caree
 
   const [jobs, profile, resumes, prepPacks, materials] = await Promise.all([
     prisma.jobLead.findMany({
-      where: { userId, deletedAt: null, status: { notIn: ['ARCHIVED', 'OFFER', 'REJECTED'] } },
+      where: { userId, deletedAt: null, status: { in: [...ACTIVE_JOB_STATUSES] } },
       orderBy: { updatedAt: 'desc' },
     }),
     prisma.userProfile.findUnique({ where: { userId } }),

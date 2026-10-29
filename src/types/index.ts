@@ -227,4 +227,6 @@ export type BootstrapPayload = {
   profile: UserProfileDetails;
   titleOptions: string[];
   streakCount: number;
+  streakActiveToday?: boolean;
+  streakAtRisk?: boolean;
 };

@@ -15,7 +15,8 @@
 
 import { prisma } from './prisma';
 import { mapDbJob } from './db-helpers';
-import { JobLead, JobStatus } from '@/types';
+import { ACTIVE_JOB_STATUSES } from './job-status';
+import { JobLead } from '@/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,7 +37,6 @@ export type QueueItem = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ACTIVE_STATUSES: JobStatus[] = ['SAVED', 'LEAD', 'APPLYING', 'APPLIED', 'INTERVIEWING'];
 const MAX_QUEUE_SIZE = 5;
 const STALE_DAYS = 7;
 const HIGH_FIT_THRESHOLD = 70;
@@ -159,7 +159,7 @@ export async function generateDailyQueue(userId: string): Promise<QueueItem[]> {
     where: {
       userId,
       deletedAt: null,
-      status: { in: ACTIVE_STATUSES },
+      status: { in: [...ACTIVE_JOB_STATUSES] },
     },
     orderBy: { updatedAt: 'desc' },
   });

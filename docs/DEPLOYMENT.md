@@ -264,12 +264,21 @@ with a trial end exactly 14 days after the launch timestamp.
 
 ### 11. Confirm cron
 
-Vercel Cron runs `/api/cron/maintenance` nightly at 03:00 UTC. Verify
-`CRON_SECRET` is set, then trigger manually to confirm it works:
+Vercel Cron runs three jobs:
+
+- `/api/cron/maintenance` nightly at 03:00 UTC
+- `/api/cron/job-discovery` daily at 06:00 UTC
+- `/api/cron/queue` daily at 07:00 UTC (daily queue digest + streak risk)
+
+Verify `CRON_SECRET` is set, then trigger each manually to confirm it works:
 
 ```bash
 curl -H "Authorization: Bearer $CRON_SECRET" https://yourdomain.com/api/cron/maintenance
+curl -H "Authorization: Bearer $CRON_SECRET" https://yourdomain.com/api/cron/queue
 ```
+
+The queue cron is idempotent. Re-running it on the same day will not duplicate
+a user's daily digest or streak-risk warning.
 
 ### 12. Verify Resume Intelligence
 

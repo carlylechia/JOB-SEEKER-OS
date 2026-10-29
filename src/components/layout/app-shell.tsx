@@ -1,6 +1,7 @@
 import { SidebarNav } from './sidebar-nav';
 import { Topbar } from './topbar';
 import { BackToSiteButton } from './back-to-site-button';
+import { StreakHeartbeat } from './streak-heartbeat';
 
 type UserLike = {
   id: string;
@@ -13,6 +14,7 @@ type UserLike = {
 export function AppShell({ children, user }: { children: React.ReactNode; user: UserLike }) {
   return (
     <div className="flex min-h-screen">
+      <StreakHeartbeat />
       {/* Presentation only — /admin is independently server-protected, so a
           hidden link is never the authorization boundary. */}
       <SidebarNav isAdmin={user.role === 'ADMIN'} />

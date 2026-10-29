@@ -10,6 +10,15 @@ export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user?.id) return jsonError('Unauthorized', 401);
 
-  const { streakCount, changed } = await touchStreak(session.user.id);
-  return jsonOk({ streakCount, changed });
+  const { streakCount, changed, activeToday, isAtRisk, nextMilestone, daysToNextMilestone } =
+    await touchStreak(session.user.id);
+
+  return jsonOk({
+    streakCount,
+    changed,
+    activeToday,
+    isAtRisk,
+    nextMilestone,
+    daysToNextMilestone,
+  });
 }

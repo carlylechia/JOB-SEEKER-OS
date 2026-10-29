@@ -7,6 +7,7 @@ import { TrialBanner } from '@/components/billing/trial-countdown';
 import { getEffectiveSubscription } from '@/lib/billing/subscriptions';
 import { prisma } from '@/lib/prisma';
 import { profilePictureSrc } from '@/lib/profile-picture';
+import { touchStreak } from '@/lib/streak';
 
 const getProfileStatus = cache(async (userId: string) => {
   return prisma.userProfile.findUnique({
@@ -34,6 +35,10 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   if (!session?.user?.id) {
     redirect('/login');
   }
+
+  // Any visit to a protected page is activity. This is what makes a streak
+  // reflect consistency of use, not only consistency of edits.
+  await touchStreak(session.user.id).catch(() => null);
 
   const headersList = await headers();
   const pathname = headersList.get('x-pathname') ?? '';

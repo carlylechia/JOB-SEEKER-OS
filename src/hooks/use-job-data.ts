@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { mutate } from 'swr';
 import { ApiError, BootstrapPayload, Contact, EnrichedContact, JobFormValues, JobLead, PrepPack, QueueTask, Template, UserPreferences, UserProfileDetails } from '@/types';
 import { checklistCompletion, hydrateJob } from '@/lib/scoring';
+import { isActiveJobStatus } from '@/lib/job-status';
 
 type PublicJobsResponse = { jobs: JobLead[] };
 
@@ -15,6 +17,20 @@ async function parseApiResponse<T>(response: Response): Promise<T> {
   return data as T;
 }
 
+/**
+ * Revalidate every queue view after a job changes state, so a task that is no
+ * longer valid disappears immediately instead of waiting for the SWR cache to
+ * expire. The server also reconciles stale actions on every queue read.
+ */
+function notifyQueueChanged() {
+  if (typeof window === 'undefined') return;
+  void mutate(
+    (key) => typeof key === 'string' && key.startsWith('/api/career-actions'),
+    undefined,
+    { revalidate: true },
+  );
+}
+
 export function useJobs() {
   const [rawJobs, setRawJobs] = useState<JobLead[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -24,6 +40,8 @@ export function useJobs() {
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const [onboardingSkipped, setOnboardingSkipped] = useState(false);
   const [streakCount, setStreakCount] = useState(0);
+  const [streakActiveToday, setStreakActiveToday] = useState(false);
+  const [streakAtRisk, setStreakAtRisk] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -41,6 +59,8 @@ export function useJobs() {
         setOnboardingCompleted(data.onboardingCompleted);
         setOnboardingSkipped(data.onboardingSkipped ?? false);
         setStreakCount(data.streakCount ?? 0);
+        setStreakActiveToday(Boolean(data.streakActiveToday));
+        setStreakAtRisk(Boolean(data.streakAtRisk));
       } catch (error) {
         console.error(error);
       } finally {
@@ -53,13 +73,38 @@ export function useJobs() {
     };
   }, []);
 
+  // The heartbeat can count a new local day while this tab stays open. Listen
+  // for its event so the widget updates without a full reload.
+  useEffect(() => {
+    function onStreakUpdated(event: Event) {
+      const detail = (event as CustomEvent<{
+        streakCount?: number;
+        activeToday?: boolean;
+        isAtRisk?: boolean;
+      }>).detail;
+      if (typeof detail?.streakCount !== 'number') return;
+      setStreakCount(detail.streakCount);
+      setStreakActiveToday(Boolean(detail.activeToday));
+      setStreakAtRisk(Boolean(detail.isAtRisk));
+    }
+
+    window.addEventListener('streak:updated', onStreakUpdated);
+    return () => window.removeEventListener('streak:updated', onStreakUpdated);
+  }, []);
+
   const jobs = useMemo(() => {
     if (!preferences) return [];
     return rawJobs.map((job) => hydrateJob(job, preferences));
   }, [rawJobs, preferences]);
 
   const contacts = useMemo(() => jobs.flatMap((job) => job.contacts), [jobs]);
-  const interviews = useMemo(() => jobs.flatMap((job) => job.interviews), [jobs]);
+  // Rejected, archived and offer-stage jobs must not surface interview
+  // reminders. Keep the history on the job itself, but not as a dashboard
+  // prompt.
+  const interviews = useMemo(
+    () => jobs.filter((job) => isActiveJobStatus(job.status)).flatMap((job) => job.interviews),
+    [jobs],
+  );
 
   const enrichedContacts = useMemo<EnrichedContact[]>(
     () =>
@@ -83,7 +128,9 @@ export function useJobs() {
     const tasks: QueueTask[] = [];
 
     for (const job of jobs) {
-      if (['ARCHIVED', 'OFFER'].includes(job.status)) continue;
+      // A follow-up or prep task is never valid for a closed job, even if it
+      // still has a date attached from earlier in the pipeline.
+      if (!isActiveJobStatus(job.status)) continue;
 
       const base = {
         jobId: job.id,
@@ -140,8 +187,6 @@ export function useJobs() {
           label: 'Prepare for interview',
           description: `Interview prep needed for ${job.company}`,
         });
-      } else if (job.status === 'REJECTED') {
-        // No tasks for rejected
       }
     }
 
@@ -158,13 +203,18 @@ export function useJobs() {
   const dashboard = useMemo(() => {
     const total = jobs.length;
     const applied = jobs.filter((j) => ['APPLIED', 'INTERVIEWING', 'OFFER'].includes(j.status)).length;
-    const interviewsCount = jobs.filter((j) => j.interviews.length > 0).length;
+    const interviewsCount = jobs.filter(
+      (j) => isActiveJobStatus(j.status) && j.interviews.length > 0,
+    ).length;
     const offers = jobs.filter((j) => j.status === 'OFFER').length;
     const avgFit = total ? Math.round((jobs.reduce((sum, j) => sum + j.score.fitScore, 0) / total) * 10) / 10 : 0;
     const responseRate = applied ? Math.round((interviewsCount / applied) * 100) : 0;
-    const topPriority = [...jobs].sort((a, b) => b.score.fitScore - a.score.fitScore).slice(0, 5);
+    const topPriority = jobs
+      .filter((j) => isActiveJobStatus(j.status))
+      .sort((a, b) => b.score.fitScore - a.score.fitScore)
+      .slice(0, 5);
     const queue = [...jobs]
-      .filter((j) => ['A', 'B'].includes(j.score.fitTier) && !['ARCHIVED', 'REJECTED', 'OFFER'].includes(j.status))
+      .filter((j) => ['A', 'B'].includes(j.score.fitTier) && isActiveJobStatus(j.status))
       .sort((a, b) => checklistCompletion(b) + b.score.fitScore - (checklistCompletion(a) + a.score.fitScore));
     const weeklyTrend = [
       { week: 'W1', leads: jobs.filter((j) => j.dateFound <= new Date().toISOString().slice(0, 10)).length, applied, interviews: interviewsCount },
@@ -223,6 +273,7 @@ export function useJobs() {
     });
     const payload = await parseApiResponse<{ job: JobLead }>(res);
     setRawJobs((prev) => prev.map((job) => (job.id === id ? payload.job : job)));
+    notifyQueueChanged();
     return payload.job;
   }
 
@@ -230,6 +281,7 @@ export function useJobs() {
     const res = await fetch(`/api/jobs/${id}`, { method: 'DELETE' });
     await parseApiResponse<{ ok: true }>(res);
     setRawJobs((prev) => prev.filter((job) => job.id !== id));
+    notifyQueueChanged();
   }
 
   async function createTitle(name: string) {
@@ -251,6 +303,7 @@ export function useJobs() {
     });
     const payload = await parseApiResponse<{ job: JobLead }>(res);
     setRawJobs((prev) => prev.map((j) => (j.id === jobId ? payload.job : j)));
+    notifyQueueChanged();
     return payload.job;
   }
 
@@ -351,6 +404,8 @@ export function useJobs() {
     onboardingCompleted,
     onboardingSkipped,
     streakCount,
+    streakActiveToday,
+    streakAtRisk,
     getJob,
     updateTemplate,
     updatePreferences,

@@ -6,11 +6,14 @@
 import { prisma } from '@/lib/prisma';
 import { logImportantInfo, logImportantError } from '@/lib/observability';
 import { sendNotificationEmail } from '@/lib/email';
+import { dateKeyInTimeZone } from './calendar';
 
 export type NotificationType =
   | 'queue'
   | 'follow_up'
   | 'streak'
+  | 'streak_risk'
+  | 'daily_digest'
   | 'system'
   | 'queue_reminder'
   | 'follow_up_due'
@@ -78,6 +81,40 @@ export async function createNotification(
 /** Mark a single notification as read. */
 export async function markNotificationRead(id: string): Promise<void> {
   await prisma.notification.update({ where: { id }, data: { read: true } });
+}
+
+/**
+ * True when a notification of `type` was already created for this user on the
+ * same local calendar day as `at`.
+ *
+ * Used by the daily cron so a retried or manually re-run job cannot spam the
+ * same reminder twice in one day, while still allowing tomorrow's reminder even
+ * if today's ran late.
+ */
+export async function notificationExistsOnLocalDay(
+  userId: string,
+  type: NotificationType,
+  at: Date,
+  timeZone?: string | null,
+): Promise<boolean> {
+  const dayKey = dateKeyInTimeZone(at, timeZone);
+
+  // A local day can be up to ~26h from UTC, so 36h is a safe lookback. The
+  // result set is tiny (one or two rows per day) and bounded.
+  const recent = await prisma.notification.findMany({
+    where: {
+      userId,
+      type,
+      createdAt: { gte: new Date(at.getTime() - 36 * 60 * 60 * 1000) },
+    },
+    select: { createdAt: true },
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+  });
+
+  return recent.some(
+    (notification) => dateKeyInTimeZone(notification.createdAt, timeZone) === dayKey,
+  );
 }
 
 /** Mark all unread notifications for a user as read. */

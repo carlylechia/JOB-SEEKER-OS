@@ -3,6 +3,7 @@ import { demoTemplates } from './demo-data';
 import { defaultPreferences, defaultTitleOptions } from './preferences';
 import { JobLead, JobFormValues, Template, UserPreferences, UserProfileDetails } from '@/types';
 import { calculateFitScore, calculateFitTier, calculatePriority } from './scoring';
+import { deriveStreak } from './streak-core';
 
 export type DbJob = {
   id: string;
@@ -158,6 +159,13 @@ export async function getUserWorkspace(userId: string) {
     prisma.jobTitle.findMany({ orderBy: { name: 'asc' } }),
   ]);
 
+  const streak = deriveStreak(
+    user?.streakCount ?? 0,
+    user?.lastActiveDate ?? null,
+    new Date(),
+    profile?.timezone,
+  );
+
   return {
     preferences: mapDbPreferences(profile),
     onboardingCompleted: Boolean(profile?.onboardingCompleted),
@@ -172,7 +180,9 @@ export async function getUserWorkspace(userId: string) {
       body: template.body,
     })) as Template[],
     titleOptions: titleOptions.map((item) => item.name),
-    streakCount: user?.streakCount ?? 0,
+    streakCount: streak.streakCount,
+    streakActiveToday: streak.activeToday,
+    streakAtRisk: streak.isAtRisk,
   };
 }
 

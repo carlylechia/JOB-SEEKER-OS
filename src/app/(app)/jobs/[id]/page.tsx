@@ -9,6 +9,7 @@ import { PriorityBadge } from "@/components/shared/priority-badge";
 import { ScoreBadge } from "@/components/shared/score-badge";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useJobs } from "@/hooks/use-job-data";
+import { isActiveJobStatus } from "@/lib/job-status";
 import { JobIntelligencePanel } from "@/components/jobs/job-intelligence-panel";
 import { checklistCompletion } from "@/lib/scoring";
 import { Checklist, Contact, JobFormValues, JobStatus } from "@/types";
@@ -100,6 +101,8 @@ export default function JobDetailsPage() {
 
   if (isLoading) return <div className="card-pad">Loading job…</div>;
   if (!job) return <div className="card-pad">Job not found.</div>;
+
+  const jobIsActive = isActiveJobStatus(job.status);
 
   const kitSteps = workspace
     ? buildKitSteps({
@@ -545,13 +548,19 @@ export default function JobDetailsPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <Link href="/interview-prep" className="btn-secondary text-sm">Open workspace</Link>
                   <Link href="/prep" className="btn-secondary text-sm">Prep notes</Link>
-                  <button
-                    type="button"
-                    className="btn-primary text-sm"
-                    onClick={() => setCreatingPack((p) => !p)}
-                  >
-                    {creatingPack ? 'Creating…' : 'Create AI prep pack'}
-                  </button>
+                  {jobIsActive ? (
+                    <button
+                      type="button"
+                      className="btn-primary text-sm"
+                      onClick={() => setCreatingPack((p) => !p)}
+                    >
+                      {creatingPack ? 'Creating…' : 'Create AI prep pack'}
+                    </button>
+                  ) : (
+                    <span className="text-xs text-muted">
+                      This job is closed. Existing packs stay available.
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -577,7 +586,7 @@ export default function JobDetailsPage() {
                   ))}
                 </div>
               )}
-              {creatingPack && (
+              {jobIsActive && creatingPack && (
                 <div className="mt-3 space-y-2">
                   <p className="muted text-xs mb-1">Prepare with job-specific questions generated from this role and your career profile.</p>
                   <div className="flex gap-2">

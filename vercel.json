@@ -9,6 +9,10 @@
     {
       "path": "/api/cron/job-discovery",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/queue",
+      "schedule": "0 7 * * *"
     }
   ]
 }

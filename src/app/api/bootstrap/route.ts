@@ -2,6 +2,7 @@ import { auth } from '@/auth';
 import { jsonError, jsonOk } from '@/lib/api';
 import { getUserWorkspace } from '@/lib/db-helpers';
 import { logImportantError } from '@/lib/observability';
+import { touchStreak } from '@/lib/streak';
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -10,6 +11,11 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Loading the workspace is real app usage. Counting it means a user who
+    // reads their dashboard every day keeps their streak without having to
+    // create or edit a record first.
+    await touchStreak(session.user.id).catch(() => null);
+
     const workspace = await getUserWorkspace(session.user.id);
     return jsonOk(workspace, request);
   } catch (error) {

@@ -6,13 +6,10 @@ import { checkHardEligibility } from './eligibility';
 import { computeConfidences, compositeRankingScore } from './confidence';
 import { mapDbPreferences } from '@/lib/db-helpers';
 import { logImportantInfo, logImportantError } from '@/lib/observability';
+import { dateKeyInTimeZone } from '@/lib/calendar';
 
 export function localDateKey(timezone: string, date = new Date()): string {
-  try {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(date);
-  } catch {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' }).format(date);
-  }
+  return dateKeyInTimeZone(date, timezone);
 }
 
 export type RunDiscoveryOptions = {

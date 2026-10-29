@@ -294,6 +294,22 @@ would hold locks across network I/O.
 
 Scheduled nightly via `vercel.json` crons.
 
+`/api/cron/queue` runs daily and is idempotent:
+
+1. sync each user's career actions
+2. send one motivating daily digest with the top three moves
+3. warn users whose streak is at risk (timezone-aware, once per day)
+
+Career-action sync also reconciles the queue: open system actions whose job has
+moved to a closed stage (rejected, archived, offer) or was deleted are
+auto-dismissed, and are revived only if the job returns to an active stage.
+Queue reads apply the same job-status filter defensively, so stale interview
+or follow-up prompts cannot leak back in.
+
+Streaks use the user's saved timezone, and any protected-page visit counts as
+activity. A user who reads their dashboard every day keeps the streak even if
+they change nothing.
+
 ### Cron is not authorization
 
 `isCronAuthorized()` **fails closed**: if `CRON_SECRET` is unset or shorter

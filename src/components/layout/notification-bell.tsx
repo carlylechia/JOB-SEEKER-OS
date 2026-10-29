@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { ArrowLeft, Bell } from 'lucide-react';
 
 type Notification = {
@@ -20,6 +21,19 @@ function timeAgo(dateStr: string): string {
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
+}
+
+function notificationLink(type: string): { href: string; label: string } | null {
+  if (['daily_digest', 'queue', 'queue_reminder', 'follow_up_due'].includes(type)) {
+    return { href: '/queue', label: 'Open your queue' };
+  }
+  if (['streak', 'streak_risk'].includes(type)) {
+    return { href: '/dashboard', label: 'Open your dashboard' };
+  }
+  if (type === 'interview_upcoming') {
+    return { href: '/interview-prep', label: 'Open interview prep' };
+  }
+  return null;
 }
 
 export function NotificationBell() {
@@ -163,6 +177,15 @@ export function NotificationBell() {
                 <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-foreground/90">
                   {selectedNotification.message}
                 </p>
+                {notificationLink(selectedNotification.type) && (
+                  <Link
+                    href={notificationLink(selectedNotification.type)!.href}
+                    onClick={closePanel}
+                    className="btn-secondary mt-4 inline-flex items-center text-sm"
+                  >
+                    {notificationLink(selectedNotification.type)!.label} →
+                  </Link>
+                )}
               </div>
             </div>
           ) : (

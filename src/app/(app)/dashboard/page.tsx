@@ -14,6 +14,7 @@ import { TopPriorityList } from '@/components/dashboard/top-priority-list';
 import { UpcomingList } from '@/components/dashboard/upcoming-list';
 import { WeeklyTrendChart } from '@/components/dashboard/weekly-trend-chart';
 import { useJobs } from '@/hooks/use-job-data';
+import { isActiveJobStatus } from '@/lib/job-status';
 
 function getGreeting(name?: string): string {
   const h = new Date().getHours();
@@ -29,7 +30,7 @@ function getFormattedDate(): string {
 }
 
 export default function DashboardPage() {
-  const { dashboard, jobs, interviews, preferences, onboardingCompleted, onboardingSkipped, profile, streakCount, isLoading } = useJobs();
+  const { dashboard, jobs, interviews, preferences, onboardingCompleted, onboardingSkipped, profile, streakCount, streakActiveToday, streakAtRisk, isLoading } = useJobs();
 
   if (isLoading) {
     return (
@@ -45,7 +46,7 @@ export default function DashboardPage() {
 
   // Derive follow-up and interview lists
   const followUpItems = jobs
-    .filter((job) => job.nextFollowUp)
+    .filter((job) => isActiveJobStatus(job.status) && job.nextFollowUp)
     .slice(0, 5)
     .map((job) => {
       const d = new Date(job.nextFollowUp!);
@@ -57,6 +58,8 @@ export default function DashboardPage() {
     });
 
   const interviewItems = interviews
+    .filter((item) => !item.outcome || item.outcome === 'PENDING')
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
     .slice(0, 5)
     .map((item) => {
       const d = new Date(item.scheduledAt);
@@ -181,7 +184,13 @@ export default function DashboardPage() {
       )}
 
       {/* ── Streak (prominent, only when active) ────────────────────── */}
-      {streakCount > 0 && <StreakWidget streakCount={streakCount} />}
+      {streakCount > 0 && (
+        <StreakWidget
+          streakCount={streakCount}
+          activeToday={streakActiveToday}
+          isAtRisk={streakAtRisk}
+        />
+      )}
 
       <section className="rounded-2xl border border-line bg-gradient-to-r from-surface-sunken via-background to-card p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

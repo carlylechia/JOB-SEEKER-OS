@@ -1,101 +1,204 @@
 /**
- * Streak engine — reward daily engagement.
+ * Streak engine — reward daily engagement, not just database mutations.
  *
- * Call `touchStreak(userId)` whenever a user performs a meaningful action
- * (add job, update job, apply, complete checklist task, etc.).
+ * Call `touchStreak(userId)` whenever the user is actually using the app
+ * (opening a protected page, loading the workspace, heartbeating from the
+ * shell) as well as after meaningful actions. A visit is enough to keep a
+ * streak alive; the old implementation only counted writes, so a user who read
+ * their dashboard every day was treated as inactive.
  *
  * Rules:
- *   - Same calendar day  → streak unchanged (idempotent)
- *   - Yesterday          → streakCount += 1
- *   - Older OR no date   → streakCount = 1 (start fresh)
+ *   - Same local calendar day → unchanged (idempotent)
+ *   - Yesterday              → streakCount += 1
+ *   - Older OR no date       → streakCount = 1 (start fresh)
+ *
+ * Calendar days use the user's saved timezone, not UTC. See `streak-core.ts`.
  */
 
 import { prisma } from '@/lib/prisma';
-import { createNotification } from '@/lib/notifications';
+import { now } from '@/lib/billing/clock';
+import { createNotification, notificationExistsOnLocalDay } from '@/lib/notifications';
 import { logImportantInfo } from '@/lib/observability';
+import { deriveStreak, type StreakSnapshot } from './streak-core';
+import { STREAK_MILESTONES } from './streak-milestones';
 
-function toDateOnly(d: Date): string {
-  return d.toISOString().slice(0, 10); // "YYYY-MM-DD"
-}
+export type TouchStreakResult = StreakSnapshot & { changed: boolean };
 
-function yesterday(now: Date): string {
-  const d = new Date(now);
-  d.setDate(d.getDate() - 1);
-  return toDateOnly(d);
-}
+type StreakUser = {
+  streakCount: number;
+  lastActiveDate: Date | null;
+  profile: { timezone: string } | null;
+};
 
-export async function touchStreak(userId: string): Promise<{ streakCount: number; changed: boolean }> {
-  const user = await prisma.user.findUnique({
+async function loadStreakUser(userId: string): Promise<StreakUser | null> {
+  return prisma.user.findUnique({
     where: { id: userId },
-    select: { streakCount: true, lastActiveDate: true },
+    select: {
+      streakCount: true,
+      lastActiveDate: true,
+      profile: { select: { timezone: true } },
+    },
   });
-  if (!user) return { streakCount: 0, changed: false };
+}
 
-  const today = toDateOnly(new Date());
-  const lastDay = user.lastActiveDate ? toDateOnly(user.lastActiveDate) : null;
-
-  // Already tracked today — nothing to do
-  if (lastDay === today) {
-    return { streakCount: user.streakCount, changed: false };
+/**
+ * Records activity for the user's current local day and advances the streak
+ * when yesterday was the previous active day.
+ *
+ * Idempotent: calling it on every page load and every heartbeat is safe.
+ */
+export async function touchStreak(
+  userId: string,
+  options: { at?: Date } = {},
+): Promise<TouchStreakResult> {
+  const at = options.at ?? now();
+  const user = await loadStreakUser(userId);
+  if (!user) {
+    return { ...deriveStreak(0, null, at, 'UTC'), changed: false };
   }
 
-  // Calculate new streak
-  const prevStreak = user.streakCount;
-  const isConsecutive = lastDay === yesterday(new Date());
-  const newStreak = isConsecutive ? prevStreak + 1 : 1;
+  const timeZone = user.profile?.timezone;
+  const snapshot = deriveStreak(user.streakCount, user.lastActiveDate, at, timeZone);
 
+  // Already counted today. Repair an inconsistent stored count (for example a
+  // row left at 0 by the old UTC-only implementation) without incrementing.
+  if (snapshot.activeToday) {
+    if (snapshot.streakCount !== user.streakCount) {
+      await prisma.user
+        .update({ where: { id: userId }, data: { streakCount: snapshot.streakCount } })
+        .catch(() => null);
+    }
+    return { ...snapshot, changed: false };
+  }
+
+  const newStreak = snapshot.streakCount + 1;
   await prisma.user.update({
     where: { id: userId },
-    data: { streakCount: newStreak, lastActiveDate: new Date() },
+    data: { streakCount: newStreak, lastActiveDate: at },
   });
+
+  const updated = deriveStreak(newStreak, at, at, timeZone);
 
   await logImportantInfo({
     event: 'streak_updated',
     userId,
-    context: { prevStreak, newStreak, isConsecutive },
+    context: {
+      prevStreak: user.streakCount,
+      newStreak,
+      wasAtRisk: snapshot.isAtRisk,
+      timeZone: updated.timeZone,
+    },
   });
 
-  // Fire streak milestone notifications
-  const milestones = [3, 5, 7, 14, 21, 30, 60, 90, 100];
-  if (milestones.includes(newStreak)) {
+  if ((STREAK_MILESTONES as readonly number[]).includes(newStreak)) {
     await createNotification(userId, {
       type: 'streak',
-      title: `🔥 ${newStreak}-day streak!`,
-      message: `You've been active ${newStreak} days in a row. Keep the momentum going!`,
-      sendEmail: newStreak >= 7, // email on weekly+ milestones
-    });
+      title: `🔥 ${newStreak}-day streak unlocked`,
+      message:
+        `You've shown up ${newStreak} days in a row. That is not luck — it is a promise you keep ` +
+        `to yourself. Next stop: ${updated.nextMilestone} days. Keep the fire alive.`,
+      sendEmail: newStreak >= 7,
+    }).catch(() => null);
   }
 
-  // Warn about streak risk the next day — handled by cron
-  return { streakCount: newStreak, changed: true };
+  return { ...updated, changed: true };
 }
 
-/** Called by cron to warn users whose last activity was 1 day ago (at risk tomorrow). */
-export async function sendStreakRiskNotifications(): Promise<number> {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const startOfYesterday = new Date(yesterday);
-  startOfYesterday.setHours(0, 0, 0, 0);
-  const endOfYesterday = new Date(yesterday);
-  endOfYesterday.setHours(23, 59, 59, 999);
+/**
+ * The authoritative streak status for display.
+ *
+ * Normalises a stored count that no longer matches the calendar (for example
+ * after a missed day) so the dashboard cannot advertise a streak that is
+ * already over.
+ */
+export async function getStreakStatus(
+  userId: string,
+  at: Date = now(),
+): Promise<StreakSnapshot> {
+  const user = await loadStreakUser(userId);
+  if (!user) return deriveStreak(0, null, at, 'UTC');
 
-  const atRisk = await prisma.user.findMany({
+  const snapshot = deriveStreak(user.streakCount, user.lastActiveDate, at, user.profile?.timezone);
+
+  if (snapshot.streakCount !== user.streakCount) {
+    await prisma.user
+      .update({ where: { id: userId }, data: { streakCount: snapshot.streakCount } })
+      .catch(() => null);
+  }
+
+  return snapshot;
+}
+
+/**
+ * Called by cron to warn users whose last activity was yesterday (the streak
+ * ends if today passes without activity).
+ *
+ * Timezone-aware and deduped: running the cron twice in one day produces one
+ * warning, not two.
+ */
+export async function sendStreakRiskNotifications(at: Date = now()): Promise<number> {
+  // A yesterday-local timestamp is always within 48h of now, so this bound is
+  // safe and keeps the candidate set small even as the user base grows.
+  const candidates = await prisma.user.findMany({
     where: {
       streakCount: { gte: 2 },
-      lastActiveDate: { gte: startOfYesterday, lte: endOfYesterday },
+      lastActiveDate: {
+        not: null,
+        gte: new Date(at.getTime() - 48 * 60 * 60 * 1000),
+        lt: at,
+      },
     },
-    select: { id: true, streakCount: true },
+    select: {
+      id: true,
+      streakCount: true,
+      lastActiveDate: true,
+      profile: { select: { timezone: true } },
+    },
   });
 
   let notified = 0;
-  for (const user of atRisk) {
+
+  for (const user of candidates) {
+    const snapshot = deriveStreak(
+      user.streakCount,
+      user.lastActiveDate,
+      at,
+      user.profile?.timezone,
+    );
+    if (!snapshot.isAtRisk) continue;
+
+    if (
+      await notificationExistsOnLocalDay(
+        user.id,
+        'streak_risk',
+        at,
+        user.profile?.timezone,
+      )
+    ) {
+      continue;
+    }
+
+    const dayWord = snapshot.streakCount === 1 ? 'day' : 'days';
+    const milestoneWord = snapshot.daysToNextMilestone === 1 ? 'day' : 'days';
+
     await createNotification(user.id, {
-      type: 'streak',
-      title: '⚠️ Don\'t lose your streak!',
-      message: `You have a ${user.streakCount}-day streak. Log in and take an action today to keep it alive.`,
-      sendEmail: user.streakCount >= 5,
+      type: 'streak_risk',
+      title: `🔥 Your ${snapshot.streakCount}-day streak is on the line`,
+      message:
+        `You've shown up ${snapshot.streakCount} ${dayWord} in a row. One small action today keeps ` +
+        `the fire alive — even five minutes counts. You're only ${snapshot.daysToNextMilestone} ` +
+        `${milestoneWord} from your ${snapshot.nextMilestone}-day milestone.`,
+      sendEmail: snapshot.streakCount >= 5,
     });
+
     notified++;
+  }
+
+  if (notified > 0) {
+    await logImportantInfo({
+      event: 'streak_risk_notifications_sent',
+      context: { notified },
+    });
   }
 
   return notified;

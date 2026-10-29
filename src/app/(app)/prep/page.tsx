@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { PageHeader } from '@/components/shared/page-header';
 import { useJobs } from '@/hooks/use-job-data';
+import { isActiveJobStatus } from '@/lib/job-status';
 import { JobLead, PrepPack } from '@/types';
 
 const PREP_FIELDS: { key: keyof Omit<PrepPack, 'prepScore' | 'prepStatus'>; label: string; hint: string }[] = [
@@ -138,7 +139,9 @@ export default function PrepPage() {
   if (isLoading) return <div className="card-pad">Loading prep packs…</div>;
 
   const interviewJobs = jobs.filter((j) => j.status === 'INTERVIEWING');
-  const otherJobs = jobs.filter((j) => !['INTERVIEWING', 'ARCHIVED', 'REJECTED'].includes(j.status) && j.prepPack.prepStatus !== 'NOT_STARTED');
+  const otherJobs = jobs.filter(
+    (j) => j.status !== 'INTERVIEWING' && isActiveJobStatus(j.status) && j.prepPack.prepStatus !== 'NOT_STARTED',
+  );
 
   return (
     <div className="space-y-6">
