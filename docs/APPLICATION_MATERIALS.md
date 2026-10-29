@@ -32,6 +32,47 @@ Template categories map to the existing `FollowUpTemplate.type` vocabulary:
 
 ---
 
+## Application kits
+
+Materials are organised as **application kits**, not as a flat list. A kit is
+the set of records that already belong to one `JobLead`:
+
+- every `ApplicationMaterial` with that `jobId`;
+- every `StructuredResume` tailored to the role (`targetJobId`) or explicitly
+  used by one of its materials (`resumeId`);
+- the real application facts — pipeline status, applied date, next follow-up,
+  contacts and recorded interviews.
+
+There is no separate kit table and no duplicate ownership model: the job id is
+the grouping key, and every query is scoped to the session user.
+
+The job kit is available at:
+
+- **Page** — `/application-materials/jobs/[jobId]`
+- **API** — `GET /api/application-materials/workspace/[jobId]`
+
+Both return the same bounded summary; full material text stays behind the
+per-material API and its own ownership check. A job belonging to another user,
+a deleted job and a missing job all produce the same non-disclosing 404.
+
+From the kit, choosing a material type generates it with the job, profile,
+linked resume and earlier materials for the same application already in
+context. The library at `/application-materials` groups active materials by job
+and keeps general materials (no target job, or a job removed from the pipeline)
+and archived drafts in separate sections, so a removed job never leaves a dead
+link to a kit page. The job detail page links directly to the job's kit.
+
+### Resume linkage
+
+A resume can be linked to a job in the kit. Linking uses the existing
+`StructuredResume.targetJobId` field through `PATCH /api/resumes/[id]` with
+optimistic concurrency (`expectedRevision`), so it cannot silently overwrite a
+newer edit in another tab. A material records the resume it used in
+`ApplicationMaterial.resumeId`; unlinking does not remove that historical
+record.
+
+---
+
 ## Source-of-truth hierarchy
 
 Generated materials are built from, and checked against, this hierarchy:
@@ -83,6 +124,34 @@ problem.
 
 ---
 
+## Continuity between a job’s materials
+
+A new material for a job is written with the application's earlier materials in
+context, so the cover letter, recruiter message and follow-up sound like they
+came from the same person.
+
+Continuity is deliberately bounded and **never treated as evidence**:
+
+- At most five earlier materials are included, one per material type, newest
+  first.
+- The type being generated is excluded, so asking for another cover letter
+  reuses the existing cover letter instead of feeding it back to itself.
+- Archived rows and rows whose generation did not complete are excluded.
+- Each excerpt is capped at 900 characters and the whole block at 4,200
+  characters.
+- The prompt labels the block `EARLIER_MATERIALS` and states that it may only
+  influence voice, terminology and emphasis. A claim from an earlier draft that
+  was wrong does not become true by repetition. Verification never receives
+  earlier materials as a source.
+- Earlier material ids, versions and excerpts are part of the input fingerprint,
+  so a genuinely new context produces a new draft while the same context still
+  reuses the same result.
+
+Generation metadata records `hadPriorMaterials` and `priorMaterialCount`, and
+the kit shows which earlier materials will be used before generating.
+
+---
+
 ## Draft persistence and versioning
 
 Materials are stored in the `ApplicationMaterial` table, owned by `userId`.
@@ -91,13 +160,22 @@ Materials are stored in the `ApplicationMaterial` table, owned by `userId`.
   before explicitly saving cannot discard the draft. Reopening legacy rows
   falls back to the verified text in their generation metadata.
 - Explicitly saving promotes a draft to `READY` and names it with the material
-  type, company, role and original creation timestamp, for example
-  `Cover letter — Northwind — Backend Engineer — 2026-10-24T00:53:46.867Z`.
+  type, company, role and original creation time in a deterministic UTC format,
+  for example `Cover letter — Northwind — Backend Engineer — 24 Oct 2026, 00:53 UTC`.
+  The same row therefore has the same title on every server.
+- The generated subject line, when the material type has one, is persisted with
+  the draft by the generation service — not only by a later edit.
 - The saved text remains editable; edits use optimistic concurrency and are
   persisted before the material is marked ready.
-- A regeneration creates a **new row** chained through `supersedesId`; the
-  previous draft is left intact. Nothing the user has reviewed is ever
-  silently overwritten.
+- A regeneration or revision creates a **new row** chained through
+  `supersedesId`; the previous draft is left intact. Nothing the user has
+  reviewed is ever silently overwritten.
+- `POST /api/application-materials/[id]/revise` revises the stored draft with
+  required change instructions, optional tone and length, and the same
+  verification pass as a first generation. It reads the draft text through the
+  same legacy-safe accessor as the editor, preserves the draft's job and resume,
+  and returns the new material id so the editor can open it. The AI call is
+  metered exactly like a fresh generation.
 - `revision` numbers each draft in its chain (starting at 1).
 - `editVersion` implements optimistic concurrency: the client echoes the
   version it loaded, and a mismatch is rejected with 409.
@@ -105,10 +183,16 @@ Materials are stored in the `ApplicationMaterial` table, owned by `userId`.
   chains stay meaningful.
 - `jobId`, `resumeId` and `templateId` are optional and `SetNull` on deletion,
   so deleting a job, resume or template never destroys the user's writing.
-- Reuse is keyed by the full generation input, including user instructions,
-  tone, length, selected resume content, job facts and application context.
+- Reuse is keyed by the full generation input, including the applied tone and
+  length, user instructions, conversation, selected resume content, job facts,
+  application context, prompt version and bounded earlier-material excerpts.
   Changing those inputs produces a fresh draft rather than returning a stale
   one.
+- Application-grounded types are enforced server-side, before any provider
+  call: a follow-up or status check requires a recorded application, and a
+  thank-you requires either a recorded interview or non-empty notes supplied by
+  the user. The API returns `VALIDATION_FAILED` (422) with
+  `meta.code = NOT_APPLIED_YET` or `NO_INTERVIEW_CONTEXT`.
 - Private material is never written onto a shared `JobLead` and never exposed
   through public job APIs.
 
@@ -196,6 +280,9 @@ New table `ApplicationMaterial` plus three enums
 
 - `prisma/migrations/20261018212656_application_materials/`
 - `prisma/migrations/20261018220000_application_material_unique/`
+- `prisma/migrations/20261029130000_application_material_job_workspace/` —
+  adds the composite `(userId, jobId, updatedAt)` index used by job kits. It is
+  additive and non-destructive.
 
 Apply with `npm run prisma:migrate:deploy`. Do not run `prisma db push` in
 production.
@@ -241,8 +328,13 @@ fakes — no key, no network, no paid calls.
 Tests added: `tests/application-materials.test.ts` — entitlement enforcement
 (Free/Pro/Premium/trial/admin), generation (all six types, missing context,
 foreign job, numeric fabrication, employer fabrication, timeout, reuse,
-duplicate concurrency, malformed output), verification, persistence (save,
-edit, revision chaining, archive, ownership isolation, no credit for
+duplicate concurrency, malformed output), server-side application grounding
+(refused follow-up, thank-you with notes vs. no interview), continuity context
+(earlier materials included, current type and archived rows excluded), kit
+helpers (grouping, availability, progress steps, library grouping), workspace
+loading (ownership-scoped job, materials and resumes; deleted jobs hidden;
+pipeline-derived availability), verification, persistence (save, edit, revision
+chaining, subject persistence, archive, ownership isolation, no credit for
 copy/download/edit).
 
 ---
@@ -258,7 +350,12 @@ copy/download/edit).
 
 ## Job details page integration
 
-The job details page (`/jobs/[id]`) lists existing cover letters and
-application materials for that job, with type, status, generation status,
-subject and updated date. A "Create material" link pre-selects the target job,
-so users can generate a cover letter directly from a job they are viewing.
+The job details page (`/jobs/[id]`) shows that job's application kit: its
+progress steps, linked resumes, latest materials and a direct link to
+`/application-materials/jobs/[jobId]`. A "Create material" link pre-selects the
+target job, so a draft started from the job page belongs to the same kit.
+
+Inside the kit, every material type is generated with the job, its linked
+resume and the application's earlier materials already in context. The full
+editor links back to the kit, and a revision keeps the same job and resume.
+Nothing in either surface sends anything automatically.

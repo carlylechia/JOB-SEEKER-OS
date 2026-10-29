@@ -40,13 +40,18 @@ import { getResume } from '@/lib/resume-builder/documents';
 import type { ResumeContent } from '@/lib/resume-builder/schema';
 import {
   MATERIAL_MAX_JOB_CHARS,
+  MATERIAL_MAX_PRIOR_CONTEXT_CHARS,
+  MATERIAL_MAX_PRIOR_MATERIALS,
+  MATERIAL_MAX_PRIOR_MATERIAL_CHARS,
   MATERIAL_MAX_PROFILE_CHARS,
   MATERIAL_MAX_RESUME_CHARS,
 } from './limits';
 import {
   APPLIED_STATUSES,
+  MATERIAL_TYPE_META,
   type MaterialType,
 } from './materials';
+import { getStoredMaterialContent } from './wire';
 
 /** What the model is allowed to know, and what verification checks against. */
 export type CandidateFacts = {
@@ -124,6 +129,27 @@ export type ResumeFacts = {
   };
 };
 
+/**
+ * An earlier material for the SAME job, included so a new draft can continue
+ * the application's voice instead of starting from nothing.
+ *
+ * It is deliberately not candidate evidence: `verify.ts` never receives it as a
+ * source, and the prompt states that it may not add a personal fact. A cover
+ * letter that once overstated something must not become the reason a follow-up
+ * repeats it.
+ */
+export type PriorMaterialFacts = {
+  id: string;
+  type: MaterialType;
+  label: string;
+  title: string;
+  subject: string | null;
+  status: string;
+  updatedAt: Date;
+  /** Bounded text, already clipped by the context builder. */
+  content: string;
+};
+
 export type MaterialContext = {
   type: MaterialType;
   candidate: CandidateFacts;
@@ -134,6 +160,12 @@ export type MaterialContext = {
   resume: ResumeFacts | null;
   /** Labeled summary of a valid saved job analysis. Never treated as fact. */
   intelligence: { summary: string; category: string } | null;
+  /**
+   * Earlier materials for this job, excluding the type being generated. The
+   * exclusion is intentional: asking for another cover letter should reuse the
+   * cover letter draft, not feed it back to itself as "history".
+   */
+  priorMaterials: PriorMaterialFacts[];
   /** Fields we genuinely lack, in user-facing words. */
   missingInputs: string[];
   completeness: 'COMPLETE' | 'PARTIAL' | 'MINIMAL';
@@ -602,6 +634,86 @@ function flattenResumeContent(content: unknown): string {
   return lines.join('\n');
 }
 
+// ─── Earlier materials ──────────────────────────────────────────────────────
+
+/**
+ * Load the newest material of each OTHER type for this exact application.
+ *
+ * Bounded in three directions: at most five materials, at most 900 characters
+ * each, and at most 4,200 characters in total. A job with twenty revisions
+ * therefore contributes the same prompt budget as a job with five.
+ *
+ * One per type, newest first: sending four successive drafts of the same cover
+ * letter would teach the model to copy its own older wording, not to continue
+ * the application.
+ */
+async function buildPriorMaterialFacts(
+  userId: string,
+  jobId: string | null,
+  currentType: MaterialType,
+): Promise<PriorMaterialFacts[]> {
+  if (!jobId) return [];
+
+  const rows = await prisma.applicationMaterial.findMany({
+    where: {
+      userId,
+      jobId,
+      type: { not: currentType },
+      generationStatus: 'COMPLETED',
+      status: { not: 'ARCHIVED' },
+    },
+    orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+    take: 24,
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      subject: true,
+      status: true,
+      content: true,
+      generationMeta: true,
+      updatedAt: true,
+    },
+  });
+
+  const seenTypes = new Set<string>();
+  const materials: PriorMaterialFacts[] = [];
+  let usedChars = 0;
+
+  for (const row of rows) {
+    if (seenTypes.has(row.type)) continue;
+
+    const stored = getStoredMaterialContent({
+      content: row.content,
+      generationMeta: row.generationMeta,
+      status: row.status,
+    });
+    const content = tidyMultiline(stored, MATERIAL_MAX_PRIOR_MATERIAL_CHARS);
+    if (!content) continue;
+
+    const remaining = MATERIAL_MAX_PRIOR_CONTEXT_CHARS - usedChars;
+    if (remaining <= 80) break;
+
+    const bounded = content.slice(0, Math.min(content.length, remaining));
+    seenTypes.add(row.type);
+    usedChars += bounded.length;
+    materials.push({
+      id: row.id,
+      type: row.type as MaterialType,
+      label: MATERIAL_TYPE_META[row.type as MaterialType]?.label ?? 'Application material',
+      title: row.title,
+      subject: row.subject,
+      status: row.status,
+      updatedAt: row.updatedAt,
+      content: bounded,
+    });
+
+    if (materials.length >= MATERIAL_MAX_PRIOR_MATERIALS) break;
+  }
+
+  return materials;
+}
+
 // ─── Assembly ───────────────────────────────────────────────────────────────
 
 export type BuildContextParams = {
@@ -666,6 +778,11 @@ export async function buildMaterialContext(
   }
 
   const application = resolveApplicationContext(job);
+  const priorMaterials = await buildPriorMaterialFacts(
+    params.userId,
+    job?.id ?? null,
+    params.type,
+  );
 
   // ── What is genuinely missing ────────────────────────────────────────────
   const missingInputs: string[] = [];
@@ -702,6 +819,7 @@ export async function buildMaterialContext(
     application,
     resume,
     intelligence,
+    priorMaterials,
     missingInputs,
     completeness,
   };

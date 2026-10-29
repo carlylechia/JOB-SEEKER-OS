@@ -36,7 +36,7 @@ export const MATERIAL_SCHEMA_NAME = 'application_material';
  * Bumped when the PROMPT changes but the output shape does not, so a prompt
  * tweak invalidates a cached draft without pretending the contract changed.
  */
-export const MATERIAL_PROMPT_VERSION = 1;
+export const MATERIAL_PROMPT_VERSION = 2;
 
 // ─── Claims and evidence ────────────────────────────────────────────────────
 
@@ -161,6 +161,10 @@ export const materialMetaSchema = z.object({
   hadSelectedResume: z.boolean(),
   /** True when a stored template informed the draft. */
   hadTemplate: z.boolean(),
+  /** True when earlier materials for this same application were used for continuity. */
+  hadPriorMaterials: z.boolean(),
+  /** How many earlier materials were included, bounded by the context limit. */
+  priorMaterialCount: z.number().int().min(0).max(10),
   /** Real application facts available at generation time. */
   applicationContext: z.enum(['NONE', 'SUBMITTED', 'INTERVIEW_SCHEDULED', 'INTERVIEW_RECORDED']),
   /** True when input context was cut before generation. */

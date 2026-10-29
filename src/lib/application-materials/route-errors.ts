@@ -15,6 +15,7 @@ import {
   ApplicationMaterialAiError,
   DuplicateGenerationInFlightError,
   JobNotFoundError,
+  MaterialStateError,
 } from './service';
 import { StructuredResumeNotFoundError } from '@/lib/resume-builder/documents';
 import { MATERIAL_ERROR_MESSAGES, type MaterialErrorCode } from './schema';
@@ -40,6 +41,14 @@ function map(error: unknown): Mapped | null {
 
   if (error instanceof JobNotFoundError) {
     return { code: 'NOT_FOUND', message: 'Job not found.' };
+  }
+
+  if (error instanceof MaterialStateError) {
+    return {
+      code: 'VALIDATION_FAILED',
+      message: error.message,
+      meta: { code: error.code },
+    };
   }
 
   if (error instanceof StructuredResumeNotFoundError) {

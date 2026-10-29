@@ -149,6 +149,8 @@ export type PromptInputs = {
   resumeBlock: string | null;
   /** A labelled summary of a saved job analysis. Never evidence. */
   intelligenceBlock: string | null;
+  /** Earlier drafts for this same application. Continuity only, never evidence. */
+  priorMaterialsBlock: string | null;
   /** Free-text instructions from the user. Untrusted. */
   instructionsBlock: string | null;
   /** A pasted conversation. Untrusted, and only what the user supplied. */
@@ -223,6 +225,20 @@ export function buildMaterialPrompt(inputs: PromptInputs): string {
         'You must NOT cite it, quote it, or present it to anyone as a fact. It is the model\'s opinion of a third-party document.',
         inputs.intelligenceBlock,
       ].join('\n'),
+    );
+  }
+
+  if (inputs.priorMaterialsBlock) {
+    parts.push(
+      wrap(
+        'EARLIER_MATERIALS',
+        [
+          'Drafts the candidate already has for this SAME application. Use them only for continuity: keep the application\'s voice, terminology and emphasis consistent, and avoid writing the same opening again.',
+          'These are NOT evidence about the candidate. Never add an employer, title, skill, metric, date or any other personal fact because an earlier draft mentions it. If an earlier draft conflicts with the candidate facts, the candidate facts win.',
+          'Never quote or cite an earlier material as a source in `claims`, and do not copy sentences verbatim. Write a new message that fits this material type.',
+          inputs.priorMaterialsBlock,
+        ].join('\n'),
+      ),
     );
   }
 

@@ -12,6 +12,11 @@ import { useJobs } from "@/hooks/use-job-data";
 import { JobIntelligencePanel } from "@/components/jobs/job-intelligence-panel";
 import { checklistCompletion } from "@/lib/scoring";
 import { Checklist, Contact, JobFormValues, JobStatus } from "@/types";
+import {
+  buildKitSteps,
+  type ApplicationWorkspaceData,
+} from "@/lib/application-materials/workspace";
+import { MATERIAL_TYPE_META, type MaterialType } from "@/lib/application-materials/materials";
 
 const ALL_STATUSES: JobStatus[] = ['LEAD', 'SAVED', 'APPLYING', 'APPLIED', 'INTERVIEWING', 'OFFER', 'REJECTED', 'ARCHIVED'];
 const RELATIONSHIP_TYPES = ['RECRUITER', 'HIRING_MANAGER', 'REFERRAL', 'NETWORK', 'OTHER'];
@@ -44,7 +49,7 @@ export default function JobDetailsPage() {
   const [savingFollowUp, setSavingFollowUp] = useState(false);
   const [checklistSaving, setChecklistSaving] = useState(false);
   const [rescoring, setRescoring] = useState(false);
-  const [materials, setMaterials] = useState<Array<{ id: string; type: string; title: string; subject: string | null; status: string; generationStatus: string; createdAt: string; updatedAt: string }>>([]);
+  const [workspace, setWorkspace] = useState<ApplicationWorkspaceData | null>(null);
   const [materialsLoading, setMaterialsLoading] = useState(false);
   const [prepPacks, setPrepPacks] = useState<Array<{ id: string; title: string; status: string; questionCount: number; practicedCount: number; interviewAt: string | null; updatedAt: string }>>([]);
 
@@ -57,10 +62,12 @@ export default function JobDetailsPage() {
     async function loadMaterials() {
       setMaterialsLoading(true);
       try {
-        const res = await fetch(`/api/application-materials?jobId=${jobId}`, { cache: 'no-store' });
+        const res = await fetch(`/api/application-materials/workspace/${jobId}`, {
+          cache: 'no-store',
+        });
         if (!res.ok) return;
         const json = await res.json();
-        if (!cancelled) setMaterials(json.materials || []);
+        if (!cancelled) setWorkspace((json.workspace as ApplicationWorkspaceData) ?? null);
       } catch {
         // non-fatal
       } finally {
@@ -93,6 +100,19 @@ export default function JobDetailsPage() {
 
   if (isLoading) return <div className="card-pad">Loading job…</div>;
   if (!job) return <div className="card-pad">Job not found.</div>;
+
+  const kitSteps = workspace
+    ? buildKitSteps({
+        jobId: workspace.job.id,
+        materials: workspace.materials,
+        resumes: workspace.resumes,
+        hasApplied: workspace.summary.hasApplied,
+        hasInterview: workspace.summary.hasInterview,
+      })
+    : [];
+  const kitMaterials = workspace
+    ? workspace.materials.filter((material) => material.status !== 'ARCHIVED')
+    : [];
 
   async function handleUpdate(values: JobFormValues) {
     if (job) {
@@ -194,10 +214,10 @@ export default function JobDetailsPage() {
               </Link>
             ) : null}
             <Link
-              href={`/application-materials/new?job=${job.id}`}
+              href={`/application-materials/jobs/${job.id}`}
               className="btn-secondary"
             >
-              Create cover letter
+              Application kit
             </Link>
             <button
               className="btn-secondary"
@@ -615,38 +635,114 @@ export default function JobDetailsPage() {
               </div>
             </div>
             <div className="card-pad">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Cover letters &amp; materials</h3>
-                <Link href={`/application-materials/new?job=${job.id}`} className="btn-secondary text-sm">Create material</Link>
+              <div className="flex flex-wrap items-start justify-between gap-2 mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Application kit</h3>
+                  {workspace ? (
+                    <p className="muted mt-1 text-xs">
+                      {workspace.summary.activeMaterials} materials · {workspace.summary.readyCount} ready ·{' '}
+                      {workspace.summary.resumeCount} linked resume
+                      {workspace.summary.resumeCount === 1 ? '' : 's'}
+                    </p>
+                  ) : null}
+                </div>
+                <Link
+                  href={`/application-materials/jobs/${job.id}`}
+                  className="btn-primary text-sm"
+                >
+                  Open application kit
+                </Link>
               </div>
+
               {materialsLoading ? (
-                <div className="text-xs text-muted animate-pulse">Loading materials…</div>
-              ) : materials.length === 0 ? (
+                <div className="text-xs text-muted animate-pulse">Loading application kit…</div>
+              ) : !workspace ? (
                 <div className="text-xs text-muted">
-                  No cover letters or application materials for this role yet. Create one from your job details.
+                  The application kit could not be loaded. Open it directly to try again.
                 </div>
               ) : (
-                <div className="space-y-2 text-sm">
-                  {materials.map((m) => (
-                    <div key={m.id} className="rounded-xl border border-line p-3 flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <Link href={`/application-materials/${m.id}`} className="text-ink font-medium hover:text-accent-text">
-                          {m.title}
-                        </Link>
-                        <div className="mt-0.5 text-xs text-muted">
-                          {(m.type || '').replace('_', ' ')} · {m.status ? m.status.charAt(0) + m.status.slice(1).toLowerCase() : ''}
-                          {m.subject && ` · "${m.subject}"`}
+                <>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {kitSteps.map((step) => (
+                      <div
+                        key={step.key}
+                        className={`rounded-xl border p-3 ${
+                          step.complete
+                            ? 'border-success/25 bg-success/[0.06]'
+                            : 'border-line bg-surface-sunken'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            aria-hidden="true"
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
+                              step.complete
+                                ? 'bg-success text-white'
+                                : 'bg-card text-muted ring-1 ring-line'
+                            }`}
+                          >
+                            {step.complete ? '✓' : '·'}
+                          </span>
+                          <span className="text-sm font-medium text-ink">{step.label}</span>
                         </div>
-                        <div className="mt-0.5 text-xs text-muted">
-                          {new Date(m.updatedAt).toLocaleDateString()}
-                        </div>
+                        <p className="muted mt-1 text-xs">{step.detail}</p>
                       </div>
-                      <span className={`badge text-xs ${m.generationStatus === 'COMPLETED' ? 'bg-success/15 text-success-text' : m.generationStatus === 'FAILED' ? 'bg-danger/15 text-danger-text' : 'bg-surface-sunken text-ink'}`}>
-                        {m.generationStatus ? m.generationStatus.charAt(0) + m.generationStatus.slice(1).toLowerCase() : ''}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 space-y-2 text-sm">
+                    {kitMaterials.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-line p-4 text-xs text-muted">
+                        Nothing written for this role yet. The kit will keep its cover letter,
+                        outreach and follow-up together.
+                      </div>
+                    ) : (
+                      kitMaterials.slice(0, 4).map((material) => (
+                        <div
+                          key={material.id}
+                          className="rounded-xl border border-line p-3 flex items-start justify-between gap-3"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <Link
+                              href={`/application-materials/${material.id}`}
+                              className="text-ink font-medium hover:text-accent-text"
+                            >
+                              {material.title}
+                            </Link>
+                            <div className="mt-0.5 text-xs text-muted">
+                              {MATERIAL_TYPE_META[material.type as MaterialType]?.label ??
+                                material.type.replace(/_/g, ' ')}{' '}
+                              · {material.status.toLowerCase()}
+                              {material.resumeName ? ` · ${material.resumeName}` : ''}
+                            </div>
+                            <div className="mt-0.5 text-xs text-muted">
+                              {new Date(material.updatedAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <span
+                            className={`badge text-xs ${
+                              material.generationStatus === 'COMPLETED'
+                                ? 'bg-success/15 text-success-text'
+                                : material.generationStatus === 'FAILED'
+                                  ? 'bg-danger/15 text-danger-text'
+                                  : 'bg-surface-sunken text-ink'
+                            }`}
+                          >
+                            {material.generationStatus.toLowerCase()}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                    {kitMaterials.length > 4 ? (
+                      <Link
+                        href={`/application-materials/jobs/${job.id}`}
+                        className="inline-block text-xs text-accent-text underline underline-offset-2"
+                      >
+                        View all {kitMaterials.length} materials in the kit
+                      </Link>
+                    ) : null}
+                  </div>
+                </>
               )}
             </div>
           </div>

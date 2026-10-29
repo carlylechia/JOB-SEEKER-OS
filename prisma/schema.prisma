@@ -1304,6 +1304,8 @@ model ApplicationMaterial {
   @@index([userId, type, updatedAt])
   @@index([userId, status])
   @@index([jobId])
+  /// The application-kit read: every material for one job, newest first.
+  @@index([userId, jobId, updatedAt])
   @@index([supersedesId])
 }
 

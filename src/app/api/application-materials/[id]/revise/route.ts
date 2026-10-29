@@ -22,7 +22,10 @@ import { runGeneration, APPLICATION_MATERIAL_FEATURE } from '@/lib/application-m
 import { resolveApplicationMaterialAiProvider } from '@/lib/application-materials/ai-client';
 import { applicationMaterialErrorResponse } from '@/lib/application-materials/route-errors';
 import { reviseMaterialRequestSchema } from '@/lib/application-materials/requests';
-import { serialiseMaterialDetail } from '@/lib/application-materials/wire';
+import {
+  getStoredMaterialContent,
+  serialiseMaterialDetail,
+} from '@/lib/application-materials/wire';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -78,11 +81,44 @@ export async function POST(request: Request, { params }: Params) {
       // The material being revised must belong to the caller.
       const existing = await prisma.applicationMaterial.findFirst({
         where: { id, userId },
-        select: { id: true, type: true, jobId: true, resumeId: true, revision: true },
+        select: {
+          id: true,
+          type: true,
+          jobId: true,
+          resumeId: true,
+          revision: true,
+          content: true,
+          status: true,
+          generationMeta: true,
+        },
       });
       if (!existing) {
         return apiError('NOT_FOUND', 'Material not found.', { request });
       }
+
+      // The draft the user sees is the draft the model must improve. Legacy
+      // rows stored their verified text only in generation metadata, so read
+      // through the same accessor the editor uses.
+      const sourceDraft = getStoredMaterialContent(existing);
+      if (!sourceDraft.trim()) {
+        return apiError(
+          'VALIDATION_FAILED',
+          'This draft has no text to revise yet. Generate or write it first, then ask for a revision.',
+          { request },
+        );
+      }
+
+      // Preserve the choices the draft was written with unless the caller
+      // explicitly changes them. A revision is an edit of this draft, not a
+      // silent reset to the default tone and length.
+      const storedMeta = existing.generationMeta as
+        | { meta?: { tone?: unknown; length?: unknown } }
+        | null
+        | undefined;
+      const storedTone =
+        typeof storedMeta?.meta?.tone === 'string' ? storedMeta.meta.tone : undefined;
+      const storedLength =
+        typeof storedMeta?.meta?.length === 'string' ? storedMeta.meta.length : undefined;
 
       let result;
       try {
@@ -91,18 +127,17 @@ export async function POST(request: Request, { params }: Params) {
           type: existing.type,
           jobId: existing.jobId ?? null,
           resumeId: existing.resumeId ?? null,
-          title: `${existing.type} (revision)`,
           origin: 'AI_REVISED',
           supersedesId: id,
           force: true,
           route: ROUTE,
           provider: resolveApplicationMaterialAiProvider(),
-          tone: 'PROFESSIONAL',
-          length: 'STANDARD',
-          instructions: null,
+          tone: data.tone ?? storedTone ?? 'PROFESSIONAL',
+          length: data.length ?? storedLength ?? 'STANDARD',
+          instructions: data.instructions,
           conversation: null,
           recipientName: null,
-          sourceDraft: null,
+          sourceDraft,
         });
       } catch (error) {
         return applicationMaterialErrorResponse(error, request);
@@ -115,16 +150,11 @@ export async function POST(request: Request, { params }: Params) {
         });
       }
 
-      // Patch the freshly-created row with the revision's title and content.
-      // The row was created by runGeneration with a placeholder title; the real
-      // content lives in result.material.content.
-      const updated = await prisma.applicationMaterial.update({
-        where: { id: result.summary.id },
-        data: {
-          title: data.instructions.slice(0, 60),
-          content: result.material.content,
-          subject: result.material.subject,
-        },
+      // The service already persisted the canonical title, verified content and
+      // subject, and incremented the revision. Read the row back rather than
+      // patching it here, so the response is exactly what a later GET returns.
+      const updated = await prisma.applicationMaterial.findFirst({
+        where: { id: result.summary.id, userId },
         select: {
           userId: true,
           id: true,
@@ -157,6 +187,11 @@ export async function POST(request: Request, { params }: Params) {
           updatedAt: true,
         },
       });
+      if (!updated) {
+        // The row was created and completed in this request, so this is not a
+        // user state: it means the database changed underneath us.
+        throw new Error('Revision row disappeared after generation.');
+      }
 
       return privateNoStore(
         jsonOk(

@@ -69,6 +69,20 @@ export const MATERIAL_MAX_RESUME_CHARS = 4_000;
 export const MATERIAL_MAX_SOURCE_DRAFT_CHARS = 8_000;
 
 /**
+ * How many earlier materials for the same application are sent as continuity
+ * context. One per material type, newest first: enough to keep a follow-up
+ * consistent with the cover letter and outreach already written, without
+ * turning the prompt into a history of every draft ever generated.
+ */
+export const MATERIAL_MAX_PRIOR_MATERIALS = 5;
+
+/** Ceiling on any one earlier material included as continuity context. */
+export const MATERIAL_MAX_PRIOR_MATERIAL_CHARS = 900;
+
+/** Ceiling on the combined earlier-material block. */
+export const MATERIAL_MAX_PRIOR_CONTEXT_CHARS = 4_200;
+
+/**
  * Hard ceiling on any material the user saves by hand, and on any generated
  * body we will store. A cover letter is not a novel.
  */

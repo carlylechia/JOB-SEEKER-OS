@@ -36,17 +36,27 @@ import {
 import {
   buildMaterialContext,
   type MaterialContext,
+  type PriorMaterialFacts,
 } from './context';
-import { resolveLength, resolveTone, type MaterialLength, type Tone } from './materials';
+import {
+  APPLICATION_GROUNDED_TYPES,
+  resolveLength,
+  resolveTone,
+  type MaterialLength,
+  type Tone,
+} from './materials';
 import {
   MATERIAL_ERROR_MESSAGES,
   MATERIAL_SCHEMA_VERSION,
   MATERIAL_PROMPT_VERSION,
+  materialMetaSchema,
   modelMaterialSchema,
   type MaterialErrorCode,
+  type MaterialMeta,
   type MaterialResult,
   type ModelMaterial,
 } from './schema';
+import { buildApplicationMaterialTitle } from './naming';
 import { verifyMaterial } from './verify';
 import { MATERIAL_PROCESSING_STALE_MS } from './limits';
 import {
@@ -65,6 +75,24 @@ export class JobNotFoundError extends Error {
   constructor() {
     super('Job not found.');
     this.name = 'JobNotFoundError';
+  }
+}
+
+/**
+ * The user's own records cannot honestly support this material yet.
+ *
+ * These are 4xx states, not provider failures: the fix is to move the job to
+ * Applied or record the interview, then try again. Enforced here rather than
+ * only in the UI, because a hidden button is not an authorisation check.
+ */
+export class MaterialStateError extends Error {
+  readonly code: MaterialErrorCode;
+  readonly status = 422;
+
+  constructor(code: MaterialErrorCode) {
+    super(MATERIAL_ERROR_MESSAGES[code]);
+    this.name = 'MaterialStateError';
+    this.code = code;
   }
 }
 
@@ -116,8 +144,11 @@ export type RunGenerationOptions = {
   jobId: string | null;
   /** The resume the user explicitly selected, when there is one. */
   resumeId: string | null;
-  /** User-visible title for the saved material. */
-  title: string;
+  /**
+   * Legacy display hint. Canonical titles are derived from the resolved job and
+   * creation time so they cannot be a truncated instruction or a raw enum.
+   */
+  title?: string;
   /** How this row came into existence. */
   origin: 'AI_GENERATED' | 'AI_REVISED' | 'TEMPLATE_DERIVED' | 'MANUAL';
   /** The material this one replaces, when this is a revision. */
@@ -218,6 +249,9 @@ async function claimMaterialRow(params: {
   origin: 'AI_GENERATED' | 'AI_REVISED' | 'TEMPLATE_DERIVED' | 'MANUAL';
   supersedesId: string | null;
   inputFingerprint: string;
+  jobStage: string | null;
+  appliedAt: Date | null;
+  nextFollowUpAt: Date | null;
 }): Promise<{ row: MaterialRow; claimed: boolean }> {
   const existing = await findMaterialRow({
     userId: params.userId,
@@ -236,6 +270,9 @@ async function claimMaterialRow(params: {
           content: '',
           origin: params.origin as any,
           supersedesId: params.supersedesId,
+          jobStage: params.jobStage,
+          appliedAt: params.appliedAt,
+          nextFollowUpAt: params.nextFollowUpAt,
           inputFingerprint: params.inputFingerprint,
           schemaVersion: MATERIAL_SCHEMA_VERSION,
           promptVersion: MATERIAL_PROMPT_VERSION,
@@ -310,9 +347,20 @@ export async function runGeneration(
     throw new JobNotFoundError();
   }
 
+  assertApplicationGrounding(context, options);
+
+  // The resolved values are what actually reach the prompt, so the fingerprint
+  // must use them too: an invalid tone that falls back to PROFESSIONAL is the
+  // same request as an explicit PROFESSIONAL, and should reuse the same draft.
+  const tone = resolveTone(context.type, options.tone);
+  const length = resolveLength(context.type, options.length);
+
   // 3. Build the input fingerprint over the real context the model will see,
-  //    so two identical requests never diverge.
+  //    so two identical requests never diverge. The prompt version and the
+  //    earlier-material excerpt set are part of the key: a prompt change or a
+  //    new earlier draft legitimately produces a new result.
   const fingerprintInput = {
+    promptVersion: MATERIAL_PROMPT_VERSION,
     type: context.type,
     candidate: {
       version: context.candidate.careerProfileVersion,
@@ -329,8 +377,17 @@ export async function runGeneration(
     application: context.application,
     resume: context.resume,
     intelligence: context.intelligence,
-    tone: options.tone,
-    length: options.length,
+    priorMaterials: context.priorMaterials.map((material) => ({
+      id: material.id,
+      type: material.type,
+      status: material.status,
+      updatedAt: material.updatedAt.toISOString(),
+      title: material.title,
+      subject: material.subject,
+      content: material.content,
+    })),
+    tone,
+    length,
     instructions: options.instructions,
     conversation: options.conversation,
     recipientName: options.recipientName,
@@ -358,14 +415,24 @@ export async function runGeneration(
     }
   }
 
+  const title = buildApplicationMaterialTitle({
+    type: context.type,
+    company: context.job?.company ?? null,
+    role: context.job?.title ?? null,
+    createdAt: new Date(),
+  });
+
   const { row, claimed } = await claimMaterialRow({
     userId,
     type: context.type,
     jobId: context.job ? context.job.id : null,
-    title: options.title,
+    title,
     origin: options.origin,
     supersedesId: options.supersedesId,
     inputFingerprint,
+    jobStage: context.job?.status ?? null,
+    appliedAt: context.job?.dateApplied ?? null,
+    nextFollowUpAt: context.job?.nextFollowUp ?? null,
   });
 
   // Another request for this exact input set is mid-flight.
@@ -421,8 +488,8 @@ export async function runGeneration(
   let model: ModelMaterial;
   try {
     const promptInputs = buildPromptInputs(context, {
-      tone: resolveTone(context.type, options.tone),
-      length: resolveLength(context.type, options.length),
+      tone,
+      length,
       instructions: options.instructions ?? null,
       conversation: options.conversation ?? null,
       recipientName: options.recipientName ?? null,
@@ -452,11 +519,30 @@ export async function runGeneration(
 
   // 7. Verify. Nothing model-written reaches the database until this pass.
   const sources = buildEvidenceSources(context);
+  const thinInputs = Boolean(
+    context.candidate.profileText.length < 100 ||
+      (context.job !== null && !context.job.hasDescription),
+  );
+  const meta = buildMeta(context, {
+    tone,
+    length,
+    inputFingerprint,
+    provider,
+    thinInputs,
+  });
+  // Validate the server-owned metadata against the stored contract before it is
+  // attached to a result. A silent shape drift here would make every later read
+  // of the row fail, so this is treated as a generation failure instead.
+  const parsedMeta = materialMetaSchema.safeParse(meta);
+  if (!parsedMeta.success) {
+    await markFailed(row.id, new ApplicationMaterialAiError('AI_INVALID_RESPONSE', false));
+    return failureFor(row.id, new ApplicationMaterialAiError('AI_INVALID_RESPONSE', false));
+  }
   const verified = verifyMaterial({
     model,
     candidate: context.candidate,
     sources,
-    meta: buildMeta(context),
+    meta: parsedMeta.data,
   });
 
   // 8. Persist.
@@ -465,16 +551,13 @@ export async function runGeneration(
     data: {
       generationStatus: 'COMPLETED',
       content: verified.content,
+      subject: verified.subject,
       generationMeta: verified,
       errorCode: null,
       provider: provider.name,
       model: provider.model,
       creditsConsumed,
-      thinInputs:
-        Boolean(
-          context.candidate.profileText.length < 100 ||
-            (context.job !== null && !context.job.hasDescription),
-        ),
+      thinInputs,
       ...(options.supersedesId ? { revision: { increment: 1 } } : {}),
     },
   });
@@ -525,6 +608,7 @@ function buildPromptInputs(
     applicationBlock: buildApplicationBlock(context.application),
     resumeBlock: context.resume ? context.resume.text : null,
     intelligenceBlock: context.intelligence ? buildIntelligenceBlock(context.intelligence) : null,
+    priorMaterialsBlock: buildPriorMaterialsBlock(context.priorMaterials),
     instructionsBlock: userChoices.instructions,
     conversationBlock: userChoices.conversation,
     templateBlock: null,
@@ -562,6 +646,26 @@ function buildIntelligenceBlock(
   return `Saved job analysis category: ${intelligence.category}. Summary: ${intelligence.summary}.`;
 }
 
+/**
+ * One labelled block of earlier drafts. The prompt already says these are not
+ * evidence; repeating the type and date here keeps each excerpt attributable
+ * without turning it into a source the model can cite.
+ */
+function buildPriorMaterialsBlock(materials: PriorMaterialFacts[]): string | null {
+  if (materials.length === 0) return null;
+
+  return materials
+    .map((material) => {
+      const lines = [
+        `[${material.label} — ${material.status.toLowerCase()} — updated ${material.updatedAt.toISOString().slice(0, 10)}]`,
+      ];
+      if (material.subject) lines.push(`Subject: ${material.subject}`);
+      lines.push(material.content);
+      return lines.join('\n');
+    })
+    .join('\n\n');
+}
+
 function buildEvidenceSources(context: MaterialContext): Record<string, string> {
   const sources: Record<string, string> = {};
   if (context.job?.description) sources.JOB_DESCRIPTION = context.job.description;
@@ -573,27 +677,67 @@ function buildEvidenceSources(context: MaterialContext): Record<string, string> 
   return sources;
 }
 
-function buildMeta(context: MaterialContext) {
+function buildMeta(
+  context: MaterialContext,
+  options: {
+    tone: Tone;
+    length: MaterialLength;
+    inputFingerprint: string;
+    provider: ApplicationMaterialAiProvider;
+    thinInputs: boolean;
+  },
+): MaterialMeta {
   return {
     schemaVersion: MATERIAL_SCHEMA_VERSION,
     promptVersion: MATERIAL_PROMPT_VERSION,
-    inputFingerprint: '',
+    inputFingerprint: options.inputFingerprint,
     generatedAt: new Date().toISOString(),
-    provider: 'openai',
-    model: 'unknown',
-    tone: 'PROFESSIONAL',
-    length: 'STANDARD',
+    provider: options.provider.name,
+    model: options.provider.model,
+    tone: options.tone,
+    length: options.length,
     hadJobDescription: Boolean(context.job?.hasDescription),
     hadConfirmedCareerProfile: context.candidate.confirmed,
     hadSelectedResume: Boolean(context.resume),
     hadTemplate: false,
-    applicationContext: context.application.stage as
-      | 'NONE'
-      | 'SUBMITTED'
-      | 'INTERVIEW_SCHEDULED'
-      | 'INTERVIEW_RECORDED',
-    thinInputs: false,
+    hadPriorMaterials: context.priorMaterials.length > 0,
+    priorMaterialCount: context.priorMaterials.length,
+    applicationContext: context.application.stage,
+    thinInputs: options.thinInputs,
   };
+}
+
+/**
+ * Refuse a material whose premise is not true yet.
+ *
+ * The workspace hides these actions and explains why, but a hidden button is
+ * not an authorisation check: a caller can post to the API directly. The guard
+ * lives here, before the fingerprint, the claim and the provider call, so a
+ * refused request costs nothing.
+ *
+ * A thank-you note is different from the other grounded types. It is allowed
+ * without a recorded interview only when the user supplied their own notes,
+ * because then the draft has something real to refer to and the prompt is told
+ * those notes are unverified. With neither, the only honest answer is that we
+ * cannot write it.
+ */
+function assertApplicationGrounding(
+  context: MaterialContext,
+  options: Pick<RunGenerationOptions, 'conversation'>,
+): void {
+  if (!APPLICATION_GROUNDED_TYPES.includes(context.type)) return;
+
+  if (context.type === 'INTERVIEW_THANK_YOU') {
+    const hasOwnNotes = Boolean(options.conversation?.trim());
+    if (!context.application.hasInterview && !hasOwnNotes) {
+      throw new MaterialStateError('NO_INTERVIEW_CONTEXT');
+    }
+    return;
+  }
+
+  if (!context.application.hasApplied) {
+    throw new MaterialStateError('NOT_APPLIED_YET');
+  }
 }
 
 async function resolveProfileVersion(userId: string): Promise<number> {

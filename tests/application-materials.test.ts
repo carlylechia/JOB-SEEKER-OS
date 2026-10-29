@@ -14,6 +14,7 @@ import {
   APPLICATION_MATERIAL_FEATURE,
   runGeneration,
   JobNotFoundError,
+  MaterialStateError,
   DuplicateGenerationInFlightError,
   type RunGenerationResult,
 } from '@/lib/application-materials/service';
@@ -39,6 +40,17 @@ import type { ModelMaterial } from '@/lib/application-materials/schema';
 import { buildMaterialContext } from '@/lib/application-materials/context';
 import { getStoredMaterialContent } from '@/lib/application-materials/wire';
 import { buildApplicationMaterialTitle } from '@/lib/application-materials/naming';
+import {
+  ApplicationWorkspaceNotFoundError,
+  loadApplicationWorkspace,
+} from '@/lib/application-materials/workspace-server';
+import {
+  buildKitSteps,
+  groupLibraryMaterials,
+  groupWorkspaceMaterials,
+  resolveMaterialAvailability,
+  type WorkspaceMaterialSummary,
+} from '@/lib/application-materials/workspace';
 import { createResume, updateResume } from '@/lib/resume-builder/documents';
 import { typicalContent } from './resume-builder-fixtures';
 
@@ -212,6 +224,37 @@ async function setup(opts: {
   }
 
   return { user, job };
+}
+
+/** Persist a completed material row directly, for context/workspace tests. */
+async function createStoredMaterial(params: {
+  userId: string;
+  type: string;
+  fingerprint: string;
+  title?: string;
+  content?: string;
+  jobId?: string | null;
+  status?: 'DRAFT' | 'READY' | 'ARCHIVED';
+  origin?: 'AI_GENERATED' | 'AI_REVISED' | 'MANUAL';
+  generationStatus?: 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  resumeId?: string | null;
+}) {
+  return prisma.applicationMaterial.create({
+    data: {
+      userId: params.userId,
+      type: params.type as any,
+      title: params.title ?? `${params.type} draft`,
+      content: params.content ?? 'Stored content',
+      jobId: params.jobId ?? null,
+      resumeId: params.resumeId ?? null,
+      status: (params.status ?? 'DRAFT') as any,
+      origin: (params.origin ?? 'AI_GENERATED') as any,
+      inputFingerprint: params.fingerprint,
+      schemaVersion: 1,
+      promptVersion: 2,
+      generationStatus: params.generationStatus ?? 'COMPLETED',
+    },
+  });
 }
 
 beforeEach(() => {
@@ -464,6 +507,7 @@ describe('generation', () => {
       where: { id: (result as { summary: { id: string } }).summary.id },
     });
     expect(stored.content).toBe(material.content);
+    expect(stored.subject).toBe('Application: Backend Engineer');
     expect(stored.status).toBe('DRAFT');
     expect(provider.calls).toHaveLength(1);
     expect((result as { creditsConsumed: number }).creditsConsumed).toBe(1);
@@ -606,13 +650,16 @@ describe('generation', () => {
     expect((result as RunGenerationResult).outcome).toBe('COMPLETED');
   });
 
-  it('requires application context for a follow-up', async () => {
+  it('refuses a follow-up for a role that has not been applied to', async () => {
     const { user, job } = await setup({ plan: 'PRO' });
     // Reset to LEAD (not applied)
-    await prisma.jobLead.update({ where: { id: job.id }, data: { status: 'LEAD', dateApplied: null } });
+    await prisma.jobLead.update({
+      where: { id: job.id },
+      data: { status: 'LEAD', dateApplied: null, nextFollowUp: null },
+    });
 
     const provider = fakeProvider();
-    const result = await runGeneration({
+    const rejection = await runGeneration({
       userId: user.id,
       type: 'APPLICATION_FOLLOW_UP',
       jobId: job.id,
@@ -628,10 +675,79 @@ describe('generation', () => {
       conversation: null,
       recipientName: null,
       sourceDraft: null,
+    }).catch((error: unknown) => error);
+
+    // A hidden button is not an authorisation check: the service refuses too.
+    expect(rejection).toBeInstanceOf(MaterialStateError);
+    if (rejection instanceof MaterialStateError) {
+      expect(rejection.code).toBe('NOT_APPLIED_YET');
+      expect(rejection.status).toBe(422);
+    }
+    // Refused before any provider call or credit is spent.
+    expect(provider.calls).toHaveLength(0);
+    expect(await getUsage(user.id, APPLICATION_MATERIAL_FEATURE)).toBe(0);
+  });
+
+  it('refuses an interview thank-you when no interview and no notes exist', async () => {
+    const { user, job } = await setup({ plan: 'PRO' });
+    const provider = fakeProvider();
+
+    const rejection = await runGeneration({
+      userId: user.id,
+      type: 'INTERVIEW_THANK_YOU',
+      jobId: job.id,
+      resumeId: null,
+      title: 'Thank-you note',
+      origin: 'AI_GENERATED',
+      supersedesId: null,
+      route: '/api/application-materials/generate',
+      provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
+    }).catch((error: unknown) => error);
+
+    expect(rejection).toBeInstanceOf(MaterialStateError);
+    if (rejection instanceof MaterialStateError) {
+      expect(rejection.code).toBe('NO_INTERVIEW_CONTEXT');
+    }
+    expect(provider.calls).toHaveLength(0);
+  });
+
+  it('writes a thank-you from the user’s own notes when no interview is recorded', async () => {
+    const { user, job } = await setup({ plan: 'PRO' });
+    const provider = fakeProvider({
+      material: {
+        opening: 'Thank you for the conversation about the Backend Engineer role.',
+        body: [{ heading: null, text: 'I appreciated discussing the platform migration.' }],
+        closing: 'I hope to speak again soon.',
+      },
     });
 
-    // Should either fail with NOT_APPLIED_YET or produce a draft flagged as missing context.
-    expect((result as RunGenerationResult).outcome).toBeDefined();
+    const result = await runGeneration({
+      userId: user.id,
+      type: 'INTERVIEW_THANK_YOU',
+      jobId: job.id,
+      resumeId: null,
+      title: 'Thank-you note',
+      origin: 'AI_GENERATED',
+      supersedesId: null,
+      route: '/api/application-materials/generate',
+      provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: 'We spoke about the platform migration and the on-call rotation.',
+      recipientName: null,
+      sourceDraft: null,
+    });
+
+    expect((result as RunGenerationResult).outcome).toBe('COMPLETED');
+    expect(provider.calls).toHaveLength(1);
+    expect(provider.calls[0].userPrompt).toContain('platform migration');
   });
 
   it('produces an interview thank-you with real interview context', async () => {
@@ -933,6 +1049,123 @@ describe('generation', () => {
   });
 });
 
+// ─── Continuity between a job’s materials ──────────────────────────────────
+
+describe('application continuity', () => {
+  it('feeds earlier materials from the same application into the next draft', async () => {
+    const { user, job } = await setup({ plan: 'PRO' });
+    const provider = fakeProvider();
+
+    await runGeneration({
+      userId: user.id,
+      type: 'COVER_LETTER',
+      jobId: job.id,
+      resumeId: null,
+      origin: 'AI_GENERATED',
+      supersedesId: null,
+      route: '/api/application-materials/generate',
+      provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
+    });
+
+    const result = await runGeneration({
+      userId: user.id,
+      type: 'RECRUITER_OUTREACH',
+      jobId: job.id,
+      resumeId: null,
+      origin: 'AI_GENERATED',
+      supersedesId: null,
+      route: '/api/application-materials/generate',
+      provider,
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: null,
+      conversation: null,
+      recipientName: null,
+      sourceDraft: null,
+    });
+
+    expect((result as RunGenerationResult).outcome).toBe('COMPLETED');
+    expect(provider.calls).toHaveLength(2);
+
+    // The second prompt carries the first draft as labelled continuity context,
+    // not as candidate evidence.
+    const secondPrompt = provider.calls[1].userPrompt;
+    expect(secondPrompt).toContain('EARLIER_MATERIALS');
+    expect(secondPrompt).toContain('Cover letter');
+    expect(secondPrompt).toContain('Subject: Application: Backend Engineer');
+    expect(secondPrompt).toContain('These are NOT evidence about the candidate');
+
+    const stored = await prisma.applicationMaterial.findUniqueOrThrow({
+      where: { id: (result as { summary: { id: string } }).summary.id },
+    });
+    const meta = (
+      stored.generationMeta as {
+        meta: { hadPriorMaterials: boolean; priorMaterialCount: number };
+      }
+    ).meta;
+    expect(meta.hadPriorMaterials).toBe(true);
+    expect(meta.priorMaterialCount).toBe(1);
+  });
+
+  it('excludes the current type and archived drafts from continuity', async () => {
+    const { user, job } = await setup({ plan: 'PRO' });
+
+    await createStoredMaterial({
+      userId: user.id,
+      type: 'COVER_LETTER',
+      jobId: job.id,
+      fingerprint: 'continuity-cover',
+      title: 'Cover letter — stored',
+      content: 'COVER-SPECIFIC-TEXT',
+    });
+    await createStoredMaterial({
+      userId: user.id,
+      type: 'RECRUITER_OUTREACH',
+      jobId: job.id,
+      fingerprint: 'continuity-outreach',
+      title: 'Recruiter message — stored',
+      content: 'OUTREACH-SPECIFIC-TEXT',
+    });
+    await createStoredMaterial({
+      userId: user.id,
+      type: 'LINKEDIN_CONNECTION',
+      jobId: job.id,
+      fingerprint: 'continuity-linkedin',
+      title: 'Connection note — archived',
+      content: 'ARCHIVED-SPECIFIC-TEXT',
+      status: 'ARCHIVED',
+    });
+
+    const coverContext = await buildMaterialContext({
+      userId: user.id,
+      type: 'COVER_LETTER',
+      jobId: job.id,
+      resumeId: null,
+      profileVersion: 3,
+    });
+    expect(coverContext.priorMaterials).toHaveLength(1);
+    expect(coverContext.priorMaterials[0].type).toBe('RECRUITER_OUTREACH');
+    expect(coverContext.priorMaterials[0].content).toContain('OUTREACH-SPECIFIC-TEXT');
+
+    const outreachContext = await buildMaterialContext({
+      userId: user.id,
+      type: 'RECRUITER_OUTREACH',
+      jobId: job.id,
+      resumeId: null,
+      profileVersion: 3,
+    });
+    expect(outreachContext.priorMaterials).toHaveLength(1);
+    expect(outreachContext.priorMaterials[0].type).toBe('COVER_LETTER');
+    expect(outreachContext.priorMaterials[0].content).toContain('COVER-SPECIFIC-TEXT');
+  });
+});
+
 // ─── Verification ─────────────────────────────────────────────────────────
 
 describe('verification', () => {
@@ -1053,7 +1286,7 @@ describe('persistence', () => {
         role: 'Backend Engineer',
         createdAt: new Date('2026-10-24T00:53:46.867Z'),
       }),
-    ).toBe('Cover letter — Northwind — Backend Engineer — 2026-10-24T00:53:46.867Z');
+    ).toBe('Cover letter — Northwind — Backend Engineer — 24 Oct 2026, 00:53 UTC');
   });
 
   it('edits a material and bumps editVersion', async () => {
@@ -1166,6 +1399,345 @@ describe('persistence', () => {
     await saveMaterial(user.id);
 
     expect(await getUsage(user.id, APPLICATION_MATERIAL_FEATURE)).toBe(0);
+  });
+});
+
+// ─── Application-kit workspace ─────────────────────────────────────────────
+
+function workspaceMaterial(
+  overrides: Partial<WorkspaceMaterialSummary> = {},
+): WorkspaceMaterialSummary {
+  return {
+    id: 'material-1',
+    type: 'COVER_LETTER',
+    title: 'Cover letter',
+    subject: null,
+    status: 'DRAFT',
+    origin: 'AI_GENERATED',
+    generationStatus: 'COMPLETED',
+    revision: 1,
+    editVersion: 1,
+    resumeId: null,
+    resumeName: null,
+    createdAt: '2026-10-01T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z',
+    errorCode: null,
+    thinInputs: false,
+    ...overrides,
+  };
+}
+
+describe('application kit helpers', () => {
+  it('groups a job’s materials by type, newest first, and keeps archived ones visible', () => {
+    const groups = groupWorkspaceMaterials([
+      workspaceMaterial({
+        id: 'older-archived',
+        status: 'ARCHIVED',
+        updatedAt: '2026-10-01T00:00:00.000Z',
+      }),
+      workspaceMaterial({
+        id: 'newer-active',
+        updatedAt: '2026-10-03T00:00:00.000Z',
+      }),
+      workspaceMaterial({
+        id: 'recruiter',
+        type: 'RECRUITER_OUTREACH',
+        updatedAt: '2026-10-02T00:00:00.000Z',
+      }),
+    ]);
+
+    expect(groups).toHaveLength(6);
+    const cover = groups.find((group) => group.type === 'COVER_LETTER');
+    expect(cover?.latest?.id).toBe('newer-active');
+    expect(cover?.materials.map((material) => material.id)).toEqual([
+      'newer-active',
+      'older-archived',
+    ]);
+    expect(cover?.activeCount).toBe(1);
+    expect(cover?.archivedCount).toBe(1);
+    expect(groups.find((group) => group.type === 'RECRUITER_OUTREACH')?.latest?.id).toBe(
+      'recruiter',
+    );
+  });
+
+  it('falls back to the newest archived draft when nothing is active', () => {
+    const groups = groupWorkspaceMaterials([
+      workspaceMaterial({
+        id: 'archived-only',
+        status: 'ARCHIVED',
+        updatedAt: '2026-10-04T00:00:00.000Z',
+      }),
+    ]);
+    expect(groups.find((group) => group.type === 'COVER_LETTER')?.latest?.id).toBe(
+      'archived-only',
+    );
+  });
+
+  it('locks application-grounded types until the pipeline supports the claim', () => {
+    const followUp = resolveMaterialAvailability({
+      type: 'APPLICATION_FOLLOW_UP',
+      hasApplied: false,
+      hasInterview: false,
+      hasContacts: false,
+    });
+    expect(followUp.canGenerate).toBe(false);
+    expect(followUp.reason).toContain('Applied');
+
+    const thankYou = resolveMaterialAvailability({
+      type: 'INTERVIEW_THANK_YOU',
+      hasApplied: false,
+      hasInterview: false,
+      hasContacts: false,
+    });
+    expect(thankYou.canGenerate).toBe(true);
+    expect(thankYou.note).toContain('notes');
+
+    const outreach = resolveMaterialAvailability({
+      type: 'RECRUITER_OUTREACH',
+      hasApplied: false,
+      hasInterview: false,
+      hasContacts: false,
+    });
+    expect(outreach.canGenerate).toBe(true);
+    expect(outreach.note).toContain('contact');
+  });
+
+  it('summarises kit progress without calling a follow-up missing before applying', () => {
+    const resumes = [
+      {
+        id: 'resume-1',
+        name: 'Backend resume',
+        revision: 1,
+        origin: 'BLANK',
+        targetJobId: 'job-1',
+        updatedAt: '2026-10-01T00:00:00.000Z',
+        usedByMaterials: 0,
+      },
+    ];
+
+    const beforeApplying = buildKitSteps({
+      jobId: 'job-1',
+      materials: [workspaceMaterial({ type: 'COVER_LETTER' })],
+      resumes,
+      hasApplied: false,
+      hasInterview: false,
+    });
+    expect(beforeApplying.find((step) => step.key === 'RESUME')?.complete).toBe(true);
+    expect(beforeApplying.find((step) => step.key === 'COVER_LETTER')?.complete).toBe(true);
+    expect(beforeApplying.find((step) => step.key === 'FOLLOW_UP')?.complete).toBe(false);
+    expect(beforeApplying.find((step) => step.key === 'FOLLOW_UP')?.detail).toContain(
+      'after you apply',
+    );
+
+    const afterInterview = buildKitSteps({
+      jobId: 'job-1',
+      materials: [workspaceMaterial({ type: 'COVER_LETTER' })],
+      resumes,
+      hasApplied: true,
+      hasInterview: true,
+    });
+    const followUp = afterInterview.find((step) => step.key === 'FOLLOW_UP');
+    expect(followUp?.label).toBe('Thank-you note');
+    expect(followUp?.detail).toContain('thank-you');
+  });
+
+  it('groups the library into job kits plus general materials', () => {
+    const job = { id: 'job-1', title: 'Backend Engineer', company: 'Northwind', status: 'APPLIED' };
+    const grouped = groupLibraryMaterials([
+      {
+        id: 'cover',
+        type: 'COVER_LETTER',
+        title: 'Cover letter',
+        status: 'DRAFT',
+        generationStatus: 'COMPLETED',
+        jobId: 'job-1',
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-03T00:00:00.000Z',
+        job,
+      },
+      {
+        id: 'follow',
+        type: 'APPLICATION_FOLLOW_UP',
+        title: 'Follow-up',
+        status: 'READY',
+        generationStatus: 'COMPLETED',
+        jobId: 'job-1',
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-02T00:00:00.000Z',
+        job,
+      },
+      {
+        id: 'general',
+        type: 'RECRUITER_OUTREACH',
+        title: 'Recruiter message',
+        status: 'DRAFT',
+        generationStatus: 'COMPLETED',
+        jobId: null,
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-04T00:00:00.000Z',
+      },
+      {
+        id: 'deleted-job',
+        type: 'COVER_LETTER',
+        title: 'Cover letter to a removed job',
+        status: 'READY',
+        generationStatus: 'COMPLETED',
+        jobId: 'job-deleted',
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-05T00:00:00.000Z',
+        job: {
+          id: 'job-deleted',
+          title: 'Platform Engineer',
+          company: 'GoneCo',
+          status: 'ARCHIVED',
+          deletedAt: '2026-10-05T00:00:00.000Z',
+        },
+      },
+    ]);
+
+    expect(grouped.kits).toHaveLength(1);
+    expect(grouped.kits[0].jobId).toBe('job-1');
+    expect(grouped.kits[0].materials.map((material) => material.id)).toEqual(['cover', 'follow']);
+    expect(grouped.kits[0].latestAt).toBe('2026-10-03T00:00:00.000Z');
+    expect(grouped.kits[0].draftCount).toBe(1);
+    expect(grouped.kits[0].readyCount).toBe(1);
+    expect(grouped.kits[0].types).toEqual(['COVER_LETTER', 'APPLICATION_FOLLOW_UP']);
+    // A soft-deleted job has no kit page, so its drafts stay reachable under
+    // general materials rather than behind a link that would 404.
+    expect(grouped.general.map((material) => material.id)).toEqual(['deleted-job', 'general']);
+  });
+});
+
+describe('application workspace loader', () => {
+  it('loads one job’s materials and linked resumes only', async () => {
+    const { user, job } = await setup({ plan: 'PRO' });
+    const resume = await createResume({
+      userId: user.id,
+      input: { from: 'BLANK' },
+      limit: null,
+    });
+    await prisma.structuredResume.update({
+      where: { id: resume.id },
+      data: { targetJobId: job.id },
+    });
+
+    const cover = await createStoredMaterial({
+      userId: user.id,
+      type: 'COVER_LETTER',
+      jobId: job.id,
+      resumeId: resume.id,
+      fingerprint: 'workspace-cover',
+      title: 'Cover letter — this job',
+      status: 'READY',
+    });
+    const followUp = await createStoredMaterial({
+      userId: user.id,
+      type: 'APPLICATION_FOLLOW_UP',
+      jobId: job.id,
+      fingerprint: 'workspace-follow-up',
+      title: 'Follow-up — this job',
+    });
+
+    // A material for another job must never appear in this kit.
+    const otherJob = await prisma.jobLead.create({
+      data: {
+        userId: user.id,
+        company: 'OtherCo',
+        title: 'Platform Engineer',
+        jobDescription: 'Another role.',
+        status: 'LEAD',
+        score: {},
+        checklist: {},
+        contacts: [],
+        interviews: [],
+        prepPack: {},
+      },
+    });
+    await createStoredMaterial({
+      userId: user.id,
+      type: 'COVER_LETTER',
+      jobId: otherJob.id,
+      fingerprint: 'workspace-other-job',
+      title: 'Cover letter — other job',
+    });
+
+    const workspace = await loadApplicationWorkspace({
+      userId: user.id,
+      jobId: job.id,
+    });
+
+    expect(workspace.job.id).toBe(job.id);
+    expect(workspace.job.title).toBe('Backend Engineer');
+    expect(workspace.materials.map((material) => material.id).sort()).toEqual(
+      [cover.id, followUp.id].sort(),
+    );
+    expect(workspace.summary.totalMaterials).toBe(2);
+    expect(workspace.summary.activeMaterials).toBe(2);
+    expect(workspace.summary.readyCount).toBe(1);
+    expect(workspace.summary.resumeCount).toBe(1);
+    expect(workspace.summary.tailoredResumeCount).toBe(1);
+    expect(workspace.summary.hasApplied).toBe(true);
+    expect(workspace.availability.COVER_LETTER.canGenerate).toBe(true);
+    expect(workspace.availability.APPLICATION_FOLLOW_UP.canGenerate).toBe(true);
+
+    const linkedResume = workspace.resumes.find((item) => item.id === resume.id);
+    expect(linkedResume?.targetJobId).toBe(job.id);
+    expect(linkedResume?.usedByMaterials).toBe(1);
+    expect(workspace.materials.find((material) => material.id === cover.id)?.resumeName).toBe(
+      resume.name,
+    );
+  });
+
+  it('does not disclose another user’s job or a deleted job', async () => {
+    const { user } = await setup({ plan: 'PRO' });
+    const other = await createUser();
+    userIds.push(other.id);
+    const foreignJob = await prisma.jobLead.create({
+      data: {
+        userId: other.id,
+        company: 'OtherCo',
+        title: 'Engineer',
+        jobDescription: 'Someone else’s private role.',
+        status: 'APPLIED',
+        score: {},
+        checklist: {},
+        contacts: [],
+        interviews: [],
+        prepPack: {},
+      },
+    });
+
+    await expect(
+      loadApplicationWorkspace({ userId: user.id, jobId: foreignJob.id }),
+    ).rejects.toBeInstanceOf(ApplicationWorkspaceNotFoundError);
+
+    const second = await setup({ plan: 'PRO' });
+    await prisma.jobLead.update({
+      where: { id: second.job.id },
+      data: { deletedAt: new Date('2026-10-01T00:00:00.000Z') },
+    });
+    await expect(
+      loadApplicationWorkspace({ userId: second.user.id, jobId: second.job.id }),
+    ).rejects.toBeInstanceOf(ApplicationWorkspaceNotFoundError);
+  });
+
+  it('reports grounding availability from the job’s real pipeline record', async () => {
+    const { user, job } = await setup({
+      plan: 'PRO',
+      job: { status: 'LEAD', dateApplied: null, nextFollowUp: null },
+    });
+
+    const workspace = await loadApplicationWorkspace({
+      userId: user.id,
+      jobId: job.id,
+    });
+
+    expect(workspace.summary.hasApplied).toBe(false);
+    expect(workspace.availability.COVER_LETTER.canGenerate).toBe(true);
+    expect(workspace.availability.APPLICATION_FOLLOW_UP.canGenerate).toBe(false);
+    expect(workspace.availability.APPLICATION_STATUS_CHECK.canGenerate).toBe(false);
+    expect(workspace.availability.INTERVIEW_THANK_YOU.canGenerate).toBe(true);
+    expect(workspace.availability.INTERVIEW_THANK_YOU.note).toContain('notes');
   });
 });
 

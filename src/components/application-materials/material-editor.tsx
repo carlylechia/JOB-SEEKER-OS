@@ -3,8 +3,13 @@
 /**
  * Material editor.
  *
- * Handles creating a new draft, revising an existing one, and editing a saved
- * draft. Generation is an explicit user action; nothing is sent externally.
+ * Handles creating a new draft and reviewing an existing one. Generation and
+ * revision are explicit user actions; nothing is sent externally.
+ *
+ * A material belongs to the application kit for the job it targets. Editing a
+ * saved draft therefore keeps its job and resume fixed, and "ask for a
+ * revision" creates a new row chained through `supersedesId` instead of
+ * overwriting the draft the user already reviewed.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -15,6 +20,7 @@ import { ResumeLayoutPreview } from '@/components/resume-builder/resume-layout-p
 import type { LayoutDocument } from '@/lib/resume-builder/layout';
 import {
   MATERIAL_TYPES,
+  isMaterialType,
   type MaterialType,
   type MaterialLength,
   type Tone,
@@ -23,19 +29,15 @@ import {
   lengthsFor,
   resolveTone,
   resolveLength,
-  TONES,
-  LENGTHS,
   TONE_LABELS,
   LENGTH_LABELS,
 } from '@/lib/application-materials/materials';
-import { downloadHeaders } from '@/lib/application-materials/download';
 
 type JobOption = { id: string; title: string; company: string; status: string };
 type ResumeOption = { id: string; name: string };
 
-type EditorMode = 'create' | 'edit';
-
 type StoredMaterialResult = {
+  meta?: { tone?: unknown; length?: unknown };
   greeting?: string;
   senderName?: string;
   signOff?: string;
@@ -54,8 +56,19 @@ type FormValues = {
   instructions: string;
   recipientName: string;
   conversation: string;
-  sourceDraft: string;
 };
+
+const DEFAULT_TYPE: MaterialType = 'COVER_LETTER';
+
+/** Read a short opaque id from the URL without trusting it. */
+function queryId(value: string | null): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed.slice(0, 64) : null;
+}
+
+function queryType(value: string | null): MaterialType {
+  return isMaterialType(value) ? value : DEFAULT_TYPE;
+}
 
 async function fetchJobs(): Promise<JobOption[]> {
   const res = await fetch('/api/bootstrap', { cache: 'no-store' });
@@ -93,30 +106,31 @@ export default function MaterialEditor() {
   const routeParams = useParams<{ id?: string }>();
   const materialIdFromUrl =
     (typeof routeParams?.id === 'string' && routeParams.id) || searchParams.get('id') || null;
-  const [mode, setMode] = useState<EditorMode>(materialIdFromUrl ? 'edit' : 'create');
+  const mode: 'create' | 'edit' = materialIdFromUrl ? 'edit' : 'create';
+  const revisionCreated = searchParams.get('revised') === '1';
 
-  useEffect(() => {
-    if (materialIdFromUrl) setMode('edit');
-  }, [materialIdFromUrl]);
   const [jobs, setJobs] = useState<JobOption[]>([]);
   const [jobsLoading, setJobsLoading] = useState(true);
   const [resumes, setResumes] = useState<ResumeOption[]>([]);
   const [resumesLoading, setResumesLoading] = useState(true);
   const [resumeLoadError, setResumeLoadError] = useState<string | null>(null);
 
-  const [form, setForm] = useState<FormValues>({
-    type: 'COVER_LETTER',
-    jobId: searchParams.get('job') || null,
-    resumeId: null,
-    tone: 'PROFESSIONAL',
-    length: 'STANDARD',
-    instructions: '',
-    recipientName: '',
-    conversation: '',
-    sourceDraft: '',
+  const [form, setForm] = useState<FormValues>(() => {
+    const type = queryType(searchParams.get('type'));
+    return {
+      type,
+      jobId: queryId(searchParams.get('job')),
+      resumeId: queryId(searchParams.get('resume')),
+      tone: 'PROFESSIONAL',
+      length: 'STANDARD',
+      instructions: '',
+      recipientName: '',
+      conversation: '',
+    };
   });
 
   const [generating, setGenerating] = useState(false);
+  const [revising, setRevising] = useState(false);
   const [copying, setCopying] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -134,6 +148,7 @@ export default function MaterialEditor() {
     claims: Array<{ source: string; claim: string; status: string; note: string | null }>;
   } | null>(null);
   const [saved, setSaved] = useState(false);
+  const [contentDirty, setContentDirty] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [previewLayout, setPreviewLayout] = useState<LayoutDocument | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -148,11 +163,39 @@ export default function MaterialEditor() {
     form.type === 'APPLICATION_FOLLOW_UP' ||
     form.type === 'APPLICATION_STATUS_CHECK' ||
     form.type === 'INTERVIEW_THANK_YOU';
-  const supportsJob = Boolean(meta?.requiresJob);
+  const supportsJob = Boolean(meta?.fields.includes('JOB'));
   const supportsPdf = Boolean(meta?.supportsPdf);
-  const supportsSubject = Boolean(meta?.supportsSubject);
+  const showInterviewNotes = Boolean(meta?.fields.includes('INTERVIEW_NOTES'));
+  const showSharedContext =
+    !showInterviewNotes &&
+    (meta?.fields.includes('CONVERSATION') || meta?.fields.includes('SHARED_CONTEXT'));
+  const showRecipient =
+    meta?.fields.includes('RECIPIENT_NAME') || meta?.fields.includes('CONTACT');
+
+  const selectedJob = useMemo(
+    () => jobs.find((job) => job.id === form.jobId) ?? null,
+    [jobs, form.jobId],
+  );
+  const selectedResume = useMemo(
+    () => resumes.find((resume) => resume.id === form.resumeId) ?? null,
+    [resumes, form.resumeId],
+  );
 
   const contentRef = useRef<HTMLTextAreaElement>(null);
+
+  const loadPreview = useCallback(async (id: string) => {
+    setPreviewLoading(true);
+    try {
+      const res = await fetch(`/api/application-materials/${id}/preview`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('preview failed');
+      const json = await res.json();
+      setPreviewLayout(json.layout ?? null);
+    } catch {
+      setPreviewLayout(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     void (async () => {
@@ -173,10 +216,32 @@ export default function MaterialEditor() {
       .finally(() => setResumesLoading(false));
   }, []);
 
-  // When the type changes, reset the job if the new type doesn't need one.
+  // A query id that does not name one of the user's own records must not linger
+  // in the form: sending it would turn a typo into a 404 at generation time.
   useEffect(() => {
-    if (!supportsJob) setForm((prev) => ({ ...prev, jobId: null }));
-  }, [form.type, supportsJob]);
+    if (mode !== 'create' || jobsLoading || !form.jobId) return;
+    if (jobs.some((job) => job.id === form.jobId)) return;
+    const stale = form.jobId;
+    setForm((prev) => (prev.jobId === stale ? { ...prev, jobId: null } : prev));
+  }, [mode, jobsLoading, jobs, form.jobId]);
+
+  useEffect(() => {
+    if (mode !== 'create' || resumesLoading || !form.resumeId) return;
+    if (resumes.some((resume) => resume.id === form.resumeId)) return;
+    const stale = form.resumeId;
+    setForm((prev) => (prev.resumeId === stale ? { ...prev, resumeId: null } : prev));
+  }, [mode, resumesLoading, resumes, form.resumeId]);
+
+  // Keep tone and length valid when the type changes. A LinkedIn note has no
+  // FORMAL tone or DETAILED length, and silently sending a value the server
+  // will discard would leave no button looking selected.
+  useEffect(() => {
+    setForm((prev) => {
+      const tone = resolveTone(prev.type, prev.tone);
+      const length = resolveLength(prev.type, prev.length);
+      return tone === prev.tone && length === prev.length ? prev : { ...prev, tone, length };
+    });
+  }, [form.type]);
 
   // When in edit mode, load the existing material.
   useEffect(() => {
@@ -195,11 +260,17 @@ export default function MaterialEditor() {
         }
         if (cancelled) return;
         const stored = (json.data ?? {}) as StoredMaterialResult;
+        const storedType = isMaterialType(json.type) ? json.type : DEFAULT_TYPE;
         setForm((prev) => ({
           ...prev,
-          type: json.type as MaterialType,
-          jobId: json.jobId ?? null,
-          resumeId: json.resumeId ?? null,
+          type: storedType,
+          jobId: typeof json.jobId === 'string' ? json.jobId : null,
+          resumeId: typeof json.resumeId === 'string' ? json.resumeId : null,
+          tone: resolveTone(storedType, stored.meta?.tone),
+          length: resolveLength(storedType, stored.meta?.length),
+          instructions: '',
+          recipientName: '',
+          conversation: '',
         }));
         setResult({
           content: json.content ?? '',
@@ -215,6 +286,7 @@ export default function MaterialEditor() {
         setMaterialId(json.id);
         setEditVersion(json.editVersion ?? 1);
         setSaved(json.status === 'READY');
+        setContentDirty(false);
         void loadPreview(json.id);
       } catch {
         if (!cancelled) setError('Could not load this application material. Please try again.');
@@ -225,7 +297,7 @@ export default function MaterialEditor() {
     return () => {
       cancelled = true;
     };
-  }, [mode, materialIdFromUrl]);
+  }, [mode, materialIdFromUrl, loadPreview]);
 
   const handleGenerate = useCallback(async () => {
     setError(null);
@@ -237,16 +309,16 @@ export default function MaterialEditor() {
       const res = await fetch('/api/application-materials/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({
           type: form.type,
           jobId: form.jobId,
           resumeId: form.resumeId,
           tone: form.tone,
           length: form.length,
-          instructions: form.instructions || undefined,
-          conversation: form.conversation || undefined,
-          recipientName: form.recipientName || undefined,
-          sourceDraft: form.sourceDraft || undefined,
+          instructions: form.instructions.trim() || undefined,
+          conversation: form.conversation.trim() || undefined,
+          recipientName: form.recipientName.trim() || undefined,
         }),
       });
 
@@ -279,13 +351,63 @@ export default function MaterialEditor() {
       });
       setMaterialId(json.materialId);
       setSaved(false);
+      setContentDirty(false);
       if (json.materialId) void loadPreview(json.materialId);
     } catch {
       setError('Generation failed. Please try again.');
     } finally {
       setGenerating(false);
     }
-  }, [form]);
+  }, [form, loadPreview]);
+
+  const handleRevise = useCallback(async () => {
+    if (!materialId) return;
+
+    if (contentDirty) {
+      setError('Save your edits first so the revision starts from the text you see.');
+      return;
+    }
+
+    const instructions = form.instructions.trim();
+    if (!instructions) {
+      setError('Tell us what you would like to change before asking for a revision.');
+      return;
+    }
+
+    setRevising(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/application-materials/${materialId}/revise`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          id: materialId,
+          instructions,
+          tone: form.tone,
+          length: form.length,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.error?.message ?? 'Could not create a revision. Please try again.');
+        return;
+      }
+
+      const nextId = typeof json.materialId === 'string' ? json.materialId : null;
+      if (!nextId) {
+        setError('The revision was created but could not be opened. Check your application kit.');
+        return;
+      }
+
+      setForm((prev) => ({ ...prev, instructions: '' }));
+      router.push(`/application-materials/${nextId}?revised=1`);
+    } catch {
+      setError('Could not create a revision. Please try again.');
+    } finally {
+      setRevising(false);
+    }
+  }, [materialId, contentDirty, form.instructions, form.tone, form.length, router]);
 
   const handleSave = useCallback(async () => {
     if (!result || !materialId) return;
@@ -295,6 +417,7 @@ export default function MaterialEditor() {
       const res = await fetch(`/api/application-materials/${materialId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({
           id: materialId,
           content: result.content,
@@ -309,13 +432,14 @@ export default function MaterialEditor() {
       }
       setEditVersion(json.editVersion ?? editVersion + 1);
       setSaved(true);
+      setContentDirty(false);
       if (materialId) void loadPreview(materialId);
     } catch {
       setError('Could not save this material.');
     } finally {
       setSaving(false);
     }
-  }, [result, materialId, editVersion]);
+  }, [result, materialId, editVersion, loadPreview]);
 
   const handleDelete = useCallback(async () => {
     if (!materialId || !window.confirm('Permanently delete this material? This cannot be undone.')) {
@@ -326,6 +450,7 @@ export default function MaterialEditor() {
     try {
       const res = await fetch(`/api/application-materials/${materialId}`, {
         method: 'DELETE',
+        credentials: 'same-origin',
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -339,20 +464,6 @@ export default function MaterialEditor() {
       setDeleting(false);
     }
   }, [materialId, router]);
-
-  const loadPreview = useCallback(async (id: string) => {
-    setPreviewLoading(true);
-    try {
-      const res = await fetch(`/api/application-materials/${id}/preview`, { cache: 'no-store' });
-      if (!res.ok) throw new Error('preview failed');
-      const json = await res.json();
-      setPreviewLayout(json.layout ?? null);
-    } catch {
-      setPreviewLayout(null);
-    } finally {
-      setPreviewLoading(false);
-    }
-  }, []);
 
   const handleCopy = async () => {
     if (!result) return;
@@ -368,6 +479,12 @@ export default function MaterialEditor() {
 
   const handleDownload = async (format: 'txt' | 'pdf' | 'docx') => {
     if (!result || !materialId) return;
+    // Exports are rendered from the stored row, not from this textarea. Saving
+    // first keeps the file identical to the draft the user is looking at.
+    if (contentDirty) {
+      setError('Save your edits first so the download matches the text you see.');
+      return;
+    }
     setDownloading(true);
     try {
       const res = await fetch(
@@ -397,17 +514,6 @@ export default function MaterialEditor() {
     }
   };
 
-  const handleRevise = () => {
-    if (!result) return;
-    setForm((prev) => ({
-      ...prev,
-      sourceDraft: result.content,
-    }));
-    setMode('create');
-    setError(null);
-    setResult(null);
-  };
-
   const typeItems = MATERIAL_TYPES.map((t) => {
     const m = MATERIAL_TYPE_META[t];
     return {
@@ -416,6 +522,11 @@ export default function MaterialEditor() {
       description: m.description,
     };
   });
+
+  const canRevise = Boolean(form.instructions.trim()) && !revising && !contentDirty;
+  // Only link to a kit that still exists. In edit mode the stored job id may
+  // point at a job that was since removed from the pipeline.
+  const jobKitHref = selectedJob ? `/application-materials/jobs/${selectedJob.id}` : null;
 
   if (materialLoading) {
     return <div className="card-pad">Loading your application material…</div>;
@@ -427,15 +538,20 @@ export default function MaterialEditor() {
         title={mode === 'edit' ? 'Edit application material' : 'Create material'}
         subtitle={
           mode === 'edit'
-            ? 'Review, edit, and save your application material.'
+            ? 'Review and save this draft, or ask for a revision written from it.'
             : 'Choose a material type, add context, and generate a draft.'
         }
         action={
-          mode === 'edit' && materialId ? (
-            <div className="flex gap-2">
-              <Link href="/application-materials" className="btn-secondary text-xs">
-                ← Back to library
+          <div className="flex flex-wrap gap-2">
+            {jobKitHref ? (
+              <Link href={jobKitHref} className="btn-secondary text-xs">
+                ← Job kit
               </Link>
+            ) : null}
+            <Link href="/application-materials" className="btn-secondary text-xs">
+              Application library
+            </Link>
+            {mode === 'edit' && materialId ? (
               <button
                 type="button"
                 onClick={() => void handleDelete()}
@@ -444,60 +560,93 @@ export default function MaterialEditor() {
               >
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>
-            </div>
-          ) : null
+            ) : null}
+          </div>
         }
       />
 
+      {revisionCreated ? (
+        <div
+          role="status"
+          className="rounded-xl border border-success/25 bg-success/[0.08] px-4 py-3 text-sm text-success-text"
+        >
+          Revision created. Your earlier draft is unchanged and still available in the job kit.
+        </div>
+      ) : null}
+
       {error && (
-        <div className="rounded-xl border border-warn/25 bg-warn/[0.07] px-4 py-3 text-sm text-warn-text">
+        <div
+          role="alert"
+          className="rounded-xl border border-warn/25 bg-warn/[0.07] px-4 py-3 text-sm text-warn-text"
+        >
           {error}
         </div>
       )}
 
-      {/* Material type selection */}
-      <section className="card-pad">
-        <div className="text-sm font-medium text-muted mb-3">What would you like to create?</div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {typeItems.map((item) => {
-            const active = form.type === item.value;
-            return (
-              <button
-                key={item.value}
-                type="button"
-                onClick={() =>
-                  setForm((prev) => ({ ...prev, type: item.value as MaterialType }))
-                }
-                className={`w-full text-left rounded-xl border p-3 transition-colors ${
-                  active
-                    ? 'border-accent bg-accent/[0.06] text-ink'
-                    : 'border-line hover:border-line-strong text-ink-2'
-                }`}
-              >
-                <div className="font-medium text-sm">{item.label}</div>
-                <div className="text-xs text-muted mt-1">{item.description}</div>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+      {/* Material type selection (create) or read-only identity (edit). */}
+      {mode === 'create' ? (
+        <section className="card-pad">
+          <div className="text-sm font-medium text-muted mb-3">
+            What would you like to create?
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {typeItems.map((item) => {
+              const active = form.type === item.value;
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() =>
+                    setForm((prev) => ({ ...prev, type: item.value as MaterialType }))
+                  }
+                  className={`w-full text-left rounded-xl border p-3 transition-colors ${
+                    active
+                      ? 'border-accent bg-accent/[0.06] text-ink'
+                      : 'border-line hover:border-line-strong text-ink-2'
+                  }`}
+                >
+                  <div className="font-medium text-sm">{item.label}</div>
+                  <div className="text-xs text-muted mt-1">{item.description}</div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : (
+        <section className="card-pad">
+          <div className="text-xs font-medium uppercase tracking-wide text-muted">
+            Material type
+          </div>
+          <p className="mt-1 text-sm font-medium text-ink">{meta.label}</p>
+          <p className="muted mt-1 text-xs">{meta.description}</p>
+        </section>
+      )}
 
-      {/* Configuration form */}
+      {/* Configuration form. In edit mode this configures the revision. */}
       <section className="card-pad space-y-5">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-ink">Configure</h2>
+        <div>
+          <h2 className="text-lg font-semibold text-ink">
+            {mode === 'edit' ? 'Ask for a revision' : 'Configure'}
+          </h2>
+          <p className="muted mt-1 text-xs">
+            {mode === 'edit'
+              ? 'A revision is written from this draft plus your guidance. It is saved as a new version, so this one is never overwritten.'
+              : 'Everything below is context you control. Nothing is sent until you send it yourself.'}
+          </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="col-span-2 md:col-span-1">
-            <label className="text-sm font-medium text-ink block mb-1">Tone</label>
-            <div className="flex gap-1">
+            <span className="text-sm font-medium text-ink block mb-1">Tone</span>
+            <div className="flex flex-wrap gap-1">
               {toneOptions.map((t) => {
                 const active = form.tone === t;
                 return (
                   <button
                     key={t}
                     type="button"
+                    aria-pressed={active}
                     onClick={() => setForm((prev) => ({ ...prev, tone: t }))}
                     className={`text-xs rounded-xl border px-3 py-1.5 transition-colors ${
                       active
@@ -513,14 +662,15 @@ export default function MaterialEditor() {
           </div>
 
           <div className="col-span-2 md:col-span-1">
-            <label className="text-sm font-medium text-ink block mb-1">Length</label>
-            <div className="flex gap-1">
+            <span className="text-sm font-medium text-ink block mb-1">Length</span>
+            <div className="flex flex-wrap gap-1">
               {lengthOptions.map((l) => {
                 const active = form.length === l;
                 return (
                   <button
                     key={l}
                     type="button"
+                    aria-pressed={active}
                     onClick={() => setForm((prev) => ({ ...prev, length: l }))}
                     className={`text-xs rounded-xl border px-3 py-1.5 transition-colors ${
                       active
@@ -537,39 +687,73 @@ export default function MaterialEditor() {
 
           {supportsJob && (
             <div className="col-span-2">
-              <label className="text-sm font-medium text-ink block mb-1">
+              <label className="text-sm font-medium text-ink block mb-1" htmlFor="material-job">
                 Target job
               </label>
-              {jobsLoading ? (
+              {mode === 'edit' ? (
+                <>
+                  <div className="rounded-xl border border-line bg-surface-sunken p-3 text-sm text-ink">
+                    {jobsLoading
+                      ? 'Loading job…'
+                      : selectedJob
+                        ? `${selectedJob.title} at ${selectedJob.company}`
+                        : form.jobId
+                          ? 'This job is no longer in your pipeline.'
+                          : 'No target job'}
+                  </div>
+                  <p className="muted text-xs mt-1">
+                    A revision keeps the same job and resume. Open the job kit to link another
+                    resume or write a different material for this role.
+                  </p>
+                </>
+              ) : jobsLoading ? (
                 <div className="text-xs text-muted">Loading jobs…</div>
               ) : (
-                <select
-                  className="input"
-                  value={form.jobId ?? ''}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, jobId: e.target.value || null }))
-                  }
-                >
-                  <option value="">None (general message)</option>
-                  {jobs.map((job) => (
-                    <option key={job.id} value={job.id}>
-                      {job.title} at {job.company} ({job.status})
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <select
+                    id="material-job"
+                    className="input"
+                    value={form.jobId ?? ''}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, jobId: e.target.value || null }))
+                    }
+                  >
+                    <option value="">None (general message)</option>
+                    {jobs.map((job) => (
+                      <option key={job.id} value={job.id}>
+                        {job.title} at {job.company} ({job.status})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="muted text-xs mt-1">
+                    Linking a job grounds the draft in the real role details and your application
+                    record. Every material for it is grouped in the job&apos;s application kit.
+                  </p>
+                </>
               )}
-              <p className="muted text-xs mt-1">
-                Linking a job grounds the draft in the real role details and your
-                application record.
-              </p>
             </div>
           )}
 
           <div className="col-span-2">
             <label className="text-sm font-medium text-ink block mb-1" htmlFor="material-resume">
-              Resume to use (optional)
+              Resume to use
             </label>
-            {resumesLoading ? (
+            {mode === 'edit' ? (
+              <>
+                <div className="rounded-xl border border-line bg-surface-sunken p-3 text-sm text-ink">
+                  {resumesLoading
+                    ? 'Loading resume…'
+                    : selectedResume
+                      ? selectedResume.name
+                      : form.resumeId
+                        ? 'This resume is no longer available.'
+                        : 'Your confirmed career profile'}
+                </div>
+                <p className="muted text-xs mt-1">
+                  A revision keeps the resume this draft was written with.
+                </p>
+              </>
+            ) : resumesLoading ? (
               <div className="text-xs text-muted">Loading resumes…</div>
             ) : (
               <select
@@ -588,49 +772,64 @@ export default function MaterialEditor() {
                 ))}
               </select>
             )}
-            {resumeLoadError ? (
+            {mode === 'create' && resumeLoadError ? (
               <p className="mt-1 text-xs text-danger-text">{resumeLoadError}</p>
-            ) : resumes.length === 0 && !resumesLoading ? (
+            ) : mode === 'create' && resumes.length === 0 && !resumesLoading ? (
               <p className="muted mt-1 text-xs">
                 Build a resume from your confirmed career profile to use its exact wording here.{' '}
                 <Link href="/resumes" className="underline underline-offset-2">
                   Open resumes
                 </Link>
               </p>
-            ) : (
+            ) : mode === 'create' ? (
               <p className="muted mt-1 text-xs">
                 When selected, this resume is included as additional evidence for the draft.
               </p>
-            )}
+            ) : null}
           </div>
 
           <div className="col-span-2">
-            <label className="text-sm font-medium text-ink block mb-1">
-              Your instructions (optional)
+            <label
+              className="text-sm font-medium text-ink block mb-1"
+              htmlFor="material-instructions"
+            >
+              {mode === 'edit' ? 'What should change?' : 'Your instructions (optional)'}
             </label>
             <textarea
+              id="material-instructions"
               className="input min-h-[100px] resize-y"
               value={form.instructions}
+              maxLength={2000}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, instructions: e.target.value }))
               }
-              placeholder="e.g. Emphasise my API experience, keep the tone warm, or shorten the second paragraph."
+              placeholder={
+                mode === 'edit'
+                  ? 'e.g. Shorten the opening, emphasise the API work, and keep the closing warm.'
+                  : 'e.g. Emphasise my API experience, keep the tone warm, or shorten the second paragraph.'
+              }
             />
             <p className="muted text-xs mt-1">
-              These are treated as style guidance only — they can never add a fact
-              that isn&apos;t in your profile.
+              {mode === 'edit'
+                ? 'Required for a revision. Guidance changes wording and emphasis; it can never add a fact to your record.'
+                : 'These are treated as style guidance only — they can never add a fact that isn’t in your profile.'}
             </p>
           </div>
         </div>
 
-        {(meta.fields.includes('RECIPIENT_NAME') || meta.fields.includes('CONTACT')) && (
+        {mode === 'create' && showRecipient && (
           <div className="col-span-2">
-            <label className="text-sm font-medium text-ink block mb-1">
+            <label
+              className="text-sm font-medium text-ink block mb-1"
+              htmlFor="material-recipient"
+            >
               Recipient name (optional)
             </label>
             <input
+              id="material-recipient"
               className="input"
               value={form.recipientName}
+              maxLength={120}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, recipientName: e.target.value }))
               }
@@ -642,14 +841,38 @@ export default function MaterialEditor() {
           </div>
         )}
 
-        {(meta.fields.includes('CONVERSATION') || meta.fields.includes('SHARED_CONTEXT')) && (
+        {mode === 'create' && showInterviewNotes && (
           <div className="col-span-2">
-            <label className="text-sm font-medium text-ink block mb-1">
+            <label className="text-sm font-medium text-ink block mb-1" htmlFor="material-notes">
+              What did you actually discuss? (optional)
+            </label>
+            <textarea
+              id="material-notes"
+              className="input min-h-[90px] resize-y"
+              value={form.conversation}
+              maxLength={4000}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, conversation: e.target.value }))
+              }
+              placeholder="The interviewer, the topics, anything you want to refer to. Only what really happened."
+            />
+            <p className="muted text-xs mt-1">
+              If no interview is recorded in your pipeline, your own notes are required before a
+              thank-you can be written.
+            </p>
+          </div>
+        )}
+
+        {mode === 'create' && showSharedContext && (
+          <div className="col-span-2">
+            <label className="text-sm font-medium text-ink block mb-1" htmlFor="material-context">
               Shared context (optional)
             </label>
             <textarea
+              id="material-context"
               className="input min-h-[80px] resize-y"
               value={form.conversation}
+              maxLength={4000}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, conversation: e.target.value }))
               }
@@ -661,40 +884,66 @@ export default function MaterialEditor() {
           </div>
         )}
 
-        {isApplicationGrounded && form.jobId && (
-          <div className="col-span-2">
-            <p className="muted text-xs mt-1">
-              This material describes a real application. It will only be
-              generated when your pipeline supports that claim.
-            </p>
-          </div>
+        {mode === 'create' && isApplicationGrounded && form.jobId && (
+          <p className="muted text-xs">
+            This material describes a real application. It will only be generated when your
+            pipeline supports that claim.
+          </p>
         )}
       </section>
 
-      {/* Generate action */}
+      {/* Primary action: generate a new draft, or revise this one. */}
       <div className="card-pad">
-        <button
-          type="button"
-          disabled={generating}
-          onClick={handleGenerate}
-          className="btn-primary w-full md:w-auto disabled:opacity-50"
-        >
-          {generating ? 'Generating draft…' : 'Generate draft'}
-        </button>
-        {generating && (
-          <p className="muted text-xs mt-2">
-            This calls the AI provider once and is metered against your AI
-            allowance.
-          </p>
+        {mode === 'edit' ? (
+          <>
+            <button
+              type="button"
+              disabled={!canRevise}
+              onClick={() => void handleRevise()}
+              className="btn-primary w-full md:w-auto disabled:opacity-50"
+            >
+              {revising ? 'Writing a revision…' : 'Create revision'}
+            </button>
+            <p className="muted text-xs mt-2">
+              {revising
+                ? 'This calls the AI provider once. Your current draft is untouched.'
+                : contentDirty
+                  ? 'Save your edits above first, so the revision starts from the text you see.'
+                  : form.instructions.trim()
+                    ? 'Uses one AI credit. The new version is saved separately so this draft stays intact.'
+                    : 'Add what you would like to change above to enable a revision.'}
+            </p>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              disabled={generating}
+              onClick={handleGenerate}
+              className="btn-primary w-full md:w-auto disabled:opacity-50"
+            >
+              {generating ? 'Generating draft…' : 'Generate draft'}
+            </button>
+            {generating && (
+              <p className="muted text-xs mt-2">
+                This calls the AI provider once and is metered against your AI allowance.
+              </p>
+            )}
+          </>
         )}
       </div>
 
       {/* Review and edit */}
       {result && (
         <section className="card-pad space-y-5">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-ink">Draft</h2>
-            <div className="flex gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold text-ink">Draft</h2>
+              {contentDirty ? (
+                <span className="badge bg-warn/15 text-warn-text">Unsaved edits</span>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => handleDownload('txt')}
@@ -746,13 +995,11 @@ export default function MaterialEditor() {
                   {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save'}
                 </button>
               )}
-              <button
-                type="button"
-                onClick={handleRevise}
-                className="btn-secondary text-xs"
-              >
-                New revision
-              </button>
+              {mode === 'create' && materialId ? (
+                <Link href={`/application-materials/${materialId}`} className="btn-primary text-xs">
+                  Continue in editor
+                </Link>
+              ) : null}
             </div>
           </div>
 
@@ -777,11 +1024,18 @@ export default function MaterialEditor() {
                   current ? { ...current, content: event.target.value } : current,
                 );
                 setSaved(false);
+                setContentDirty(true);
               }}
             />
             {result.signOff && <div className="mt-4">{result.signOff}</div>}
             {result.senderName && <div className="mt-1">{result.senderName}</div>}
           </div>
+
+          {showPreview && contentDirty ? (
+            <p className="muted text-xs">
+              The preview and downloads use the saved version until you save these edits.
+            </p>
+          ) : null}
 
           {showPreview && (
             <div className="rounded-2xl border border-line bg-white p-4 shadow-sm">
@@ -790,7 +1044,9 @@ export default function MaterialEditor() {
               ) : previewLayout ? (
                 <ResumeLayoutPreview layout={previewLayout} availableWidth={640} />
               ) : (
-                <div className="py-8 text-center text-sm text-muted">Preview unavailable. Save the draft first.</div>
+                <div className="py-8 text-center text-sm text-muted">
+                  Preview unavailable. Save the draft first.
+                </div>
               )}
             </div>
           )}
@@ -834,11 +1090,11 @@ export default function MaterialEditor() {
         </section>
       )}
 
-      {/* Apply-date gate hint for grounded types */}
-      {isApplicationGrounded && form.jobId && !jobs.find((j) => j.id === form.jobId) && (
+      {/* Application-grounded hint when no job is selected yet. */}
+      {mode === 'create' && isApplicationGrounded && !form.jobId && (
         <div className="rounded-xl border border-warn/25 bg-warn/[0.06] p-3 text-sm">
-          Select a job to see whether your pipeline supports a follow-up or
-          thank-you message for this role.
+          Select the job this describes. A follow-up, status check or thank-you cannot be written
+          honestly without the application record it refers to.
         </div>
       )}
     </div>

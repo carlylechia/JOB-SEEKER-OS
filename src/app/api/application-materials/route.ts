@@ -14,6 +14,7 @@ import { handleOptions } from '@/lib/cors';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { materialTypeSchema } from '@/lib/application-materials/materials';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,14 +39,15 @@ const LIST_FIELDS = {
   errorCode: true,
   thinInputs: true,
   editVersion: true,
+  job: { select: { id: true, title: true, company: true, status: true, deletedAt: true } },
 } as const;
-
-type Params = never;
 
 const listSchema = z
   .object({
-    type: z.string().optional(),
-    status: z.string().optional(),
+    type: materialTypeSchema.optional(),
+    status: z.enum(['DRAFT', 'READY', 'ARCHIVED']).optional(),
+    /** Scope the library to one application kit. */
+    jobId: z.string().min(1).max(64).optional(),
     take: z.coerce.number().min(1).max(100).default(50),
     cursor: z.string().max(64).optional(),
   })
@@ -80,16 +82,17 @@ export async function GET(request: Request) {
         return apiError('VALIDATION_FAILED', 'That request was not valid.', { request });
       }
 
-      const { type, status, take, cursor } = parsed.data;
+      const { type, status, jobId, take, cursor } = parsed.data;
 
       const materials = await prisma.applicationMaterial.findMany({
         where: {
           userId,
-          ...(type ? { type: type as any } : {}),
-          ...(status ? { status: status as any } : {}),
+          ...(type ? { type } : {}),
+          ...(status ? { status } : {}),
+          ...(jobId ? { jobId } : {}),
         },
         select: LIST_FIELDS,
-        orderBy: { updatedAt: 'desc' },
+        orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
         take,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       });

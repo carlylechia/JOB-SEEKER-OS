@@ -1,58 +1,37 @@
 'use client';
 
 /**
- * Application-materials workspace.
+ * Application-materials library.
  *
- * Lists the user's saved cover letters and application messages, and provides
- * the entry point to create a new one. All data is scoped to the session user
- * by the API routes; this component never handles another user's id.
+ * The library is an overview, not a second editor. Materials are grouped by the
+ * job they belong to, so one application's cover letter, outreach and follow-up
+ * are always read together and open in the same workspace. General materials
+ * (no target job) and archived drafts stay separate and clearly labelled.
+ *
+ * Every list and delete goes through the session-scoped API; this component
+ * never receives or sends another user's id.
  */
 
-import { useEffect, useState, useCallback } from 'react';
-import { PageHeader } from '@/components/shared/page-header';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { PageHeader } from '@/components/shared/page-header';
 import {
-  MATERIAL_TYPES,
-  type MaterialType,
   MATERIAL_TYPE_META,
+  type MaterialType,
 } from '@/lib/application-materials/materials';
+import {
+  groupLibraryMaterials,
+  jobStatusLabel,
+  type LibraryMaterial,
+} from '@/lib/application-materials/workspace';
 
-type SerialisedMaterial = {
-  id: string;
-  type: string;
-  title: string;
+type SerialisedMaterial = LibraryMaterial & {
   subject: string | null;
-  status: string;
   origin: string;
-  generationStatus: string;
-  jobId: string | null;
-  createdAt: string;
-  updatedAt: string;
   errorCode: string | null;
   thinInputs: boolean;
   editVersion: number;
   data: unknown;
-};
-
-async function fetchMaterials(): Promise<SerialisedMaterial[]> {
-  const res = await fetch('/api/application-materials', { cache: 'no-store' });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(json.error?.message ?? 'Could not load your materials.');
-  }
-  if (!Array.isArray(json.materials)) {
-    throw new Error('The materials service returned an unexpected response.');
-  }
-  return json.materials;
-}
-
-const TYPE_LABELS: Record<string, string> = {
-  COVER_LETTER: 'Cover letter',
-  RECRUITER_OUTREACH: 'Recruiter message',
-  LINKEDIN_CONNECTION: 'LinkedIn connection',
-  APPLICATION_FOLLOW_UP: 'Application follow-up',
-  APPLICATION_STATUS_CHECK: 'Status check',
-  INTERVIEW_THANK_YOU: 'Interview thank-you',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -61,13 +40,41 @@ const STATUS_LABELS: Record<string, string> = {
   ARCHIVED: 'Archived',
 };
 
-export default function ApplicationMaterialsPage() {
+function formatDate(iso: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(iso));
+}
+
+function plural(value: number, singular: string, pluralForm = `${singular}s`): string {
+  return `${value} ${value === 1 ? singular : pluralForm}`;
+}
+
+async function fetchMaterials(): Promise<SerialisedMaterial[]> {
+  const response = await fetch('/api/application-materials?take=100', {
+    cache: 'no-store',
+    credentials: 'same-origin',
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload?.error?.message ?? 'Could not load your materials.');
+  }
+  if (!Array.isArray(payload.materials)) {
+    throw new Error('The materials service returned an unexpected response.');
+  }
+  return payload.materials as SerialisedMaterial[];
+}
+
+export default function ApplicationMaterialsWorkspace() {
   const [materials, setMaterials] = useState<SerialisedMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [showArchived, setShowArchived] = useState(false);
+  const [tab, setTab] = useState<'active' | 'archived'>('active');
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -82,8 +89,22 @@ export default function ApplicationMaterialsPage() {
     }
   }, []);
 
-  const handleDelete = async (material: SerialisedMaterial) => {
-    if (!window.confirm(`Permanently delete "${material.title}"? This cannot be undone.`)) {
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const active = useMemo(
+    () => materials.filter((material) => material.status !== 'ARCHIVED'),
+    [materials],
+  );
+  const archived = useMemo(
+    () => materials.filter((material) => material.status === 'ARCHIVED'),
+    [materials],
+  );
+  const { kits, general } = useMemo(() => groupLibraryMaterials(active), [active]);
+
+  const handleDelete = async (material: LibraryMaterial) => {
+    if (!window.confirm(`Permanently delete “${material.title}”? This cannot be undone.`)) {
       return;
     }
     setDeletingId(material.id);
@@ -91,10 +112,11 @@ export default function ApplicationMaterialsPage() {
     try {
       const response = await fetch(`/api/application-materials/${material.id}`, {
         method: 'DELETE',
+        credentials: 'same-origin',
       });
-      const json = await response.json().catch(() => ({}));
+      const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(json.error?.message ?? 'Could not delete this material.');
+        throw new Error(payload?.error?.message ?? 'Could not delete this material.');
       }
       setMaterials((current) => current.filter((item) => item.id !== material.id));
     } catch (deleteError) {
@@ -106,134 +128,295 @@ export default function ApplicationMaterialsPage() {
     }
   };
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const active = materials.filter((m) => m.status !== 'ARCHIVED');
-  const archived = materials.filter((m) => m.status === 'ARCHIVED');
-  const visibleMaterials = showArchived ? archived : active;
-
   if (isLoading) {
-    return (
-      <div className="card-pad">Loading your application materials…</div>
-    );
+    return <div className="card-pad">Loading your application materials…</div>;
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Application materials"
-        subtitle="Manage saved cover letters and messages for your job applications. Nothing is sent automatically."
+        title="Application kits"
+        subtitle="Every job’s materials and linked resumes in one place. Nothing is sent automatically."
         action={
-          <Link
-            href="/application-materials/new"
-            className="btn-primary"
-          >
+          <Link href="/application-materials/new" className="btn-primary">
             Create material
           </Link>
         }
       />
 
-      {error && (
+      {error ? (
         <div
-          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger/25 bg-danger/[0.07] px-4 py-3 text-sm text-danger-text"
           role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger/25 bg-danger/[0.07] px-4 py-3 text-sm text-danger-text"
         >
           <p>{error}</p>
           <button type="button" className="btn-secondary text-xs" onClick={() => void load()}>
             Try again
           </button>
         </div>
-      )}
+      ) : null}
 
-      {actionError && (
-        <div className="rounded-xl border border-danger/25 bg-danger/[0.07] px-4 py-3 text-sm text-danger-text" role="alert">
+      {actionError ? (
+        <div
+          role="alert"
+          className="rounded-xl border border-danger/25 bg-danger/[0.07] px-4 py-3 text-sm text-danger-text"
+        >
           {actionError}
         </div>
-      )}
+      ) : null}
 
-      <section className="card-pad">
-        <div className="flex items-center justify-between gap-2 mb-4">
-          <h2 className="text-lg font-semibold text-ink">
-            {showArchived ? 'Archived materials' : 'Your materials'}
-          </h2>
-          {archived.length > 0 && (
-            <button
-              type="button"
-              className="btn-secondary text-xs"
-              aria-expanded={showArchived}
-              onClick={() => setShowArchived((visible) => !visible)}
-            >
-              {showArchived ? 'Show drafts' : `${archived.length} archived`}
-            </button>
-          )}
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          className={`btn text-xs ${tab === 'active' ? 'btn-primary' : 'btn-secondary'}`}
+          aria-pressed={tab === 'active'}
+          onClick={() => setTab('active')}
+        >
+          Active ({active.length})
+        </button>
+        <button
+          type="button"
+          className={`btn text-xs ${tab === 'archived' ? 'btn-primary' : 'btn-secondary'}`}
+          aria-pressed={tab === 'archived'}
+          onClick={() => setTab('archived')}
+        >
+          Archived ({archived.length})
+        </button>
+        <span className="muted ml-auto text-xs">
+          {plural(kits.length, 'application kit')} · {plural(general.length, 'general material')}
+        </span>
+      </div>
 
-        {visibleMaterials.length === 0 ? (
-          <div className="card-pad text-center py-12">
-            <div className="text-muted">
-              {showArchived ? 'No archived materials.' : 'No application materials yet.'}
+      {tab === 'archived' ? (
+        <ArchivedSection
+          materials={archived}
+          deletingId={deletingId}
+          onDelete={handleDelete}
+        />
+      ) : (
+        <>
+          <section aria-labelledby="kits-heading" className="space-y-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 id="kits-heading" className="text-lg font-semibold text-ink">
+                By application
+              </h2>
+              <span className="muted text-xs">Open a kit to write or review its next draft.</span>
             </div>
-            <p className="muted text-sm mt-2">
-              {showArchived
-                ? 'Archived materials will appear here.'
-                : 'Create a cover letter or outreach message from a job or template.'}
-            </p>
-            {!showArchived && (
-              <Link href="/application-materials/new" className="btn-primary mt-4 inline-block">
-                Create your first material
-              </Link>
+
+            {kits.length === 0 ? (
+              <div className="card-pad py-10 text-center">
+                <p className="text-sm font-medium text-ink">No application kits yet.</p>
+                <p className="muted mx-auto mt-1 max-w-md text-sm">
+                  A kit is created automatically when you write a material for a job. Open a job
+                  and choose its application kit to begin.
+                </p>
+                <Link href="/jobs" className="btn-secondary mt-4 inline-flex text-xs">
+                  Browse your jobs
+                </Link>
+              </div>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {kits.map((kit) => {
+                  const title = kit.job?.title ?? 'A deleted job';
+                  const company = kit.job?.company ?? 'Job removed from your pipeline';
+                  const latest = kit.materials[0];
+                  return (
+                    <article
+                      key={kit.jobId}
+                      className="card-pad flex flex-col transition-colors hover:border-line-strong"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h3 className="truncate text-base font-semibold text-ink">{title}</h3>
+                          <p className="muted mt-1 truncate text-sm">{company}</p>
+                        </div>
+                        {kit.job?.status ? (
+                          <span className="badge bg-surface-sunken text-ink-2">
+                            {jobStatusLabel(kit.job.status)}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <p className="muted mt-3 text-xs">
+                        {plural(kit.materials.length, 'material')} ·{' '}
+                        {plural(kit.draftCount, 'draft')} · {plural(kit.readyCount, 'ready')} ·
+                        updated {formatDate(kit.latestAt)}
+                      </p>
+
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {kit.types.map((type) => (
+                          <span
+                            key={type}
+                            className="badge bg-surface-sunken text-ink-2"
+                          >
+                            {MATERIAL_TYPE_META[type as MaterialType]?.label ?? type}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+                        <Link
+                          href={`/application-materials/jobs/${kit.jobId}`}
+                          className="btn-primary text-xs"
+                        >
+                          Open application kit
+                        </Link>
+                        {latest ? (
+                          <Link
+                            href={`/application-materials/${latest.id}`}
+                            className="btn-secondary text-xs"
+                          >
+                            Latest draft
+                          </Link>
+                        ) : null}
+                        {kit.job ? (
+                          <Link
+                            href={`/jobs/${kit.job.id}`}
+                            className="ml-auto text-xs text-accent-text underline underline-offset-2"
+                          >
+                            Job details
+                          </Link>
+                        ) : null}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
             )}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {visibleMaterials.map((material) => {
-              const meta = MATERIAL_TYPE_META[material.type as MaterialType];
-              return (
-                <div
-                  key={material.id}
-                  className="rounded-xl border border-line bg-card p-4 flex items-center gap-3"
-                >
-                  <div className="shrink-0 rounded-xl bg-surface-sunken p-2 text-muted">
-                    {material.type === 'COVER_LETTER' ? '📄' : '✉️'}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-ink truncate">
-                      {material.title}
-                    </div>
-                    <div className="flex gap-2 text-xs muted mt-1">
-                      <span>{TYPE_LABELS[material.type] ?? material.type}</span>
-                      <span>·</span>
-                      <span>
-                        {STATUS_LABELS[material.status] ?? material.status}
-                      </span>
-                      {material.jobId && <span>· job</span>}
-                    </div>
-                    <div className="muted text-xs mt-1">
-                      {new Date(material.updatedAt).toLocaleDateString()} updated
-                    </div>
-                  </div>
+          </section>
+
+          <GeneralSection
+            materials={general}
+            deletingId={deletingId}
+            onDelete={handleDelete}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+function ArchivedSection({
+  materials,
+  deletingId,
+  onDelete,
+}: {
+  materials: LibraryMaterial[];
+  deletingId: string | null;
+  onDelete: (material: LibraryMaterial) => Promise<void>;
+}) {
+  return (
+    <section className="card-pad" aria-labelledby="archived-heading">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="archived-heading" className="text-lg font-semibold text-ink">
+          Archived materials
+        </h2>
+        <span className="muted text-xs">Hidden from your active kits. Never deleted automatically.</span>
+      </div>
+      {materials.length === 0 ? (
+        <p className="muted mt-4 text-sm">No archived materials.</p>
+      ) : (
+        <ul className="mt-4 space-y-2">
+          {materials.map((material) => (
+            <li key={material.id} className="rounded-xl border border-line bg-surface-sunken p-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
                   <Link
                     href={`/application-materials/${material.id}`}
-                    className="ml-3 btn-secondary text-xs shrink-0"
+                    className="block truncate text-sm font-medium text-ink hover:text-accent-text"
                   >
+                    {material.title}
+                  </Link>
+                  <p className="muted mt-1 text-xs">
+                    {MATERIAL_TYPE_META[material.type as MaterialType]?.label ?? material.type}
+                    {material.job ? ` · ${material.job.title} at ${material.job.company}` : ''} ·
+                    archived {formatDate(material.updatedAt)}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link href={`/application-materials/${material.id}`} className="btn-secondary text-xs">
                     Open
                   </Link>
                   <button
                     type="button"
-                    className="btn-secondary text-xs shrink-0 text-danger-text"
+                    className="btn-secondary text-xs text-danger-text"
                     disabled={deletingId !== null}
-                    onClick={() => void handleDelete(material)}
+                    onClick={() => void onDelete(material)}
                   >
                     {deletingId === material.id ? 'Deleting…' : 'Delete'}
                   </button>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-    </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function GeneralSection({
+  materials,
+  deletingId,
+  onDelete,
+}: {
+  materials: LibraryMaterial[];
+  deletingId: string | null;
+  onDelete: (material: LibraryMaterial) => Promise<void>;
+}) {
+  return (
+    <section className="card-pad" aria-labelledby="general-heading">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="general-heading" className="text-lg font-semibold text-ink">
+          General materials
+        </h2>
+        <span className="muted text-xs">Drafts without an active target job.</span>
+      </div>
+
+      {materials.length === 0 ? (
+        <p className="muted mt-4 text-sm">
+          Nothing here. A recruiter message written without a job lives here, as does any draft
+          whose job was removed from your pipeline.
+        </p>
+      ) : (
+        <ul className="mt-4 space-y-2">
+          {materials.map((material) => (
+            <li key={material.id} className="rounded-xl border border-line bg-card p-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <Link
+                    href={`/application-materials/${material.id}`}
+                    className="block truncate text-sm font-medium text-ink hover:text-accent-text"
+                  >
+                    {material.title}
+                  </Link>
+                  <p className="muted mt-1 text-xs">
+                    {MATERIAL_TYPE_META[material.type as MaterialType]?.label ?? material.type}
+                    {material.job
+                      ? ` · ${material.job.title} at ${material.job.company} (job removed)`
+                      : ''}{' '}
+                    · {STATUS_LABELS[material.status] ?? material.status} · updated{' '}
+                    {formatDate(material.updatedAt)}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link href={`/application-materials/${material.id}`} className="btn-secondary text-xs">
+                    Open
+                  </Link>
+                  <button
+                    type="button"
+                    className="btn-secondary text-xs text-danger-text"
+                    disabled={deletingId !== null}
+                    onClick={() => void onDelete(material)}
+                  >
+                    {deletingId === material.id ? 'Deleting…' : 'Delete'}
+                  </button>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
