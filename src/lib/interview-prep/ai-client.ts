@@ -3,13 +3,11 @@
  *
  * Mirrors `src/lib/job-intelligence/ai-client.ts`: one OpenAI integration,
  * schema-constrained structured outputs, no tools, and every provider detail
- * kept out of the browser. A separate module from job intelligence because
- * the two features have genuinely different contracts (a pack of questions
- * and feedback is not a job-fit analysis).
+ * kept out of the browser.
  *
  * Two operations:
- *  - generatePack(params) -> ModelPack  (questions + guidance)
- *  - generateFeedback(params) -> ModelFeedback  (rubric-based evaluation)
+ *  - generatePack(params) -> ModelPack
+ *  - generateFeedback(params) -> ModelFeedback
  */
 
 import OpenAI from 'openai';
@@ -25,11 +23,7 @@ import {
   type ModelPack,
 } from './schema';
 import { INTERVIEW_PREP_AI_TIMEOUT_MS } from './limits';
-import {
-  INTERVIEW_PREP_SYSTEM_PROMPT,
-  buildGenerationPrompt,
-} from './prompt';
-import { FEEDBACK_SYSTEM_PROMPT, buildFeedbackPrompt } from './prompt';
+import { FEEDBACK_SYSTEM_PROMPT, INTERVIEW_PREP_SYSTEM_PROMPT, buildFeedbackPrompt, buildGenerationPrompt } from './prompt';
 
 export const DEFAULT_INTERVIEW_PREP_MODEL = 'gpt-4.1-mini';
 
@@ -57,7 +51,10 @@ export class InterviewPrepAiError extends Error {
 
   /** Safe, user-facing copy. No provider detail crosses this boundary. */
   get userMessage(): string {
-    return INTERVIEW_PREP_ERROR_MESSAGES[this.code as keyof typeof INTERVIEW_PREP_ERROR_MESSAGES] ?? INTERVIEW_PREP_ERROR_MESSAGES.AI_UNAVAILABLE;
+    return (
+      INTERVIEW_PREP_ERROR_MESSAGES[this.code as keyof typeof INTERVIEW_PREP_ERROR_MESSAGES] ??
+      INTERVIEW_PREP_ERROR_MESSAGES.AI_UNAVAILABLE
+    );
   }
 }
 
@@ -68,26 +65,36 @@ export class InterviewPrepAiNotConfiguredError extends InterviewPrepAiError {
   }
 }
 
+export type GeneratePackParams = {
+  packBlock: string;
+  candidateBlock: string;
+  sourceBlock: string;
+  jobText: string;
+  context: string;
+  horizon: string;
+  maxQuestions: number;
+  maxTasks: number;
+  language: string | null;
+};
+
+export type GenerateFeedbackParams = {
+  question: string;
+  category: string;
+  answer: string;
+  roleTitle: string;
+  company: string;
+  dimensions: string[];
+  framework: string | null;
+  jobContext: string;
+  candidateContext: string;
+};
+
 /** What the service layer needs from an AI provider. */
 export type InterviewPrepAiProvider = {
   readonly name: string;
   readonly model: string;
-  generatePack(params: {
-    deterministicBlock: string;
-    careerProfileBlock: string;
-    jobText: string;
-    context: string;
-    maxQuestions: number;
-  }): Promise<ModelPack>;
-  generateFeedback(params: {
-    question: string;
-    category: string;
-    answer: string;
-    jobTitle: string;
-    jobCompany: string;
-    dimensions: string[];
-    framework: string | null;
-  }): Promise<ModelFeedback>;
+  generatePack(params: GeneratePackParams): Promise<ModelPack>;
+  generateFeedback(params: GenerateFeedbackParams): Promise<ModelFeedback>;
 };
 
 function mapProviderError(error: unknown): InterviewPrepAiError {
@@ -99,15 +106,9 @@ function mapProviderError(error: unknown): InterviewPrepAiError {
   })();
 
   if (status === 429) return new InterviewPrepAiError('AI_RATE_LIMITED', true, status);
-  if (status === 401 || status === 403) {
-    return new InterviewPrepAiError('AI_NOT_CONFIGURED', false, status);
-  }
-  if (status === 400 || status === 422) {
-    return new InterviewPrepAiError('AI_UNAVAILABLE', false, status);
-  }
-  if (status !== undefined && status >= 500) {
-    return new InterviewPrepAiError('AI_UNAVAILABLE', true, status);
-  }
+  if (status === 401 || status === 403) return new InterviewPrepAiError('AI_NOT_CONFIGURED', false, status);
+  if (status === 400 || status === 422) return new InterviewPrepAiError('AI_UNAVAILABLE', false, status);
+  if (status !== undefined && status >= 500) return new InterviewPrepAiError('AI_UNAVAILABLE', true, status);
 
   const name = error instanceof Error ? error.name : '';
   const message = error instanceof Error ? error.message : '';
@@ -137,11 +138,7 @@ export function createOpenAiInterviewPrepProvider(options?: {
     model,
 
     async generatePack(params): Promise<ModelPack> {
-      const client = new OpenAI({
-        apiKey,
-        timeout: timeoutMs,
-        maxRetries: 0,
-      });
+      const client = new OpenAI({ apiKey, timeout: timeoutMs, maxRetries: 0 });
 
       try {
         const response = await client.responses.parse({
@@ -151,11 +148,15 @@ export function createOpenAiInterviewPrepProvider(options?: {
             {
               role: 'user',
               content: buildGenerationPrompt({
-                deterministicBlock: params.deterministicBlock,
-                careerProfileBlock: params.careerProfileBlock,
+                packBlock: params.packBlock,
+                candidateBlock: params.candidateBlock,
+                sourceBlock: params.sourceBlock,
                 jobText: params.jobText,
                 context: params.context,
+                horizon: params.horizon,
                 maxQuestions: params.maxQuestions,
+                maxTasks: params.maxTasks,
+                language: params.language,
               }),
             },
           ],
@@ -164,14 +165,10 @@ export function createOpenAiInterviewPrepProvider(options?: {
           },
         });
 
-        if (response.output_parsed === null) {
-          throw new InterviewPrepAiError('AI_REFUSED', false);
-        }
+        if (response.output_parsed === null) throw new InterviewPrepAiError('AI_REFUSED', false);
 
         const parsed = modelPackSchema.safeParse(response.output_parsed);
-        if (!parsed.success) {
-          throw new InterviewPrepAiError('AI_INVALID_RESPONSE', true);
-        }
+        if (!parsed.success) throw new InterviewPrepAiError('AI_INVALID_RESPONSE', true);
 
         return { ...parsed.data, schemaVersion: INTERVIEW_PREP_SCHEMA_VERSION };
       } catch (error) {
@@ -181,7 +178,12 @@ export function createOpenAiInterviewPrepProvider(options?: {
             event: 'interview_prep_provider_failed',
             route: '/api/interview-prep',
             error,
-            context: { model, provider: AI_PROVIDER_NAME, providerStatus: mapped.providerStatus, operation: 'generatePack' },
+            context: {
+              model,
+              provider: AI_PROVIDER_NAME,
+              providerStatus: mapped.providerStatus,
+              operation: 'generatePack',
+            },
           });
         } else {
           await logImportantError({
@@ -195,11 +197,7 @@ export function createOpenAiInterviewPrepProvider(options?: {
     },
 
     async generateFeedback(params): Promise<ModelFeedback> {
-      const client = new OpenAI({
-        apiKey,
-        timeout: timeoutMs,
-        maxRetries: 0,
-      });
+      const client = new OpenAI({ apiKey, timeout: timeoutMs, maxRetries: 0 });
 
       try {
         const response = await client.responses.parse({
@@ -212,10 +210,12 @@ export function createOpenAiInterviewPrepProvider(options?: {
                 question: params.question,
                 category: params.category,
                 answer: params.answer,
-                jobTitle: params.jobTitle,
-                jobCompany: params.jobCompany,
+                roleTitle: params.roleTitle,
+                company: params.company,
                 dimensions: params.dimensions,
                 framework: params.framework,
+                jobContext: params.jobContext,
+                candidateContext: params.candidateContext,
               }),
             },
           ],
@@ -224,14 +224,10 @@ export function createOpenAiInterviewPrepProvider(options?: {
           },
         });
 
-        if (response.output_parsed === null) {
-          throw new InterviewPrepAiError('AI_REFUSED', false);
-        }
+        if (response.output_parsed === null) throw new InterviewPrepAiError('AI_REFUSED', false);
 
         const parsed = modelFeedbackSchema.safeParse(response.output_parsed);
-        if (!parsed.success) {
-          throw new InterviewPrepAiError('AI_INVALID_RESPONSE', true);
-        }
+        if (!parsed.success) throw new InterviewPrepAiError('AI_INVALID_RESPONSE', true);
 
         return parsed.data;
       } catch (error) {
@@ -241,7 +237,12 @@ export function createOpenAiInterviewPrepProvider(options?: {
             event: 'interview_prep_provider_failed',
             route: '/api/interview-prep',
             error,
-            context: { model, provider: AI_PROVIDER_NAME, providerStatus: mapped.providerStatus, operation: 'generateFeedback' },
+            context: {
+              model,
+              provider: AI_PROVIDER_NAME,
+              providerStatus: mapped.providerStatus,
+              operation: 'generateFeedback',
+            },
           });
         } else {
           await logImportantError({
@@ -267,9 +268,7 @@ export type InterviewPrepAiProviderFactory = () => InterviewPrepAiProvider;
 let providerFactory: InterviewPrepAiProviderFactory | null = null;
 
 /** Test-only override. Pass null to restore the real provider. */
-export function __setInterviewPrepAiProviderFactory(
-  factory: InterviewPrepAiProviderFactory | null,
-): void {
+export function __setInterviewPrepAiProviderFactory(factory: InterviewPrepAiProviderFactory | null): void {
   providerFactory = factory;
 }
 
