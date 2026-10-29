@@ -29,6 +29,7 @@ Preview build needs to boot the app).
 | `RESUME_INTELLIGENCE_MODEL` | optional | Extraction model. Defaults to `gpt-4o-mini`. Must support Structured Outputs |
 | `JOB_INTELLIGENCE_MODEL` | optional | Job-fit analysis model. Defaults to `gpt-4.1-mini`. Must support Structured Outputs |
 | `RESUME_OPTIMIZATION_MODEL` | optional | Resume optimisation model. Defaults to `gpt-4.1-mini`. Must support Structured Outputs. Read in exactly one place, independent of the other two |
+| `INTERVIEW_PREP_MODEL` | optional | Interview pack generation and answer-feedback model. Defaults to `gpt-4.1-mini`. Must support Structured Outputs. Read in exactly one place |
 | `PRODUCTION_URL` | yes for deploys | Repository **variable** (not secret): the public app origin, used by the deploy workflow to verify health |
 
 **Never** hardcode any of these in source. Do not commit real values.

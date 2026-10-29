@@ -17,10 +17,11 @@ import { handleOptions } from '@/lib/cors';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 import { z } from 'zod';
 import { interviewPrepErrorResponse } from '@/lib/interview-prep/route-errors';
+import { INTERVIEW_PREP_MAX_ANSWER_CHARS } from '@/lib/interview-prep/limits';
 import {
   getQuestionForPractice,
   submitPracticeAnswer,
-  type PracticeAttempt,
+  type PracticeAttemptView,
 } from '@/lib/interview-prep/service';
 
 export const runtime = 'nodejs';
@@ -33,7 +34,11 @@ const RATE_WINDOW_MS = 60_000;
 
 const submitSchema = z
   .object({
-    answer: z.string().max(3000),
+    answer: z.string().max(INTERVIEW_PREP_MAX_ANSWER_CHARS),
+    sessionId: z.string().min(1).optional().nullable(),
+    kind: z.enum(['INITIAL', 'REVISION', 'FOLLOW_UP']).optional(),
+    parentAttemptId: z.string().min(1).optional().nullable(),
+    followUpQuestion: z.string().max(500).optional().nullable(),
   })
   .strict();
 
@@ -67,7 +72,12 @@ export async function GET(request: Request, { params }: Params) {
         return apiError('NOT_FOUND', 'Question not found.', { request });
       }
 
-      return privateNoStore(jsonOk({ question: result.question, attempt: result.attempt }, request));
+      return privateNoStore(
+        jsonOk(
+          { question: result.question, attempt: result.attempt, attempts: result.attempts },
+          request,
+        ),
+      );
     },
     { event: 'interview_prep_get_question_failed', route: ROUTE },
   );
@@ -104,13 +114,17 @@ export async function POST(request: Request, { params }: Params) {
         return apiError('VALIDATION_FAILED', 'That request was not valid.', { request });
       }
 
-      let attempt: PracticeAttempt;
+      let attempt: PracticeAttemptView;
       try {
         attempt = await submitPracticeAnswer({
           userId,
           packId,
           questionId,
           answer: parsed.data.answer,
+          sessionId: parsed.data.sessionId ?? null,
+          kind: parsed.data.kind,
+          parentAttemptId: parsed.data.parentAttemptId ?? null,
+          followUpQuestion: parsed.data.followUpQuestion ?? null,
         });
       } catch (error) {
         return interviewPrepErrorResponse(error, request);

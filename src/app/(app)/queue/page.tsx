@@ -46,7 +46,16 @@ export default function QueuePage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="text-xs text-muted">{task.actionType.replace(/_/g, ' ')}</div>
-                  <Link href={task.relatedJobId ? `/jobs/${task.relatedJobId}` : '/queue'} className="mt-1 block font-semibold hover:text-accent-text">
+                  <Link
+                    href={
+                      task.relatedPrepPackId
+                        ? `/interview-prep/${task.relatedPrepPackId}`
+                        : task.relatedJobId
+                          ? `/jobs/${task.relatedJobId}`
+                          : '/queue'
+                    }
+                    className="mt-1 block font-semibold hover:text-accent-text"
+                  >
                     {task.title}
                   </Link>
                   <div className="text-sm text-muted">{task.description}</div>

@@ -11,8 +11,8 @@ const fetcher = (url: string) =>
   });
 
 function actionHref(item: CareerAction): string {
+  if (item.relatedPrepPackId) return `/interview-prep/${item.relatedPrepPackId}`;
   if (item.relatedJobId) return `/jobs/${item.relatedJobId}`;
-  if (item.relatedPrepPackId) return '/prep';
   return '/queue';
 }
 

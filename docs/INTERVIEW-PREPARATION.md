@@ -3,235 +3,356 @@
 teChia Jobs — Pro Release 6.
 
 This document describes the interview preparation feature: how users create
-job-specific preparation packs, generate questions from real job and career
-context, practise text-based answers, receive structured feedback, and how the
-feature is authorised, metered, persisted and operated.
+employer-specific, role-specific preparation packs, what the pack contains, how
+company research is bounded and cited, how practice and mock interviews work,
+and how the feature is authorised, metered, persisted and operated.
 
 ## 1. Workflow
 
-From a saved job:
+There are three entry points:
 
-1. Open the job (`/jobs/[id]`) and choose **Create AI prep pack**, or open an
-   existing pack from the Prep Packs list (`/prep`).
-2. Choose an interview context: recruiter screen, hiring manager, behavioral,
-   technical, system design, project discussion, problem-solving, situational,
-   final round, questions to ask the employer, or a balanced pack when the
-   stage is unknown.
-3. The server generates a small, high-quality set of questions (at most eight)
-   from the actual job description, your career profile, your selected resume
-   and the job's fit score. Questions are grouped by category and difficulty,
-   each with a competency, why it matters, the related requirement, a grounded
-   experience suggestion (only from your confirmed profile), preparation notes
-   and a suggested answer framework (STAR / technical / architecture).
-4. Reopen the pack later. Select a question, read the preparation notes, write
-   your answer and submit it. Submitting creates a numbered attempt; previous
-   attempts are preserved.
-5. Request feedback. Feedback uses a central rubric scored only on dimensions
-   that make sense for the question (e.g. technical correctness for debugging,
-   concrete example for behavioral). It explains what worked, what to improve,
-   what may be missing, a structure suggestion and bounded follow-up practice.
-6. Return later and continue. Progress (questions practised, feedback received,
-   last practised date) is persisted.
+1. **From a saved job.** Open `/jobs/[id]` and choose **Create AI prep pack**.
+   The job, company, posting URL and description are copied into the pack.
+2. **From the prep workspace.** Open `/interview-prep` for the pack list, or
+   `/interview-prep/new` to start from a saved job, import a public job URL, or
+   enter the role manually.
+3. **From the dashboard or Queue.** Preparation recommendations deep-link to the
+   relevant pack or to a new pack for a job that is approaching interview stage.
 
-## 2. Data model
+The new-pack form captures:
 
-Three tables extend the existing Prep Packs surface (`JobLead.prepPack` JSON
-remains for free-form talking points; this is the structured counterpart):
+- employer, role title, location, posting URL and job description;
+- optional official company website, careers page and up to four additional
+  research URLs;
+- interview date/time, or a coarse timing horizon when no exact date exists;
+- interview format/context (recruiter screen, hiring manager, behavioral,
+  technical, system design, project discussion, problem solving, situational,
+  final round, questions to ask, or balanced);
+- optional interview language, interviewer/panel details, invitation notes,
+  concerns and focus topics.
 
-- `InterviewPrepPack` — user-owned, job-targeted pack. Fields: title, context,
-  status (ACTIVE/ARCHIVED), schema/prompt versions, `inputFingerprint` for
-  staleness detection, `preparationGuidance`, `limitations`, cached progress
-  counters and timestamps. One pack per `(userId, jobId, inputFingerprint)` —
-  the unique index doubles as the duplicate-generation lock.
-- `InterviewQuestion` — one row per question, versioned and ordinal-positioned:
-  category, difficulty, competency, question text, why it matters, related
-  requirement, relevant experience, prep notes, answer structure, follow-up
-  question IDs, source type and source evidence. `isActive` lets a refresh
-  retire the old set without detaching attempts.
-- `InterviewPracticeAttempt` — one row per submitted answer: pack, question,
-  question version, attempt number, answer text, feedback JSON, rubric key and
-  timestamp.
+A pack can be saved as a **draft** without spending a credit. Generation, and
+later regeneration, are explicit paid AI operations. Opening, reading and
+practising a saved pack never consumes credits, even after a plan lapses.
 
-All user relations cascade on delete. Indexes support ownership-scoped reads,
-pack progress and per-question history.
+## 2. What a pack contains
 
-## 3. Question and pack schema
+The workspace has nine tabs:
 
-Defined in `src/lib/interview-prep/schema.ts` as versioned strict Zod
-contracts (pure: no `.refine`/`.transform`, so OpenAI strict structured
-outputs can enforce them). `INTERVIEW_PREP_SCHEMA_VERSION` bumps invalidate
-cached packs.
+| Tab | Contents |
+|---|---|
+| Briefing | Role summary, top priorities, strongest evidence, gaps, sourced company facts and one next action. |
+| Company | Company overview, products, customers, mission, values, culture notes, recent developments and role context. Every claim carries `SOURCE` or `INFERENCE` basis and source indexes where applicable. |
+| Role | Responsibilities, requirements, competencies, likely challenges and an occupational-family classification. Requirements show whether evidence was found, its source, confidence and a preparation action. |
+| Evidence | A bank of the candidate's own examples, what each supports, missing details and whether the profile item is confirmed. |
+| Questions | Predicted interview questions with category, difficulty, competency, why it matters, related requirement, relevant candidate evidence, coaching, answer structure, pitfalls and follow-up questions. |
+| Plan | A time-based preparation plan grouped by horizon, with completion state. Tasks are generated but also fall back deterministically so the plan is never empty. |
+| Mock interview | A persisted sequence of questions selected from the pack by focus (full, behavioral, role-specific, company/motivation, weak area, quick). Answers, feedback and session summaries are stored. |
+| Cheat sheet | A print-friendly one-page summary of the most important facts, examples, questions to ask, logistics, reminders and unknowns. |
+| Sources | The exact stored research sources, their fetch/verification status, provenance and excerpts. |
 
-Interview contexts:
-`RECRUITER_SCREEN`, `HIRING_MANAGER`, `BEHAVIORAL`, `TECHNICAL`,
-`SYSTEM_DESIGN`, `PROJECT_DISCUSSION`, `PROBLEM_SOLVING`, `SITUATIONAL`,
-`FINAL_ROUND`, `QUESTIONS_TO_ASK`, `BALANCED`.
+Questions are always marked as predictions. The feature never presents generated
+questions as actual employer questions.
 
-Question categories:
-`TECHNICAL_FUNDAMENTALS`, `APPLIED_PROBLEM_SOLVING`, `ARCHITECTURE_TRADE_OFFS`,
-`BEHAVIORAL`, `COMMUNICATION`, `OWNERSHIP`, `COLLABORATION`, `HANDLING_AMBIGUITY`,
-`DEBUGGING`, `PROJECT_DECISIONS`, `ROLE_SCENARIO`, `EMPLOYER_QUESTIONS`.
+## 3. Company research and provenance
 
-Difficulty: `FOUNDATION` / `APPLIED` / `ADVANCED`.
+There is **no web search and no scraping service**. Research is limited to pages
+the user explicitly supplies:
 
-Answer framework: `STAR` / `TECHNICAL` / `ARCHITECTURE` / null (no framework
-forced).
+- the job description (always source index 0 when present);
+- the company website;
+- the careers page;
+- up to four additional official URLs.
 
-Source type: `GENERATED` / `MANUAL` / `EDITED`.
+The server fetches each URL with hostile-input protections:
 
-Feedback ratings: `EVIDENT` / `PARTIAL` / `NOT_EVIDENT` / `INSUFFICIENT_EVIDENCE`.
+- only `http` and `https`;
+- no embedded credentials and only ports 80/443;
+- DNS resolution rejects loopback, private, link-local, CGNAT, multicast,
+  documentation and cloud-metadata addresses (IPv4 and IPv6);
+- every redirect is revalidated with the same rules, with a bounded redirect
+  count;
+- content types are limited to HTML, XHTML and plain text;
+- response bytes, extraction size, per-request time and total research time are
+  bounded;
+- no JavaScript, browser, cookies or authenticated sessions are used.
 
-## 4. Answer framework behavior
+Research status is one of:
 
-Frameworks live in `src/lib/interview-prep/prompt.ts`
-(`ANSWER_FRAMEWORK_GUIDANCE`):
+- `NOT_STARTED` — no generation attempt yet;
+- `COMPLETED` — every supplied source was read;
+- `PARTIAL` — at least one source was read and at least one failed;
+- `NOT_AVAILABLE` — no official sources were supplied;
+- `FAILED` — supplied sources could not be read.
 
-- STAR (Situation, Task, Action, Result) — behavioral questions.
-- Technical problem-solving — understand, clarify, explain approach,
-  trade-offs, validation, result.
-- Architecture and trade-offs — requirements, constraints, design,
-  alternatives, trade-offs, testing and operations.
+Each source records its URL, canonical URL, title, publisher, publication date,
+retrieval date, excerpt, fetch status (`FETCHED`, `FAILED`, `USER_SUPPLIED`) and
+verification (`SOURCE_BACKED`, `UNVERIFIED`, `USER_SUPPLIED`). Failed sources
+remain visible with an error code and a plain-language limitation; they are not
+silently replaced with invented facts.
 
-The framework is selected by question category, never forced onto every
-question. Frameworks give concise prompts and reminders, not a robotic script
-to memorise.
+Generated company claims use a strict basis:
 
-## 5. Feedback rubric
+- `SOURCE` claims must cite at least one usable source index. A `SOURCE` claim
+  with no valid source is dropped.
+- `INFERENCE` claims are allowed only where the model is explicitly reasoning
+  from the job description or supplied material, and are labelled as inference.
 
-Defined centrally in `src/lib/interview-prep/service.ts`
-(`rubricDimensionsForCategory`). Only dimensions relevant to a category are
-scored:
+When research is unavailable, pack generation still proceeds from the job
+description and the candidate's profile, and the limitations say exactly that.
 
-- Base for all: relevance, clarity/structure, communication, completeness.
-- Behavioral / project / collaboration / ownership: add concrete example,
-  role skills, supported outcomes.
-- Technical / applied / debugging / architecture: add technical correctness
-  and reasoning/trade-offs.
+## 4. Question bank and answer coaching
 
-A written answer too short to judge yields `INSUFFICIENT_EVIDENCE` for a
-dimension rather than a guess. There is no single opaque "readiness score";
-feedback is a small, visible rubric.
+Question categories include technical fundamentals, applied problem solving,
+architecture and trade-offs, behavioral, communication, ownership,
+collaboration, handling ambiguity, debugging, project decisions, role scenarios
+and employer questions.
 
-## 6. Persistence and versioning
+Each question includes:
 
-- A pack is created per user, job and input fingerprint. Re-running with the
-  same inputs reuses the completed pack and consumes no credit.
-- Changing the job description, profile, resume or context produces a new
-  fingerprint; the old pack is kept and marked stale (`isFresh: false`) rather
-  than silently replaced.
-- A refresh (`POST /api/interview-prep/[packId]/regenerate`) deactivates the
-  old questions (`isActive: false`) and inserts new ones with an incremented
-  version. Practice attempts stay attached to the question versions they were
-  taken against.
-- Attempts are numbered and never overwritten. A user can reopen a completed
-  pack and see previous answers and feedback.
+- a category, difficulty, competency and priority;
+- why the interview question matters and which requirement it tests;
+- the candidate's relevant evidence, only when it appears in their confirmed
+  profile or structured resume;
+- coaching: what the interviewer assesses, key points, a practice exercise and a
+  structure-only wording placeholder;
+- a suggested answer framework (`STAR`, `TECHNICAL`, `ARCHITECTURE`, or none);
+- what a strong answer shows, common pitfalls and bounded follow-ups.
 
-## 7. AI provider and model configuration
+Frameworks are prompts, not scripts to memorise. A placeholder contains
+bracketed structure, never a fabricated personal story.
 
-- Provider: OpenAI (Responses API, `responses.parse` with `zodTextFormat`
-  structured outputs). No tools, no web search, no code interpreter — the
-  model can only return the schema-shaped object.
-- Model: `gpt-4.1-mini`, overridable via `INTERVIEW_PREP_MODEL` (read in one
-  place, `src/lib/interview-prep/ai-client.ts`). Timeout 45s.
-- All AI work is server-side. API keys and model config never reach the
-  browser.
-- Every model output is re-validated server-side (`src/lib/interview-prep/verify.ts`),
-  even though the provider offers structured output.
+## 5. Practice, feedback and mock interviews
 
-## 8. Entitlements and usage accounting
+Submitting a written answer creates a numbered attempt. Attempts are preserved;
+a second answer to the same question is marked `REVISION`. Saving an answer is
+free and does not require a live paid plan beyond reading the pack.
 
-- Feature key: `AI_INTERVIEW_PREP` (Pro and Premium), already present in the
-  entitlement registry (`src/lib/billing/plans.ts`). `ADVANCED_PREPARATION`
-  (Premium) is reserved for later; this release does not require it.
-- Pack generation and feedback both draw on the shared `aiCredits` allowance
-  — one AI allowance, not several competing ones. Plan limits: FREE 25,
-  PRO/PREMIUM unlimited (centralised; do not scatter limits).
-- Before any AI call: authenticate → entitlement (`requireEntitlement`) →
-  resolve inputs → fingerprint → usage reservation (`consumeUsage`, atomic
-  under a PG advisory lock with an idempotency key) → provider → persist.
-- Reading a saved pack, reviewing feedback or navigating the UI consumes
-  nothing. Duplicate concurrent or retried requests with the same idempotency
-  key are not charged twice.
-- Admins are exempt and consume zero customer credits. Expired trials fail
-  closed (timestamp-derived, not cron-derived).
+Feedback is a separate, metered AI operation. The rubric is category-aware:
+only dimensions that make sense for the question are scored. A written answer
+that is too short yields `INSUFFICIENT_EVIDENCE` rather than a guess. Feedback
+includes what worked, what to improve, what was missing, a structure suggestion,
+a stronger structure, bounded follow-up practice and an optional adaptive
+follow-up.
 
-## 9. Privacy boundaries
+Feedback evidence quotes are checked against the submitted answer. A quote that
+does not appear is removed. Feedback never guarantees an outcome or predicts a
+hiring decision.
 
-- Practice answers are private to the authenticated user. Ownership is part of
-  every query; another user's pack is a 404, never a 403.
-- The raw resume is never sent to the provider — only a summary of the
-  confirmed career profile (built by Resume Intelligence).
-- Only the minimum authorised data is sent for each operation.
-- Full answers, resumes, profiles, raw prompts and feedback are not logged.
-- Practice content is not used for model training as part of this feature.
-- No retention guarantees beyond what the database holds; deletion cascades
-  with the user/job.
+Mock sessions are server-selected and persisted. A session stores its mode,
+ordered question IDs, status, timestamps and a summary derived from the attempts
+that actually received feedback. Starting a session is free; feedback remains
+metered per answer. Starting a new session closes any previous active session
+for the pack.
 
-## 10. Prompt-injection safety
+## 6. Preparation plan and readiness
 
-- The system prompt establishes that job descriptions, resumes, profiles and
-  answers are untrusted third-party data, not instructions.
-- The model gets no tools, so it cannot invoke network, file or privileged
-  operations.
-- Supplied text is fenced (`<<<... >>>`) so it cannot terminate the data
-  section early.
-- Generated questions are never presented as actual employer questions, and no
-  employer-specific claims (visa sponsorship, "the company always asks…") are
-  emitted.
-- Personal-experience references are re-checked against the user's actual
-  profile; unsupported ones are nulled. Feedback evidence quotes are re-checked
-  against the submitted answer.
+The plan is time-based: `WITHIN_24_HOURS`, `TWO_THREE_DAYS`, `WITHIN_A_WEEK`,
+`MORE_THAN_A_WEEK` or `UNKNOWN`. An exact interview date takes precedence over
+the coarse timing supplied by the user. Moving the date recalculates horizons
+and order while preserving completed tasks.
 
-## 11. Error recovery
+The model may propose tasks, but a deterministic fallback fills gaps so a pack
+always has a usable plan. Tasks cover priorities such as practicing high-value
+questions, preparing evidence, confirming logistics, reading supplied sources,
+addressing a stated concern, running a mock interview and choosing questions to
+ask the employer.
 
-- Provider failures, timeouts, rate limits, empty and malformed output, schema
-  validation failure and oversized output are mapped to safe user-facing
-  messages through `src/lib/interview-prep/route-errors.ts`.
-- Provider messages, stack traces and Prisma details never reach the browser.
-- Domain errors (`PlanRequiredError`, `UsageLimitExceededError`,
-  `DuplicatePrepGenerationInFlightError`, `PracticeAnswerTooShortError`)
-  carry machine-readable codes clients assert on.
-- Retryable failures offer a retry; non-retryable ones (e.g. no job data)
-  explain what the user can do.
+Readiness is a descriptive summary of persisted work:
 
-## 12. Database migration
+- preparation coverage (completed tasks / active tasks);
+- practice evidence (questions attempted, feedback received, mock sessions
+  completed);
+- research completeness;
+- unresolved evidence gaps;
+- unresolved high-priority tasks;
+- explicit limitations.
 
-`prisma/migrations/20261019120000_interview_preparation/migration.sql` creates
-`InterviewPrepPack`, `InterviewQuestion` and `InterviewPracticeAttempt` with
-foreign keys, cascades and indexes. It is non-destructive and was verified
-against the local database with `prisma migrate diff` producing an empty
-diff (zero drift). Apply with `npm run prisma:migrate:deploy`. Do not use
+Levels are `STARTING`, `BUILDING`, `PRACTISING` and `WELL_PREPARED`. None of them
+is a prediction of the employer's decision, and the API/UI state that
+limitation.
+
+## 7. Personalisation and anti-fabrication safeguards
+
+- Candidate context comes from the existing confirmed career profile, job
+  preferences and an optional structured resume. There is no parallel career
+  profile.
+- The full resume file is not sent to the provider. Only a bounded text extract
+  from the structured resume and profile is used.
+- A candidate evidence quote is kept only when it appears in that evidence
+  corpus. Unsupported quotes are removed even when the rest of the question
+  survives.
+- The model receives no tools, browsing, code execution or file access.
+- Job descriptions, profiles, resumes, answers, interviewer notes and research
+  pages are treated as untrusted data, fenced in the prompt and never as
+  instructions.
+- Full answers, resumes, profiles, prompts and feedback are not logged.
+- The model cannot invent company sources: `SOURCE` claims without a valid
+  index are dropped by server-side verification.
+- When candidate evidence is thin, the pack says personalisation is limited
+  rather than filling the gap with invented experience.
+
+## 8. Data model
+
+The feature extends the existing interview-prep tables rather than creating a
+parallel tracker:
+
+- `InterviewPrepPack` — user-owned, optionally linked to a `JobLead`. Stores a
+  snapshot of employer, role, location, posting URL, description, research URLs,
+  interview metadata, status, research status, input fingerprint, dedupe key,
+  validated section content, guidance, limitations, progress counters and
+  timestamps. A unique `dedupeKey` prevents duplicate generation for identical
+  inputs.
+- `InterviewResearchSource` — one row per retained source, with position,
+  provenance, fetch status, verification and excerpt.
+- `InterviewQuestion` — versioned questions. Regeneration deactivates the old
+  set instead of deleting it, so attempt history stays attached to the version
+  it was taken against.
+- `InterviewPracticeAttempt` — numbered answers, version reference, kind,
+  optional parent/follow-up, feedback JSON and rubric key.
+- `InterviewPracticeSession` — persisted mock session with mode, question IDs,
+  status, summary and timestamps.
+- `InterviewPrepTask` — plan task with stable key, horizon, priority, category,
+  estimated minutes and completion state.
+
+All user-facing relations cascade on delete. Indexes cover ownership-scoped
+reads, pack lists, interview dates and per-question history.
+
+Pack statuses are `DRAFT`, `RESEARCHING`, `GENERATING`, `READY`,
+`PARTIALLY_READY`, `FAILED` and `ARCHIVED`. A partially ready pack is one with a
+usable but thin question bank or plan; it remains fully readable.
+
+## 9. API surface
+
+| Route | Purpose |
+|---|---|
+| `GET /api/interview-prep` | List the caller's packs and entitlement metadata. |
+| `POST /api/interview-prep` | Create or reuse a pack; generate immediately or save a draft. |
+| `GET /api/interview-prep/[packId]` | Full workspace payload: content, questions, sources, tasks, sessions, readiness and practiced IDs. |
+| `PATCH /api/interview-prep/[packId]` | Update metadata, interview details, research sources or archive/restore. |
+| `DELETE /api/interview-prep/[packId]` | Archive a pack; history is kept. |
+| `POST /api/interview-prep/[packId]/regenerate` | Regenerate with force, metered. |
+| `GET/POST /api/interview-prep/[packId]/questions/[questionId]` | Load a question and attempts, or submit an answer. |
+| `POST /api/interview-prep/[packId]/attempts/[attemptId]/feedback` | Metered feedback for one attempt. |
+| `GET /api/interview-prep/[packId]/progress` | Persisted progress and readiness. |
+| `POST/GET /api/interview-prep/[packId]/sessions` | Start or list mock sessions. |
+| `GET/PATCH /api/interview-prep/[packId]/sessions/[sessionId]` | Load a session or complete it. |
+| `PATCH /api/interview-prep/[packId]/tasks/[taskId]` | Complete or reopen a preparation task. |
+| `POST /api/interview-prep/import-url` | Bounded, SSRF-safe import of a public job posting for review. |
+
+Every route resolves identity from the server session. There is no `userId`
+request parameter. Ownership is part of every query, so another user's pack is a
+404 rather than a 403. Per-user/per-IP rate limits apply to all routes.
+
+## 10. AI provider and model configuration
+
+- Provider: OpenAI Responses API, `responses.parse` with `zodTextFormat`
+  structured outputs. No tools, web search or code interpreter.
+- Model: `gpt-4.1-mini`, overridable server-side with `INTERVIEW_PREP_MODEL`.
+  Read in one place: `src/lib/interview-prep/ai-client.ts`.
+- Timeout: 45 seconds, no automatic retries that could double-charge.
+- Every output is re-validated by `src/lib/interview-prep/verify.ts`, even
+  though the provider enforces a schema.
+- Missing configuration fails closed before any credit is consumed.
+
+## 11. Entitlements and usage accounting
+
+- Feature key: `AI_INTERVIEW_PREP` (Pro and Premium), centralised in
+  `src/lib/billing/plans.ts`.
+- Generation, regeneration and feedback draw on the existing shared `aiCredits`
+  allowance — one AI ledger, not a new one.
+- Reading a saved pack, task completion, session creation, session completion
+  and answer submission are free.
+- Order of operations: authenticate → entitlement → resolve inputs → fingerprint
+  → resolve provider → reserve usage (atomic, idempotent) → provider → verify →
+  persist.
+- Identical inputs reuse a completed pack without charging twice.
+- Admins bypass customer credits; all bypasses are logged.
+- Expired trials fail closed through timestamp-derived entitlement checks, not a
+  cron job.
+
+## 12. Integrations
+
+- **Job detail** (`/jobs/[id]`) lists prep packs linked to that job and offers
+  one-click generation.
+- **Queue / dashboard** deep-link preparation recommendations to the relevant
+  pack or the new-pack form. Queue statuses recognise `READY` and
+  `PARTIALLY_READY`.
+- **Career Coach** receives a bounded summary of active preparation work rather
+  than a second copy of the pack.
+- **Entitlements** use the existing plan/feature registry; the feature is
+  released for Pro and Premium.
+- **Migration/deploy** use the existing Prisma migration and deploy pipeline.
+
+## 13. Error recovery
+
+Provider failures, timeouts, rate limits, refusals, empty/malformed output,
+schema failures and oversized output map to safe user-facing messages through
+`src/lib/interview-prep/route-errors.ts`. Provider details, stack traces and
+Prisma errors never reach the browser.
+
+Known domain failures include invalid input, missing job data, unreadable job
+URL, duplicate generation in flight, usage limits, missing entitlement, too-short
+answers and missing sessions. Failed packs retain their status and a
+machine-readable `errorCode`; a retry does not discard practice history.
+
+## 14. Database migration
+
+Migration: `prisma/migrations/20261029120000_interview_prep_intelligence/migration.sql`.
+
+It extends `InterviewPrepPack`, `InterviewQuestion` and
+`InterviewPracticeAttempt`, adds `InterviewResearchSource`,
+`InterviewPrepTask` and `InterviewPracticeSession`, and adds indexes and
+cascades. Existing interview-prep rows are preserved; legacy `ACTIVE` pack
+statuses are normalised to `READY`. The migration is non-destructive.
+
+Validated locally with:
+
+```bash
+npm run prisma:migrate:status
+npx prisma validate
+npx prisma migrate diff --from-url "$DATABASE_URL" \
+  --to-schema-datamodel prisma/schema.prisma --exit-code
+```
+
+All three produced no drift. Apply with `npm run prisma:migrate:deploy`; never use
 `prisma db push` in production.
 
-## 13. Local setup
+## 15. Local setup and validation
 
-1. Copy `.env.example` to `.env.local` and set `DATABASE_URL` to a local
-   Postgres.
+1. Copy `.env.example` to `.env.local` and point `DATABASE_URL` at local Postgres.
 2. `npm install` (runs `prisma generate` via postinstall).
-3. `npm run prisma:migrate:dev` to apply migrations locally.
-4. `npm run monetization:initialize` to seed plans (FREE/PRO/PREMIUM) and
-   feature entitlements.
-5. `npm run dev` to start.
-6. Tests: `npm test` (integration tests need `TEST_DATABASE_URL` or a local
-   `DATABASE_URL` and refuse non-test databases).
-7. `npm run typecheck` and `npm run build` for validation.
+3. `npm run prisma:migrate:dev`.
+4. `npm run monetization:initialize` to seed plans and feature entitlements.
+5. `OPENAI_API_KEY` is required for real generation; `INTERVIEW_PREP_MODEL` is
+   optional.
+6. `npm run dev` to start.
+7. Validation: `npm run typecheck`, `npm test`, `npm run lint`, `npm run build`.
+   Integration tests need a local test database and refuse non-test databases.
 
-## 14. Deployment and troubleshooting
+## 16. Deployment and troubleshooting
 
-- Deploy applies migrations via `npm run prisma:migrate:deploy` (CI runs the
-  schema-drift gate first).
-- Set `OPENAI_API_KEY` server-side only. Never expose as `NEXT_PUBLIC_*`.
-- Set `ALERT_WEBHOOK_URL` for Discord error alerting (error level only).
-- If generation fails with `AI_NOT_CONFIGURED`, the OpenAI key is missing.
-- `USAGE_LIMIT_EXCEEDED` means the period's `aiCredits` allowance is used.
-- Packs are cached by input fingerprint; unrelated profile edits do not
-  invalidate them.
+- Deploy applies migrations via `npm run prisma:migrate:deploy` before health
+  verification.
+- Set `OPENAI_API_KEY` server-side only. Never expose it as `NEXT_PUBLIC_*`.
+- `INTERVIEW_PREP_MODEL` may be set per environment; it must support Structured
+  Outputs.
+- `ALERT_WEBHOOK_URL` receives important provider/pack failures.
+- `AI_NOT_CONFIGURED`: the OpenAI key is missing or rejected.
+- `USAGE_LIMIT_EXCEEDED`: the period's shared AI credit allowance is exhausted.
+- `AI_TIMEOUT` / `AI_RATE_LIMITED`: retryable provider conditions; the pack is
+  marked failed and can be regenerated.
+- Company research missing or failed is expected when no official sources were
+  supplied; add URLs in pack settings and regenerate.
+- A pack marked “Inputs changed” means the job/profile/resume fingerprint moved;
+  the saved pack is unchanged until regenerated.
 
-## 15. What this release deliberately does not include
+## 17. What this release deliberately does not include
 
-- Audio/video interview recording or real-time voice conversation.
-- Transcription or real-time audio services.
-- A second AI orchestration framework or provider.
-- A parallel task-management system alongside the existing Queue (preparation
-  actions integrate with the existing queue surface).
-- Gamification (streaks, badges, leaderboards) or employability predictions.
+- Web search, search APIs, crawling or paid scraping services.
+- Audio/video recording, transcription or real-time voice interviews.
+- A separate AI usage ledger or a second orchestration framework.
+- A parallel task manager or career-profile system.
+- Guaranteed interview outcomes, employability predictions, streaks or badges.
+- Localisation infrastructure; the feature UI is currently English, while the
+  interview-language field can request another output language.

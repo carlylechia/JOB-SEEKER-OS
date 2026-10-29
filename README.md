@@ -92,6 +92,20 @@ Full behaviour, architecture, limits and troubleshooting: [docs/RESUME_BUILDER.m
 Full behaviour, architecture, limits and troubleshooting:
 [docs/APPLICATION_MATERIALS.md](docs/APPLICATION_MATERIALS.md).
 
+### AI Interview Intelligence & Preparation Packs (Pro)
+
+- employer-specific, role-specific, candidate-specific pack from a saved job, an imported public job URL, or a manual brief
+- company context built only from the job description and official pages you explicitly supply; every claim is marked as source-backed or an inference, and unreadable sources are shown as limitations rather than replaced with guesses
+- role analysis, responsibilities, requirement-to-evidence mapping, a personal evidence bank and competency-specific coaching
+- predicted question bank with category, difficulty, priority, answer structure, pitfalls and follow-ups — never presented as actual employer questions
+- answer practice with numbered attempts, category-aware rubric feedback and adaptive follow-up practice
+- persisted mock-interview sessions with focus modes, answer history and session summaries
+- a time-based preparation plan, honest readiness summary and print-friendly cheat sheet
+- generation and feedback metered through the existing shared AI credits; reading, practising and completing tasks remain free
+
+Full behaviour, research safeguards, data model and configuration:
+[docs/INTERVIEW-PREPARATION.md](docs/INTERVIEW-PREPARATION.md).
+
 ### Intelligent Daily Job Discovery (Pro)
 
 - high-relevance daily job shortlist (up to 5 roles) ranked specifically for your confirmed career profile and preferences

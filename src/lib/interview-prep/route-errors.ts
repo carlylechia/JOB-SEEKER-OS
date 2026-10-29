@@ -13,10 +13,14 @@ import { PlanRequiredError } from '@/lib/billing/subscriptions';
 import { UsageLimitExceededError } from '@/lib/billing/usage';
 import {
   DuplicatePrepGenerationInFlightError,
+  InterviewPrepJobNotFoundError,
   InterviewPrepPackNotFoundError,
   PracticeAnswerTooShortError,
+  PrepSessionNotFoundError,
+  PrepValidationError,
 } from './service';
 import { InterviewPrepAiError } from './ai-client';
+import { ResearchFetchError } from './research';
 import { INTERVIEW_PREP_ERROR_MESSAGES } from './schema';
 
 type Mapped = { code: ApiErrorCode; message: string; meta?: Record<string, unknown> };
@@ -44,12 +48,24 @@ function map(error: unknown): Mapped | null {
     return { code: 'NOT_FOUND', message: 'Preparation pack not found.' };
   }
 
+  if (error instanceof InterviewPrepJobNotFoundError) {
+    return { code: 'NOT_FOUND', message: 'That job could not be found.' };
+  }
+
+  if (error instanceof PrepSessionNotFoundError) {
+    return { code: 'NOT_FOUND', message: 'Practice session not found.' };
+  }
+
   if (error instanceof DuplicatePrepGenerationInFlightError) {
     return { code: 'DUPLICATE_REQUEST', message: error.message };
   }
 
-  if (error instanceof PracticeAnswerTooShortError) {
+  if (error instanceof PracticeAnswerTooShortError || error instanceof PrepValidationError) {
     return { code: 'VALIDATION_FAILED', message: error.message };
+  }
+
+  if (error instanceof ResearchFetchError) {
+    return { code: 'VALIDATION_FAILED', message: error.message, meta: { code: error.code } };
   }
 
   if (error instanceof InterviewPrepAiError) {

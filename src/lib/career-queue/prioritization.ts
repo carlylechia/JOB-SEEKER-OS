@@ -35,7 +35,10 @@ export async function buildCareerActionCandidates(userId: string): Promise<Caree
     }),
     prisma.userProfile.findUnique({ where: { userId } }),
     prisma.structuredResume.findMany({ where: { userId }, select: { id: true, targetJobId: true } }),
-    prisma.interviewPrepPack.findMany({ where: { userId, status: 'ACTIVE' }, select: { id: true, jobId: true, practicedCount: true, questionCount: true } }),
+    prisma.interviewPrepPack.findMany({
+      where: { userId, status: { in: ['READY', 'PARTIALLY_READY'] } },
+      select: { id: true, jobId: true, practicedCount: true, questionCount: true },
+    }),
     prisma.applicationMaterial.findMany({ where: { userId, status: { in: ['DRAFT', 'READY'] } }, select: { id: true, jobId: true, type: true, status: true } }),
   ]);
 

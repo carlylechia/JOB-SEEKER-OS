@@ -46,6 +46,7 @@ export default function JobDetailsPage() {
   const [rescoring, setRescoring] = useState(false);
   const [materials, setMaterials] = useState<Array<{ id: string; type: string; title: string; subject: string | null; status: string; generationStatus: string; createdAt: string; updatedAt: string }>>([]);
   const [materialsLoading, setMaterialsLoading] = useState(false);
+  const [prepPacks, setPrepPacks] = useState<Array<{ id: string; title: string; status: string; questionCount: number; practicedCount: number; interviewAt: string | null; updatedAt: string }>>([]);
 
   const job = getJob(params.id);
   const jobId = job?.id;
@@ -67,6 +68,24 @@ export default function JobDetailsPage() {
       }
     }
     void loadMaterials();
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
+
+  useEffect(() => {
+    if (!jobId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/interview-prep?jobId=${jobId}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const json = (await res.json()) as { packs?: typeof prepPacks };
+        if (!cancelled) setPrepPacks(json.packs ?? []);
+      } catch {
+        // Non-fatal: the job page still works if prep is unavailable.
+      }
+    })();
     return () => {
       cancelled = true;
     };
@@ -501,10 +520,11 @@ export default function JobDetailsPage() {
               })()}
             </div>
             <div className="card-pad">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Prep pack</h3>
-                <div className="flex items-center gap-2">
-                  <Link href="/prep" className="btn-secondary text-sm">Open prep editor</Link>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <h3 className="text-lg font-semibold">Interview prep</h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link href="/interview-prep" className="btn-secondary text-sm">Open workspace</Link>
+                  <Link href="/prep" className="btn-secondary text-sm">Prep notes</Link>
                   <button
                     type="button"
                     className="btn-primary text-sm"
@@ -514,6 +534,29 @@ export default function JobDetailsPage() {
                   </button>
                 </div>
               </div>
+
+              {prepPacks.length > 0 && (
+                <div className="mb-4 space-y-2">
+                  {prepPacks.map((pack) => (
+                    <Link
+                      key={pack.id}
+                      href={`/interview-prep/${pack.id}`}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line p-3 text-sm hover:bg-surface-sunken"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium">{pack.title}</span>
+                        <span className="text-xs text-muted">
+                          {pack.questionCount} questions · {pack.practicedCount} practised
+                          {pack.interviewAt ? ` · interview ${new Date(pack.interviewAt).toLocaleDateString()}` : ''}
+                        </span>
+                      </span>
+                      <span className={`badge shrink-0 ${pack.status === 'READY' ? 'bg-success/15 text-success-text' : pack.status === 'PARTIALLY_READY' ? 'bg-warn/15 text-warn-text' : pack.status === 'FAILED' ? 'bg-danger/15 text-danger-text' : 'bg-surface-sunken text-ink'}`}>
+                        {pack.status.replace('_', ' ').toLowerCase()}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
               {creatingPack && (
                 <div className="mt-3 space-y-2">
                   <p className="muted text-xs mb-1">Prepare with job-specific questions generated from this role and your career profile.</p>
@@ -540,6 +583,12 @@ export default function JobDetailsPage() {
                       Behavioral focus
                     </button>
                   </div>
+                  <Link
+                    href={`/interview-prep/new?jobId=${job.id}`}
+                    className="text-xs text-accent-text underline decoration-accent/40 underline-offset-2"
+                  >
+                    Or open the full setup to add interview details, concerns and research sources
+                  </Link>
                 </div>
               )}
               <div className="space-y-3 text-sm">

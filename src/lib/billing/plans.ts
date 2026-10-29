@@ -196,8 +196,9 @@ export const FEATURE_ENTITLEMENTS: Record<
   AI_INTERVIEW_PREP: {
     plans: ['PRO', 'PREMIUM'],
     label: 'AI interview preparation',
-    released: false,
-    description: 'Generate structured interview preparation packs.',
+    released: true,
+    description:
+      'Generate employer-specific preparation packs with company research, role analysis, evidence mapping, a question bank, a plan and mock practice.',
   },
   /**
    * The paid operation behind Resume Intelligence: analysing a stored resume
