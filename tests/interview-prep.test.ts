@@ -874,6 +874,14 @@ describe('practice, feedback and sessions', () => {
     expect(loaded?.questions.length).toBe(session.questionIds.length);
     expect(loaded?.questions.map((item) => item.id)).toEqual(session.questionIds);
 
+    // Session questions must carry the same provenance as the pack question
+    // list: the mock-interview card shows source links and reads sourceRefs
+    // unconditionally.
+    const sessionQuestion = loaded?.questions[0];
+    const fullQuestion = detail.data.questions.find((item) => item.id === sessionQuestion?.id);
+    expect(Array.isArray(sessionQuestion?.sourceRefs)).toBe(true);
+    expect(sessionQuestion?.sourceRefs).toEqual(fullQuestion?.sourceRefs);
+
     const completed = await completePracticeSession({
       userId: user.id,
       packId: pack.id,

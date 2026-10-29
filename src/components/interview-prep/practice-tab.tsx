@@ -230,7 +230,9 @@ function QuestionCard({
   }
 
   const latest = attempts[0] ?? null;
-  const sourceLinks = detail.sources.filter((source) => question.sourceRefs.includes(source.id));
+  const sourceRefs = question.sourceRefs ?? [];
+  const commonPitfalls = question.commonPitfalls ?? [];
+  const sourceLinks = detail.sources.filter((source) => sourceRefs.includes(source.id));
 
   return (
     <div className="space-y-3">
@@ -312,11 +314,11 @@ function QuestionCard({
                 <p className="mt-1">{question.strongAnswerShows}</p>
               </div>
             ) : null}
-            {question.commonPitfalls.length > 0 ? (
+            {commonPitfalls.length > 0 ? (
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted">Common pitfalls</p>
                 <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
-                  {question.commonPitfalls.map((pitfall, index) => (
+                  {commonPitfalls.map((pitfall, index) => (
                     <li key={`${pitfall}-${index}`}>{pitfall}</li>
                   ))}
                 </ul>

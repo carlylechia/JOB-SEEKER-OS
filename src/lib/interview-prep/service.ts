@@ -1826,7 +1826,10 @@ export type QuestionForPractice = {
   strongAnswerShows: string | null;
   commonPitfalls: string[];
   coaching: unknown;
+  sourceRefs: string[];
+  followUpQuestionIds: string[];
   isPrediction: boolean;
+  isActive: boolean;
 };
 
 export async function getQuestionForPractice(params: {
@@ -1876,7 +1879,10 @@ export async function getQuestionForPractice(params: {
       strongAnswerShows: question.strongAnswerShows,
       commonPitfalls: asStringArray(question.commonPitfalls),
       coaching: question.coaching,
+      sourceRefs: asStringArray(question.sourceRefs),
+      followUpQuestionIds: asStringArray(question.followUpQuestionIds),
       isPrediction: question.isPrediction,
+      isActive: question.isActive,
     },
     attempt: attempts[0] ? toAttempt(attempts[0]) : null,
     attempts: attempts.map(toAttempt),
@@ -2271,7 +2277,10 @@ export async function getPracticeSession(params: {
       strongAnswerShows: question.strongAnswerShows,
       commonPitfalls: asStringArray(question.commonPitfalls),
       coaching: question.coaching,
+      sourceRefs: asStringArray(question.sourceRefs),
+      followUpQuestionIds: asStringArray(question.followUpQuestionIds),
       isPrediction: question.isPrediction,
+      isActive: question.isActive,
     })),
   };
 }
