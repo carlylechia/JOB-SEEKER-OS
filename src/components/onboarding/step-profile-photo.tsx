@@ -1,8 +1,9 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Upload, X, Check } from 'lucide-react';
-import { Linkedin } from 'lucide-react';
+import { Check, Linkedin, Loader2, Upload, X } from 'lucide-react';
+import { isVercelBlobUrl } from '@/lib/blob-url';
+import { profilePictureSrc } from '@/lib/profile-picture';
 
 type Props = {
   profilePictureUrl: string;
@@ -11,6 +12,9 @@ type Props = {
   name: string;
   onUrlChange: (url: string) => void;
 };
+
+const MAX_IMAGE_SIZE = 4 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
 function getInitials(name: string) {
   return name
@@ -24,17 +28,41 @@ function getInitials(name: string) {
 export function StepProfilePhoto({ profilePictureUrl, isLinkedinUser, linkedinPhotoUrl, name, onUrlChange }: Props) {
   const [urlInput, setUrlInput] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    // Allow choosing the same file again after a failed upload.
+    e.target.value = '';
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result === 'string') onUrlChange(result);
-    };
-    reader.readAsDataURL(file);
+
+    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+      setUploadError('Only JPEG, PNG, WebP or GIF accepted.');
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      setUploadError('Image must be 4 MB or smaller.');
+      return;
+    }
+
+    setUploadError('');
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('picture', file);
+      const res = await fetch('/api/profile/picture', { method: 'POST', body: fd });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.profilePictureUrl) {
+        throw new Error(json?.error ?? 'Upload failed.');
+      }
+      onUrlChange(json.profilePictureUrl);
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : 'Upload failed.');
+    } finally {
+      setUploading(false);
+    }
   }
 
   function handleUrlSubmit() {
@@ -46,8 +74,30 @@ export function StepProfilePhoto({ profilePictureUrl, isLinkedinUser, linkedinPh
     }
   }
 
+  async function handleRemovePhoto() {
+    const previousUrl = profilePictureUrl;
+    const isStored = isVercelBlobUrl(previousUrl) || previousUrl.startsWith('/uploads/');
+
+    onUrlChange('');
+    setUploadError('');
+    if (!isStored) return;
+
+    setUploading(true);
+    try {
+      const res = await fetch('/api/profile/picture', { method: 'DELETE' });
+      if (!res.ok) throw new Error('Could not remove photo.');
+    } catch (error) {
+      // Keep the form in sync with what is still stored.
+      onUrlChange(previousUrl);
+      setUploadError(error instanceof Error ? error.message : 'Could not remove photo.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
   const hasLinkedinPhoto = isLinkedinUser && linkedinPhotoUrl;
   const isUsingLinkedinPhoto = profilePictureUrl === linkedinPhotoUrl && hasLinkedinPhoto;
+  const displayProfilePicture = profilePictureSrc(profilePictureUrl);
 
   return (
     <div className="space-y-6">
@@ -101,19 +151,20 @@ export function StepProfilePhoto({ profilePictureUrl, isLinkedinUser, linkedinPh
       {/* Avatar preview */}
       <div className="flex flex-col items-center gap-4">
         <div className="relative">
-          {profilePictureUrl ? (
+          {displayProfilePicture ? (
             <div className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={profilePictureUrl}
+                src={displayProfilePicture}
                 alt="Profile preview"
                 className="h-28 w-28 rounded-full border-2 border-accent object-cover"
               />
               {!isUsingLinkedinPhoto && (
                 <button
                   type="button"
-                  onClick={() => onUrlChange('')}
-                  className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-danger-solid text-white hover:bg-danger-solid/90"
+                  onClick={() => void handleRemovePhoto()}
+                  disabled={uploading}
+                  className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-danger-solid text-white hover:bg-danger-solid/90 disabled:opacity-50"
                 >
                   <X size={12} />
                 </button>
@@ -124,17 +175,23 @@ export function StepProfilePhoto({ profilePictureUrl, isLinkedinUser, linkedinPh
               {name ? getInitials(name) : '?'}
             </div>
           )}
+          {uploading && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50">
+              <Loader2 className="h-6 w-6 animate-spin text-white" />
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap justify-center gap-2">
           {/* Upload from device */}
           <button
             type="button"
+            disabled={uploading}
             onClick={() => fileRef.current?.click()}
-            className="btn-secondary flex items-center gap-2 text-sm"
+            className="btn-secondary flex items-center gap-2 text-sm disabled:opacity-50"
           >
             <Upload size={14} />
-            Upload photo
+            {uploading ? 'Uploading…' : 'Upload photo'}
           </button>
           <input
             ref={fileRef}
@@ -147,12 +204,19 @@ export function StepProfilePhoto({ profilePictureUrl, isLinkedinUser, linkedinPh
           {/* Paste URL */}
           <button
             type="button"
+            disabled={uploading}
             onClick={() => setShowUrlInput((v) => !v)}
-            className="btn-secondary text-sm"
+            className="btn-secondary text-sm disabled:opacity-50"
           >
             Paste URL
           </button>
         </div>
+
+        {uploadError && (
+          <p role="alert" className="text-center text-xs text-danger-text">
+            {uploadError}
+          </p>
+        )}
 
         {/* URL input panel */}
         {showUrlInput && (

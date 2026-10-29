@@ -3,7 +3,11 @@ import { NextResponse } from 'next/server';
 import { logImportantError, logImportantInfo } from '@/lib/observability';
 import { prisma } from '@/lib/prisma';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
-import { deleteStoredAsset, uploadUserAsset } from '@/lib/durable-upload';
+import {
+  AvatarBlobStoreConfigurationError,
+  deleteStoredAsset,
+  uploadUserAsset,
+} from '@/lib/durable-upload';
 
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4 MB
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
@@ -59,6 +63,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, profilePictureUrl });
   } catch (error) {
     await logImportantError({ event: 'profile_picture_upload_failed', userId: session.user.id, route: '/api/profile/picture', error });
+    if (error instanceof AvatarBlobStoreConfigurationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json({ error: 'Unable to upload picture' }, { status: 500 });
   }
 }

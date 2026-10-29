@@ -9,6 +9,7 @@ import {
   RESUME_MAX_FILE_BYTES,
   formatAcceptLabel,
 } from '@/lib/resume/limits';
+import { profilePictureSrc } from '@/lib/profile-picture';
 
 const ALLOWED_RESUME_TYPES = new Set([
   'application/pdf',
@@ -37,6 +38,7 @@ function ProfilePictureSection({
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const displayUrl = profilePictureSrc(currentUrl);
 
   async function handleFile(f: File) {
     if (!ALLOWED_IMAGE_TYPES.has(f.type)) { setError('Only JPEG, PNG, WebP or GIF accepted.'); return; }
@@ -75,8 +77,8 @@ function ProfilePictureSection({
     <div className="flex items-center gap-5">
       {/* Avatar preview */}
       <div className="relative shrink-0">
-        {currentUrl ? (
-          <img src={currentUrl} alt={name} className="h-20 w-20 rounded-2xl object-cover ring-2 ring-white/10" />
+        {displayUrl ? (
+          <img src={displayUrl} alt={name} className="h-20 w-20 rounded-2xl object-cover ring-2 ring-white/10" />
         ) : (
           <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-accent/20 text-2xl font-bold text-accent-text ring-2 ring-accent/20">
             {getInitials(name)}

@@ -21,7 +21,7 @@ Preview build needs to boot the app).
 | `EMAIL_REPLY_TO` | optional | Reply-to for transactional email |
 | `ADMIN_NOTIFICATION_EMAIL` | yes | Where new upgrade requests are notified |
 | `CRON_SECRET` | yes | Bearer token for `/api/cron/*` (min 16 chars) |
-| `BLOB_READ_WRITE_TOKEN` | yes | Token for a Vercel Blob store configured as private (resumes) |
+| `BLOB_READ_WRITE_TOKEN` | yes | Token for a Vercel Blob store configured as private (resumes and profile pictures) |
 | `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET` | optional | LinkedIn sign-in |
 | `ALERT_WEBHOOK_URL` | optional | Discord alerting for important errors |
 | `MONETIZATION_ENABLED=false` | optional | Emergency kill switch |
@@ -43,13 +43,21 @@ Preview build needs to boot the app).
 > **Preview safety.** `MONETIZATION_ENABLED=false` in the Preview environment
 > guarantees preview builds can never start real trials.
 
-> **Resume storage must be private.** The resume upload route writes with
-> `access: "private"` and deliberately refuses to fall back to public storage.
-> Create or select a Vercel Blob store configured for private access, set
-> `BLOB_READ_WRITE_TOKEN` to that store's token in every target environment, and
-> redeploy. A token linked to a public Blob store fails resume uploads with an
-> actionable configuration error. Do not change resume uploads to public to
-> work around this: resume files contain personal data.
+> **Resume and profile-picture storage must be private.** A Vercel Blob store
+> has one access mode for all of its objects. Resume uploads write with
+> `access: "private"` and deliberately refuse to fall back to public storage;
+> profile pictures do the same. Create or select a Vercel Blob store configured
+> for private access, set `BLOB_READ_WRITE_TOKEN` to that store's token in every
+> target environment, and redeploy. A token linked to a public Blob store fails
+> both uploads with an actionable configuration error. Do not change either
+> upload to public to work around this: resumes and photos contain personal
+> data.
+>
+> Private blobs are never rendered with their storage URL. Resumes stream through
+> `/api/resume/file`; profile pictures stream through
+> `/api/profile/picture/file`, which only serves a private object under the
+> signed-in user's own `avatars/<userId>/` prefix. The storage token must never
+> become a generic URL proxy.
 
 > **PDF fonts are build artifacts, not environment variables.** The two Inter
 > weights are committed at `src/lib/resume-builder/fonts/` and read through a
@@ -456,7 +464,8 @@ A permanently-warning check is a check people learn to ignore.
 [ ] Production build passes (typecheck + lint + tests + build)
 [ ] All required env vars set in Vercel
 [ ] RESEND_FROM domain verified in the Resend dashboard
-[ ] BLOB_READ_WRITE_TOKEN present (private resume storage)
+[ ] BLOB_READ_WRITE_TOKEN present (private resume and profile-picture storage)
+[ ] Profile-picture upload → render → replace → delete verified after deploy
 [ ] PDF export verified end to end against a PRODUCTION build (`next build && next start`), not `npm run dev` — the test suite runs under `tsx` and cannot detect a bundler resolution failure
 [ ] CRON_SECRET set (>= 16 chars)
 [ ] Admin account bootstrapped and /admin verified

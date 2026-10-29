@@ -1,6 +1,10 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { del, put } from '@vercel/blob';
+import {
+  isPrivateVercelBlobUrl,
+  isVercelBlobUrl,
+} from './blob-url';
 
 type AssetKind = 'resume' | 'avatar';
 
@@ -12,6 +16,17 @@ export class ResumeBlobStoreConfigurationError extends Error {
       'Resume storage is linked to a public Vercel Blob store. Switch BLOB_READ_WRITE_TOKEN to a private Blob store and redeploy; resumes cannot be uploaded publicly.',
     );
     this.name = 'ResumeBlobStoreConfigurationError';
+  }
+}
+
+export class AvatarBlobStoreConfigurationError extends Error {
+  readonly status = 503;
+
+  constructor() {
+    super(
+      'Profile picture storage is linked to a public Vercel Blob store. Switch BLOB_READ_WRITE_TOKEN to a private Blob store and redeploy; profile pictures are stored privately.',
+    );
+    this.name = 'AvatarBlobStoreConfigurationError';
   }
 }
 
@@ -34,13 +49,14 @@ const ASSET_CONFIG: Record<AssetKind, { blobPrefix: string; localDir: string; lo
  * ownership-checked `/api/resume/file` route. Previously they were uploaded as
  * PUBLIC blobs, meaning anyone with the URL could read a user's resume.
  *
- * Avatars stay public: they are rendered directly via `<img src>` throughout the
- * app, so privatising them would require proxying every render for little
- * confidentiality gain.
+ * Avatars are private too. A Vercel Blob store has one access mode for every
+ * upload, so a public avatar request against a private store fails outright.
+ * Private avatars are served through `/api/profile/picture/file`, which resolves
+ * the picture from the authenticated user's own profile.
  */
 const BLOB_ACCESS: Record<AssetKind, 'public' | 'private'> = {
   resume: 'private',
-  avatar: 'public',
+  avatar: 'private',
 };
 
 function sanitizeFilenamePart(value: string): string {
@@ -57,10 +73,6 @@ function assertProductionStorageConfig() {
   }
 }
 
-function isBlobUrl(url: string): boolean {
-  return url.includes('blob.vercel-storage.com');
-}
-
 function isLocalUploadUrl(url: string): boolean {
   return url.startsWith('/uploads/');
 }
@@ -69,19 +81,17 @@ function isLocalUploadUrl(url: string): boolean {
  * True when a stored asset URL is a Vercel Blob that requires authenticated
  * (token-gated) delivery rather than a public fetch.
  *
- * Vercel Blob private objects are served from a `.private` subdomain, so this
- * distinguishes them from legacy public uploads without an extra API call.
- * Local dev uploads under `/uploads/` are neither.
+ * Kept as a resume-named export for the existing resume loader; the underlying
+ * URL rule is shared so avatars and resumes cannot drift apart.
  */
 export function isPrivateResumeUrl(url: string): boolean {
-  if (!isBlobUrl(url)) return false;
-  return url.includes('.private.blob.vercel-storage.com') || url.includes('private/');
+  return isPrivateVercelBlobUrl(url);
 }
 
 export async function deleteStoredAsset(url: string | null | undefined): Promise<void> {
   if (!url) return;
 
-  if (isBlobUrl(url) && hasBlobToken()) {
+  if (isVercelBlobUrl(url) && hasBlobToken()) {
     await del(url).catch(() => undefined);
     return;
   }
@@ -114,11 +124,12 @@ export async function uploadUserAsset(params: {
       });
     } catch (error) {
       if (
-        kind === 'resume' &&
         error instanceof Error &&
         /cannot use private access on a public store/i.test(error.message)
       ) {
-        throw new ResumeBlobStoreConfigurationError();
+        throw kind === 'resume'
+          ? new ResumeBlobStoreConfigurationError()
+          : new AvatarBlobStoreConfigurationError();
       }
       throw error;
     }

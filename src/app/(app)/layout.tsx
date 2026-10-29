@@ -6,6 +6,7 @@ import { AppShell } from '@/components/layout/app-shell';
 import { TrialBanner } from '@/components/billing/trial-countdown';
 import { getEffectiveSubscription } from '@/lib/billing/subscriptions';
 import { prisma } from '@/lib/prisma';
+import { profilePictureSrc } from '@/lib/profile-picture';
 
 const getProfileStatus = cache(async (userId: string) => {
   return prisma.userProfile.findUnique({
@@ -59,7 +60,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
 
   const userWithAvatar = {
     ...session.user,
-    image: profile?.profilePictureUrl ?? session.user.image ?? null,
+    image: profilePictureSrc(profile?.profilePictureUrl ?? session.user.image ?? null) || null,
     role: dbUser?.role ?? 'USER',
   };
 
