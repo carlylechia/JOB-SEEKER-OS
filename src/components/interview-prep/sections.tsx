@@ -19,6 +19,7 @@ import {
   formatLongDate,
   formatShortDate,
 } from './ui';
+import { InterviewTypeSummary } from './interview-type-picker';
 
 const RESEARCH_LABELS: Record<string, string> = {
   NOT_STARTED: 'Research not started',
@@ -173,6 +174,7 @@ export function BriefingSection({ detail }: { detail: PackDetail }) {
 
   return (
     <div className="space-y-4">
+      <InterviewTypeSummary context={detail.data.context} />
       <Card className="space-y-3">
         <SectionHeading
           title="The short version"

@@ -37,6 +37,7 @@ import {
   INTERVIEW_PREP_ERROR_MESSAGES,
   INTERVIEW_PREP_PROMPT_VERSION,
   INTERVIEW_PREP_SCHEMA_VERSION,
+  interviewTrackForContext,
   type AnswerStructure,
   type Difficulty,
   type EvidenceStatus,
@@ -76,6 +77,7 @@ import {
 } from './limits';
 import {
   calculateReadiness,
+  defaultPracticeModeForContext,
   fallbackTasks,
   horizonRank,
   resolveHorizon,
@@ -534,6 +536,35 @@ function toTask(row: {
   };
 }
 
+/**
+ * Session summaries written before scoring existed lack `averageScore` and
+ * `scoredAttempts`. Normalise the JSON at the boundary so clients can rely on
+ * the declared shape instead of rendering `undefined`.
+ */
+function toSessionSummary(value: unknown): PracticeSessionSummary | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Partial<PracticeSessionSummary>;
+  return {
+    questionsAttempted: typeof raw.questionsAttempted === 'number' ? raw.questionsAttempted : 0,
+    questionsWithFeedback: typeof raw.questionsWithFeedback === 'number' ? raw.questionsWithFeedback : 0,
+    averageScore:
+      typeof raw.averageScore === 'number' && Number.isFinite(raw.averageScore)
+        ? raw.averageScore
+        : null,
+    scoredAttempts: typeof raw.scoredAttempts === 'number' ? raw.scoredAttempts : 0,
+    strengths: Array.isArray(raw.strengths)
+      ? raw.strengths.filter((item): item is string => typeof item === 'string')
+      : [],
+    priorities: Array.isArray(raw.priorities)
+      ? raw.priorities.filter((item): item is string => typeof item === 'string')
+      : [],
+    dimensions: Array.isArray(raw.dimensions)
+      ? (raw.dimensions as PracticeSessionSummary['dimensions'])
+      : [],
+    note: typeof raw.note === 'string' && raw.note.trim() ? raw.note : 'Session completed.',
+  };
+}
+
 function toSession(row: {
   id: string;
   packId: string;
@@ -551,10 +582,41 @@ function toSession(row: {
     mode: row.mode,
     status: row.status,
     questionIds: asStringArray(row.questionIds),
-    summary: (row.summary as PracticeSessionSummary | null) ?? null,
+    summary: toSessionSummary(row.summary),
     startedAt: row.startedAt,
     completedAt: row.completedAt,
     updatedAt: row.updatedAt,
+  };
+}
+
+/**
+ * Feedback written before scoring existed lacks `score`, `scoreRationale` and
+ * `modelAnswer`. Normalise those keys to null so the UI never treats a missing
+ * value as a real score or a complete evaluation.
+ */
+function toStoredFeedback(value: unknown): StoredFeedback | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Partial<StoredFeedback>;
+  return {
+    score: typeof raw.score === 'number' && Number.isFinite(raw.score) ? raw.score : null,
+    scoreRationale: typeof raw.scoreRationale === 'string' ? raw.scoreRationale : null,
+    modelAnswer: typeof raw.modelAnswer === 'string' ? raw.modelAnswer : null,
+    dimensions: Array.isArray(raw.dimensions)
+      ? (raw.dimensions as StoredFeedback['dimensions'])
+      : [],
+    whatWorked: typeof raw.whatWorked === 'string' ? raw.whatWorked : '',
+    needsImprovement: typeof raw.needsImprovement === 'string' ? raw.needsImprovement : '',
+    missing: typeof raw.missing === 'string' ? raw.missing : '',
+    structureSuggestion: typeof raw.structureSuggestion === 'string' ? raw.structureSuggestion : '',
+    revisedStructure: typeof raw.revisedStructure === 'string' ? raw.revisedStructure : null,
+    followUpPractice: Array.isArray(raw.followUpPractice)
+      ? raw.followUpPractice.filter((item): item is string => typeof item === 'string')
+      : [],
+    adaptiveFollowUp:
+      raw.adaptiveFollowUp && typeof raw.adaptiveFollowUp === 'object'
+        ? (raw.adaptiveFollowUp as StoredFeedback['adaptiveFollowUp'])
+        : null,
+    limitations: typeof raw.limitations === 'string' ? raw.limitations : null,
   };
 }
 
@@ -585,11 +647,27 @@ function toAttempt(row: {
     questionVersion: row.questionVersion,
     attemptNumber: row.attemptNumber,
     answer: row.answer,
-    feedback: (row.feedback as StoredFeedback | null) ?? null,
+    feedback: toStoredFeedback(row.feedback),
     rubricKey: row.rubricKey,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
+}
+
+/**
+ * Feedback generated before scoring existed is still valid history, but it
+ * cannot satisfy the score/model-answer contract. Only a complete scored
+ * evaluation is reused idempotently.
+ */
+function isScoredFeedback(value: unknown): value is StoredFeedback {
+  const feedback = toStoredFeedback(value);
+  return Boolean(
+    feedback &&
+      feedback.score !== null &&
+      feedback.scoreRationale &&
+      feedback.modelAnswer &&
+      Array.isArray(feedback.dimensions),
+  );
 }
 
 // ─── Input assembly ─────────────────────────────────────────────────────────
@@ -963,7 +1041,7 @@ async function persistResearchSources(packId: string, sources: ResearchSource[])
         errorCode: source.errorCode,
       })),
     });
-  });
+  }, { timeout: 20_000 });
 }
 
 // ─── Generation ────────────────────────────────────────────────────────────
@@ -1214,7 +1292,8 @@ export async function generatePrepPack(options: RunPrepGenerationOptions): Promi
       candidateBlock: candidate.profileText,
       sourceBlock: buildSourceBlock(research.sources),
       jobText: (row.jobDescription ?? '').slice(0, 40_000),
-      context: row.context,
+      context: row.context as InterviewContext,
+      track: interviewTrackForContext(row.context as InterviewContext),
       horizon,
       maxQuestions: INTERVIEW_PREP_MAX_QUESTIONS,
       maxTasks: INTERVIEW_PREP_MAX_TASKS,
@@ -1265,6 +1344,7 @@ export async function generatePrepPack(options: RunPrepGenerationOptions): Promi
   // so an imminent interview always has a usable plan.
   const fallback = fallbackTasks({
     horizon,
+    context: row.context as InterviewContext,
     roleTitle: row.roleTitle,
     company: row.company,
     researchAvailable: researchStatus === 'COMPLETED' || researchStatus === 'PARTIAL',
@@ -1334,6 +1414,9 @@ export async function generatePrepPack(options: RunPrepGenerationOptions): Promi
   const maxVersion = await prisma.interviewQuestion.aggregate({ where: { packId: row.id }, _max: { version: true } });
   const nextVersion = (maxVersion._max.version ?? 0) + 1;
 
+  // A regeneration rewrites up to ten tasks and the whole question bank. The
+  // default 5s interactive-transaction budget is too tight on a loaded
+  // database, so allow the bounded write batch to finish without timing out.
   const completed = await prisma.$transaction(async (tx) => {
     await tx.interviewQuestion.updateMany({ where: { packId: row.id, isActive: true }, data: { isActive: false } });
 
@@ -1420,7 +1503,9 @@ export async function generatePrepPack(options: RunPrepGenerationOptions): Promi
       data: {
         status,
         title: verified.pack.title || row.title,
-        context: verified.pack.context,
+        // The user's selected context is the source of truth. Provider output
+        // must never silently move a pack into a different interview type.
+        context: row.context,
         content: content as unknown as Prisma.InputJsonValue,
         preparationGuidance: verified.pack.preparationGuidance,
         limitations,
@@ -1442,7 +1527,7 @@ export async function generatePrepPack(options: RunPrepGenerationOptions): Promi
         errorCode: null,
       },
     });
-  });
+  }, { timeout: 20_000 });
 
   await updatePackProgress(row.id);
 
@@ -1458,6 +1543,7 @@ export async function generatePrepPack(options: RunPrepGenerationOptions): Promi
       tasks: finalTasks.length,
       sources: research.sources.length,
       context: row.context,
+      track: interviewTrackForContext(row.context as InterviewContext),
       researchStatus,
       creditsConsumed,
       status,
@@ -1759,6 +1845,9 @@ export async function updatePrepPack(params: {
     data: {
       ...(params.input.title !== undefined ? { title: tidy(params.input.title, 160) ?? row.title } : {}),
       ...(params.input.context !== undefined ? { context: params.input.context } : {}),
+      ...(params.input.context !== undefined && params.input.interviewFormat === undefined
+        ? { interviewFormat: params.input.context }
+        : {}),
       ...(params.input.interviewFormat !== undefined ? { interviewFormat: params.input.interviewFormat } : {}),
       ...(params.input.interviewAt !== undefined ? { interviewAt } : {}),
       ...(params.input.timing !== undefined || params.input.interviewAt !== undefined ? { timing } : {}),
@@ -1852,7 +1941,7 @@ export async function recalculateTaskSchedule(params: {
     for (let index = 0; index < reordered.length; index += 1) {
       await tx.interviewPrepTask.update({ where: { id: reordered[index].id }, data: { sortOrder: index } });
     }
-  });
+  }, { timeout: 20_000 });
 
   return { updated: tasks.length, timing: horizon };
 }
@@ -1957,6 +2046,8 @@ export async function getQuestionForPractice(params: {
   userId: string;
   packId: string;
   questionId: string;
+  /** When present, only attempts from this mock session are returned. */
+  sessionId?: string | null;
 }): Promise<{
   question: QuestionForPractice;
   attempt: PracticeAttemptView | null;
@@ -1969,12 +2060,33 @@ export async function getQuestionForPractice(params: {
   if (!pack) return null;
 
   const question = await prisma.interviewQuestion.findFirst({
-    where: { id: params.questionId, packId: params.packId, isActive: true },
+    where: {
+      id: params.questionId,
+      packId: params.packId,
+      // Active-only for free practice. A mock session may still open a question
+      // that regeneration has since deactivated, because its history is valid.
+      ...(params.sessionId ? {} : { isActive: true }),
+    },
   });
   if (!question) return null;
 
+  if (params.sessionId) {
+    const session = await prisma.interviewPracticeSession.findFirst({
+      where: { id: params.sessionId, packId: params.packId, userId: params.userId },
+      select: { questionIds: true },
+    });
+    if (!session || !asStringArray(session.questionIds).includes(params.questionId)) {
+      throw new PrepSessionNotFoundError();
+    }
+  }
+
   const attempts = await prisma.interviewPracticeAttempt.findMany({
-    where: { userId: params.userId, packId: params.packId, questionId: params.questionId },
+    where: {
+      userId: params.userId,
+      packId: params.packId,
+      questionId: params.questionId,
+      ...(params.sessionId ? { sessionId: params.sessionId } : {}),
+    },
     orderBy: { attemptNumber: 'desc' },
     take: 10,
   });
@@ -2029,7 +2141,13 @@ export async function submitPracticeAnswer(params: {
   if (!pack) throw new InterviewPrepPackNotFoundError();
 
   const question = await prisma.interviewQuestion.findFirst({
-    where: { id: questionId, packId, isActive: true },
+    where: {
+      id: questionId,
+      packId,
+      // A mock session may contain a question that regeneration has since
+      // deactivated. Its session membership is validated below.
+      ...(params.sessionId ? {} : { isActive: true }),
+    },
     select: { id: true, version: true },
   });
   if (!question) throw new InterviewPrepPackNotFoundError();
@@ -2043,9 +2161,11 @@ export async function submitPracticeAnswer(params: {
   if (params.sessionId) {
     const session = await prisma.interviewPracticeSession.findFirst({
       where: { id: params.sessionId, packId, userId },
-      select: { id: true },
+      select: { questionIds: true },
     });
-    if (!session) throw new PrepSessionNotFoundError();
+    if (!session || !asStringArray(session.questionIds).includes(questionId)) {
+      throw new PrepSessionNotFoundError();
+    }
   }
 
   if (params.parentAttemptId) {
@@ -2098,6 +2218,41 @@ export async function generatePracticeFeedback(params: {
 }> {
   const { userId, packId, attemptId, route } = params;
 
+  const attemptRow = await prisma.interviewPracticeAttempt.findFirst({
+    where: { id: attemptId, userId, packId },
+    include: {
+      question: true,
+      pack: {
+        select: {
+          id: true,
+          jobId: true,
+          company: true,
+          roleTitle: true,
+          jobDescription: true,
+          context: true,
+        },
+      },
+    },
+  });
+  if (!attemptRow) throw new InterviewPrepPackNotFoundError();
+
+  // Idempotency before entitlement or metering: a scored evaluation is already
+  // the answer. Re-reading it stays free, even after a plan lapses.
+  const existingFeedback = toStoredFeedback(attemptRow.feedback);
+  if (isScoredFeedback(existingFeedback)) {
+    await logImportantInfo({
+      event: 'interview_feedback_reused',
+      userId,
+      route,
+      context: { attemptId, packId, questionId: attemptRow.questionId },
+    });
+    return {
+      attempt: toAttempt(attemptRow),
+      feedback: existingFeedback,
+      creditsConsumed: 0,
+    };
+  }
+
   let entitlements: Entitlement;
   try {
     entitlements = await requireEntitlement(userId, INTERVIEW_PREP_FEATURE);
@@ -2110,23 +2265,6 @@ export async function generatePracticeFeedback(params: {
     });
     throw error;
   }
-
-  const attemptRow = await prisma.interviewPracticeAttempt.findFirst({
-    where: { id: attemptId, userId, packId },
-    include: {
-      question: true,
-      pack: {
-        select: {
-          id: true,
-          jobId: true,
-          company: true,
-          roleTitle: true,
-          jobDescription: true,
-        },
-      },
-    },
-  });
-  if (!attemptRow) throw new InterviewPrepPackNotFoundError();
 
   const answer = attemptRow.answer;
   if (answer.length < INTERVIEW_PREP_MIN_ANSWER_CHARS) {
@@ -2152,6 +2290,29 @@ export async function generatePracticeFeedback(params: {
   const questionCategory = attemptRow.question.category as QuestionCategory;
   const dimensions = rubricDimensionsForCategory(questionCategory);
   const framework = attemptRow.question.answerStructure as AnswerStructure | null;
+  const packContext = attemptRow.pack.context as InterviewContext;
+  const track = interviewTrackForContext(packContext);
+
+  const coaching = (attemptRow.question.coaching ?? null) as {
+    whatInterviewerAssesses?: string;
+    keyPoints?: string[];
+  } | null;
+  const coachingContext = [
+    coaching?.whatInterviewerAssesses
+      ? `What the interviewer assesses: ${coaching.whatInterviewerAssesses}`
+      : null,
+    Array.isArray(coaching?.keyPoints) && coaching.keyPoints.length > 0
+      ? `Key points a strong answer covers: ${coaching.keyPoints.join('; ')}`
+      : null,
+    attemptRow.question.strongAnswerShows
+      ? `A strong answer shows: ${attemptRow.question.strongAnswerShows}`
+      : null,
+    asStringArray(attemptRow.question.commonPitfalls).length > 0
+      ? `Common pitfalls: ${asStringArray(attemptRow.question.commonPitfalls).join('; ')}`
+      : null,
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join('\n');
 
   let creditsConsumed = 0;
   if (entitlements.isAdmin) {
@@ -2165,6 +2326,8 @@ export async function generatePracticeFeedback(params: {
     try {
       const usage = await consumeUsage(userId, INTERVIEW_PREP_FEATURE, 1, {
         limit: entitlements.limits.aiCredits,
+        // Legacy unscored feedback already consumed this key. Re-evaluating it
+        // is therefore free, and a concurrent duplicate cannot double-charge.
         idempotencyKey: `interview-feedback:${attemptId}`,
       });
       creditsConsumed = usage.consumed;
@@ -2188,11 +2351,17 @@ export async function generatePracticeFeedback(params: {
     const modelFeedback = await provider.generateFeedback({
       question: attemptRow.question.question,
       category: questionCategory,
+      difficulty: attemptRow.question.difficulty,
+      competency: attemptRow.question.competency,
+      whyMatters: attemptRow.question.whyMatters ?? '',
       answer,
       roleTitle: attemptRow.pack.roleTitle,
       company: attemptRow.pack.company,
+      context: packContext,
+      track,
       dimensions,
       framework,
+      coachingContext,
       jobContext: (attemptRow.pack.jobDescription ?? '').slice(0, 4_000),
       candidateContext: candidate.profileText.slice(0, 4_000),
     });
@@ -2204,6 +2373,9 @@ export async function generatePracticeFeedback(params: {
     });
 
     feedback = {
+      score: verified.score,
+      scoreRationale: verified.scoreRationale,
+      modelAnswer: verified.modelAnswer,
       dimensions: verified.dimensions,
       whatWorked: verified.whatWorked,
       needsImprovement: verified.needsImprovement,
@@ -2248,7 +2420,10 @@ export async function generatePracticeFeedback(params: {
       packId,
       questionId: attemptRow.questionId,
       creditsConsumed,
+      score: feedback.score,
       dimensions: dimensions.length,
+      context: packContext,
+      track,
     },
   });
 
@@ -2287,16 +2462,21 @@ async function updatePackProgress(packId: string): Promise<void> {
 export async function createPracticeSession(params: {
   userId: string;
   packId: string;
-  mode: PracticeMode;
+  mode?: PracticeMode;
 }): Promise<PracticeSessionView> {
   const pack = await prisma.interviewPrepPack.findFirst({
     where: { id: params.packId, userId: params.userId },
-    select: { id: true, status: true },
+    select: { id: true, status: true, context: true },
   });
   if (!pack) throw new InterviewPrepPackNotFoundError();
   if (pack.status === 'FAILED' || pack.status === 'DRAFT') {
     throw new PrepValidationError('Generate the preparation pack before starting a mock interview.');
   }
+
+  const context = pack.context as InterviewContext;
+  // The mock should start in the format the user is actually preparing for
+  // unless they explicitly choose another focus.
+  const mode = params.mode ?? defaultPracticeModeForContext(context);
 
   const questions = await prisma.interviewQuestion.findMany({
     where: { packId: params.packId, isActive: true },
@@ -2313,13 +2493,14 @@ export async function createPracticeSession(params: {
   });
   const attemptedQuestionIds = new Set(attempts.map((attempt) => attempt.questionId));
   const questionIds = selectPracticeQuestionIds({
-    mode: params.mode,
+    mode,
     questions,
     attemptedQuestionIds,
+    context,
   });
 
-  // One active session per pack/mode keeps the workspace coherent; a new run
-  // closes the previous abandoned one rather than silently stacking sessions.
+  // One active session per pack keeps the workspace coherent; a new run closes
+  // the previous abandoned one rather than silently stacking sessions.
   await prisma.interviewPracticeSession.updateMany({
     where: { packId: params.packId, userId: params.userId, status: 'ACTIVE' },
     data: { status: 'COMPLETED', completedAt: new Date() },
@@ -2329,7 +2510,7 @@ export async function createPracticeSession(params: {
     data: {
       userId: params.userId,
       packId: params.packId,
-      mode: params.mode,
+      mode,
       status: 'ACTIVE',
       questionIds,
     },
@@ -2418,7 +2599,8 @@ export async function completePracticeSession(params: {
 
   const attempts = await prisma.interviewPracticeAttempt.findMany({
     where: { sessionId: session.id, userId: params.userId },
-    select: { questionId: true, feedback: true },
+    select: { questionId: true, feedback: true, attemptNumber: true },
+    orderBy: { attemptNumber: 'desc' },
   });
 
   const summary = summariseSession({
@@ -2448,7 +2630,8 @@ async function refreshSessionSummary(sessionId: string): Promise<void> {
   if (!session) return;
   const attempts = await prisma.interviewPracticeAttempt.findMany({
     where: { sessionId },
-    select: { questionId: true, feedback: true },
+    select: { questionId: true, feedback: true, attemptNumber: true },
+    orderBy: { attemptNumber: 'desc' },
   });
   const summary = summariseSession({
     attempts,

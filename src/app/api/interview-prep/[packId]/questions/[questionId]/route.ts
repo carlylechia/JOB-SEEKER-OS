@@ -67,7 +67,22 @@ export async function GET(request: Request, { params }: Params) {
 
       const { packId, questionId } = await params;
 
-      const result = await getQuestionForPractice({ userId, packId, questionId });
+      const sessionId = new URL(request.url).searchParams.get('sessionId');
+      if (sessionId !== null && sessionId.length > 200) {
+        return apiError('VALIDATION_FAILED', 'That request was not valid.', { request });
+      }
+
+      let result: Awaited<ReturnType<typeof getQuestionForPractice>>;
+      try {
+        result = await getQuestionForPractice({
+          userId,
+          packId,
+          questionId,
+          sessionId: sessionId || null,
+        });
+      } catch (error) {
+        return interviewPrepErrorResponse(error, request);
+      }
       if (!result) {
         return apiError('NOT_FOUND', 'Question not found.', { request });
       }

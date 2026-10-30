@@ -8,7 +8,9 @@
  * free and handled by the question route.
  *
  * The answer must be long enough to evaluate; otherwise a 422 is returned
- * rather than a meaningless score.
+ * rather than a meaningless score. Re-evaluating an already-scored attempt is
+ * idempotent: the stored feedback is returned without a new provider call or
+ * credit.
  */
 
 import { auth } from '@/auth';

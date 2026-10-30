@@ -25,11 +25,20 @@ The new-pack form captures:
 - optional official company website, careers page and up to four additional
   research URLs;
 - interview date/time, or a coarse timing horizon when no exact date exists;
-- interview format/context (recruiter screen, hiring manager, behavioral,
-  technical, system design, project discussion, problem solving, situational,
-  final round, questions to ask, or balanced);
+- interview type: a high-level track (behavioural, technical, case study,
+  role/company, or mixed) plus the precise format/context (recruiter screen,
+  hiring manager, behavioral, technical, system design, project discussion,
+  problem solving, situational, final round, questions to ask, or balanced);
 - optional interview language, interviewer/panel details, invitation notes,
   concerns and focus topics.
+
+The type selection is not cosmetic. It changes the question mix, coaching,
+answer frameworks, fallback tasks and feedback rubric emphasis. A behavioural
+pack builds an example bank around real past experience; a technical pack tests
+reasoning, debugging and trade-offs; a case-study pack practises structured
+analysis; a role/company pack focuses on motivation and employer understanding;
+a mixed pack deliberately spans several formats. The user-selected context is
+persisted as the source of truth and is never overwritten by provider output.
 
 A pack can be saved as a **draft** without spending a credit. Generation, and
 later regeneration, are explicit paid AI operations. Opening, reading and
@@ -47,7 +56,7 @@ The workspace has nine tabs:
 | Evidence | A bank of the candidate's own examples, what each supports, missing details and whether the profile item is confirmed. |
 | Questions | Predicted interview questions with category, difficulty, competency, why it matters, related requirement, relevant candidate evidence, coaching, answer structure, pitfalls and follow-up questions. |
 | Plan | A time-based preparation plan grouped by horizon, with completion state. Tasks are generated but also fall back deterministically so the plan is never empty. |
-| Mock interview | A persisted sequence of questions selected from the pack by focus (full, behavioral, role-specific, company/motivation, weak area, quick). Answers, feedback and session summaries are stored. |
+| Mock interview | A persisted sequence of questions selected from the pack by focus (full, behavioral, role-specific, company/motivation, weak area, quick). Each answer can be evaluated for a score, strengths, improvements and a standard answer. The candidate must confirm the evaluation before advancing, or explicitly skip it after a warning. Answers, evaluations and session summaries are stored. |
 | Cheat sheet | A print-friendly one-page summary of the most important facts, examples, questions to ask, logistics, reminders and unknowns. |
 | Sources | The exact stored research sources, their fetch/verification status, provenance and excerpts. |
 
@@ -108,6 +117,14 @@ architecture and trade-offs, behavioral, communication, ownership,
 collaboration, handling ambiguity, debugging, project decisions, role scenarios
 and employer questions.
 
+The selected interview track controls deterministic question ranking and
+fallback material even when the provider proposes a generic mix. For example, a
+technical mock ranks technical fundamentals, applied reasoning, architecture,
+debugging and project decisions ahead of behavioural questions, while a
+behavioural mock ranks behavioural, collaboration, ownership and ambiguity
+questions first. The provider still authors the questions, but the server keeps
+the pack aligned with the format the candidate chose.
+
 Each question includes:
 
 - a category, difficulty, competency and priority;
@@ -131,19 +148,53 @@ free and does not require a live paid plan beyond reading the pack.
 Feedback is a separate, metered AI operation. The rubric is category-aware:
 only dimensions that make sense for the question are scored. A written answer
 that is too short yields `INSUFFICIENT_EVIDENCE` rather than a guess. Feedback
-includes what worked, what to improve, what was missing, a structure suggestion,
-a stronger structure, bounded follow-up practice and an optional adaptive
-follow-up.
+includes:
+
+- an honest overall **score out of 10**, anchored to a fixed rubric
+  (0–2 off-topic/broken, 3–4 partial, 5–6 competent but thin, 7–8 strong,
+  9–10 exceptional);
+- a short **score rationale** explaining why that score was awarded;
+- **what worked** and **what to improve**, written about the candidate's actual
+  words;
+- a prominent **standard/model answer** to the exact question, ready to say
+  aloud. Personal facts that are not in the candidate's evidence use
+  `[bracketed placeholders]`; the model must never invent an employer, metric,
+  project or outcome;
+- what was missing, a structure suggestion, a stronger structure, bounded
+  follow-up practice and an optional adaptive follow-up.
 
 Feedback evidence quotes are checked against the submitted answer. A quote that
 does not appear is removed. Feedback never guarantees an outcome or predicts a
 hiring decision.
 
 Mock sessions are server-selected and persisted. A session stores its mode,
-ordered question IDs, status, timestamps and a summary derived from the attempts
-that actually received feedback. Starting a session is free; feedback remains
-metered per answer. Starting a new session closes any previous active session
-for the pack.
+ordered question IDs, status, timestamps and a summary derived from the latest
+attempt per question. Starting a session is free; evaluation remains metered per
+answer. Starting a new session closes any previous active session for the pack.
+The default mock focus follows the pack's interview type, and the server ranks
+questions using that type before priority.
+
+The mock UI enforces a deliberate review step:
+
+1. the candidate writes and submits an answer;
+2. they choose **Evaluate answer with AI** (the answer is saved first if needed);
+3. the evaluation appears score-first, with the standard answer;
+4. they choose **Save evaluation & continue** to advance. The evaluation is
+   already persisted; this action confirms they have read it.
+
+A **Skip without evaluation** path exists but always shows a confirmation
+warning that the answer will not receive a score or standard answer. Any
+written answer is still saved first, because saving is free; only the metered
+evaluation is skipped. A saved answer is never auto-advanced just because it was
+submitted. Session summaries show the average score across the latest scored
+attempt per question and how many questions were scored.
+
+Feedback generation is idempotent. Re-requesting an existing scored evaluation
+returns it without a provider call or a charge. Feedback generated before
+scoring existed can be repaired once for free using the same idempotency key;
+only a genuinely new answer consumes another credit. Question-attempt reads can
+be scoped with an optional `sessionId`, so a mock session only sees its own
+answers and cannot be advanced by attempts from an older session.
 
 ## 6. Preparation plan and readiness
 
@@ -212,9 +263,12 @@ parallel tracker:
   set instead of deleting it, so attempt history stays attached to the version
   it was taken against.
 - `InterviewPracticeAttempt` — numbered answers, version reference, kind,
-  optional parent/follow-up, feedback JSON and rubric key.
+  optional parent/follow-up, feedback JSON and rubric key. Feedback JSON now
+  carries `score`, `scoreRationale` and `modelAnswer` alongside the rubric
+  dimensions and coaching fields; the columns themselves are unchanged.
 - `InterviewPracticeSession` — persisted mock session with mode, question IDs,
-  status, summary and timestamps.
+  status, summary and timestamps. The summary JSON includes `averageScore` and
+  `scoredAttempts` for the latest attempt per question.
 - `InterviewPrepTask` — plan task with stable key, horizon, priority, category,
   estimated minutes and completion state.
 
@@ -235,10 +289,10 @@ usable but thin question bank or plan; it remains fully readable.
 | `PATCH /api/interview-prep/[packId]` | Update metadata, interview details, research sources or archive/restore. |
 | `DELETE /api/interview-prep/[packId]` | Archive a pack; history is kept. |
 | `POST /api/interview-prep/[packId]/regenerate` | Regenerate with force, metered. |
-| `GET/POST /api/interview-prep/[packId]/questions/[questionId]` | Load a question and attempts, or submit an answer. |
-| `POST /api/interview-prep/[packId]/attempts/[attemptId]/feedback` | Metered feedback for one attempt. |
+| `GET/POST /api/interview-prep/[packId]/questions/[questionId]` | Load a question and attempts (optionally scoped with `?sessionId=`), or submit an answer. |
+| `POST /api/interview-prep/[packId]/attempts/[attemptId]/feedback` | Metered, idempotent evaluation for one attempt. |
 | `GET /api/interview-prep/[packId]/progress` | Persisted progress and readiness. |
-| `POST/GET /api/interview-prep/[packId]/sessions` | Start or list mock sessions. |
+| `POST/GET /api/interview-prep/[packId]/sessions` | Start or list mock sessions. `mode` is optional and defaults from the pack's interview type. |
 | `GET/PATCH /api/interview-prep/[packId]/sessions/[sessionId]` | Load a session or complete it. |
 | `PATCH /api/interview-prep/[packId]/tasks/[taskId]` | Complete or reopen a preparation task. |
 | `POST /api/interview-prep/import-url` | Bounded, SSRF-safe import of a public job posting for review. |
@@ -270,6 +324,9 @@ request parameter. Ownership is part of every query, so another user's pack is a
   → resolve provider → reserve usage (atomic, idempotent) → provider → verify →
   persist.
 - Identical inputs reuse a completed pack without charging twice.
+- Re-requesting an existing scored evaluation returns it without charging.
+  Legacy unscored feedback is re-evaluated once for free through the original
+  `interview-feedback:${attemptId}` idempotency key.
 - Admins bypass customer credits; all bypasses are logged.
 - Expired trials fail closed through timestamp-derived entitlement checks, not a
   cron job.
@@ -296,12 +353,19 @@ Prisma errors never reach the browser.
 
 Known domain failures include invalid input, missing job data, unreadable job
 URL, duplicate generation in flight, usage limits, missing entitlement, too-short
-answers and missing sessions. Failed packs retain their status and a
+answers and missing or mismatched sessions. A question or answer submitted with
+a session ID must belong to that session; otherwise it is a 404 rather than
+silently polluting another mock. Failed packs retain their status and a
 machine-readable `errorCode`; a retry does not discard practice history.
 
 ## 14. Database migration
 
-Migration: `prisma/migrations/20261029120000_interview_prep_intelligence/migration.sql`.
+The interview-type tracks, scoring fields and model answers reuse existing
+columns: pack `context`, attempt `feedback` JSON and session `summary` JSON. No
+new migration is required for this release.
+
+The feature itself was introduced by
+`prisma/migrations/20261029120000_interview_prep_intelligence/migration.sql`.
 
 It extends `InterviewPrepPack`, `InterviewQuestion` and
 `InterviewPracticeAttempt`, adds `InterviewResearchSource`,

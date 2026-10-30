@@ -12,6 +12,7 @@ import type {
   Difficulty,
   EvidenceStatus,
   InterviewContext,
+  InterviewTrack,
   PracticeMode,
   PracticeSessionSummary,
   PrepHorizon,
@@ -33,6 +34,7 @@ export type {
   Difficulty,
   EvidenceStatus,
   InterviewContext,
+  InterviewTrack,
   PracticeMode,
   PracticeSessionSummary,
   PrepHorizon,
@@ -328,6 +330,10 @@ export type Attempt = {
 };
 
 export type StoredFeedback = {
+  /** Null on feedback generated before scoring was introduced. */
+  score: number | null;
+  scoreRationale: string | null;
+  modelAnswer: string | null;
   dimensions: Array<{
     dimension: RubricDimension;
     rating: Rating;

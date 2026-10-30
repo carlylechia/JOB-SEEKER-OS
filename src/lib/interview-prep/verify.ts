@@ -141,6 +141,27 @@ function tidyText(text: string | null | undefined, max: number): string {
   return containsUnsupportableClaim(clean) ? neutraliseText(clean) : clean;
 }
 
+/**
+ * Multiline text keeps paragraph and list breaks (model answers are read as a
+ * script), while still normalising line endings and bounding the length.
+ *
+ * The promise/legal detector is intentionally not applied to model answers:
+ * they are first-person scripts and may legitimately say what an employer or
+ * team will do. Applying the coaching-claim filter here would replace a whole
+ * answer with a generic warning.
+ */
+function tidyMultilineText(text: string | null | undefined, max: number): string {
+  if (typeof text !== 'string') return '';
+  const clean = text.replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '').trim();
+  if (!clean) return '';
+  return clean.length > max ? clean.slice(0, max).trim() : clean;
+}
+
+function normaliseScore(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(10, Math.max(0, Math.round(value)));
+}
+
 // ─── Sources ───────────────────────────────────────────────────────────────
 
 export type VerificationSource = {
@@ -815,7 +836,28 @@ export function verifyFeedback(params: VerifyFeedbackOptions): ModelFeedback {
       }
     : null;
 
+  // The score must never contradict the rubric in the candidate's favour.
+  // If nothing could be assessed, the answer cannot be better than "broken";
+  // if every scored dimension is absent, it cannot be better than "partial".
+  let score = normaliseScore(feedback.score);
+  if (dimensions.length === 0 || dimensions.every((dimension) => dimension.rating === 'INSUFFICIENT_EVIDENCE')) {
+    score = Math.min(score, 2);
+  } else if (dimensions.every((dimension) => dimension.rating === 'NOT_EVIDENT')) {
+    score = Math.min(score, 4);
+  }
+
+  const scoreRationale =
+    tidyText(feedback.scoreRationale, 700) ||
+    `This answer scores ${score}/10 against the rubric. The notes below explain the main gap.`;
+
+  const modelAnswer =
+    tidyMultilineText(feedback.modelAnswer, 2_400) ||
+    'A complete model answer could not be generated for this attempt. Use the structure guidance and your own verified evidence to draft one.';
+
   return {
+    score,
+    scoreRationale,
+    modelAnswer,
     dimensions,
     whatWorked: tidyText(feedback.whatWorked, 600) || 'Your answer addresses the question.',
     needsImprovement: tidyText(feedback.needsImprovement, 600),

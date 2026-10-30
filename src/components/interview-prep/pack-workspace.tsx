@@ -24,11 +24,11 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import {
-  INTERVIEW_CONTEXT_DESCRIPTIONS,
   INTERVIEW_CONTEXT_LABELS,
   type InterviewContext,
 } from '@/lib/interview-prep/schema';
 import type { PackDetail } from './types';
+import { InterviewTypeBadge, InterviewTypePicker } from './interview-type-picker';
 import {
   BriefingSection,
   CompanySection,
@@ -268,6 +268,7 @@ export function PackWorkspace({ packId }: { packId: string }) {
               <Pill tone={pack.researchStatus === 'COMPLETED' ? 'success' : pack.researchStatus === 'PARTIAL' ? 'warn' : 'neutral'}>
                 {RESEARCH_LABELS[pack.researchStatus] ?? pack.researchStatus}
               </Pill>
+              <InterviewTypeBadge context={data.context} showContext />
               {readiness.level ? <Pill tone="accent">{readiness.levelLabel}</Pill> : null}
               {pack.isFresh ? null : <Pill tone="warn">Inputs changed</Pill>}
             </div>
@@ -278,7 +279,7 @@ export function PackWorkspace({ packId }: { packId: string }) {
             <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted">
               <span>
                 <Mic className="mr-1 inline h-3.5 w-3.5" aria-hidden />
-                {INTERVIEW_CONTEXT_LABELS[data.interviewFormat] ?? data.interviewFormat}
+                {INTERVIEW_CONTEXT_LABELS[data.context] ?? data.context}
               </span>
               {data.interviewAt ? (
                 <span>
@@ -445,7 +446,7 @@ function PackSettings({
 }) {
   const data = detail.data;
   const [interviewAt, setInterviewAt] = useState(toDatetimeLocal(data.interviewAt));
-  const [context, setContext] = useState<InterviewContext>(data.interviewFormat);
+  const [context, setContext] = useState<InterviewContext>(data.context);
   const [interviewLanguage, setInterviewLanguage] = useState(data.interviewLanguage ?? '');
   const [interviewerInfo, setInterviewerInfo] = useState(data.interviewerInfo ?? '');
   const [concerns, setConcerns] = useState(data.concerns ?? '');
@@ -457,7 +458,7 @@ function PackSettings({
 
   useEffect(() => {
     setInterviewAt(toDatetimeLocal(data.interviewAt));
-    setContext(data.interviewFormat);
+    setContext(data.context);
     setInterviewLanguage(data.interviewLanguage ?? '');
     setInterviewerInfo(data.interviewerInfo ?? '');
     setConcerns(data.concerns ?? '');
@@ -533,21 +534,17 @@ function PackSettings({
             onChange={(event) => setInterviewAt(event.target.value)}
           />
         </label>
-        <label className="text-sm">
-          <span className="mb-1 block font-medium">Interview format</span>
-          <select
-            className="input"
+        <div className="sm:col-span-2">
+          <span className="mb-2 block text-sm font-medium">Interview type</span>
+          <InterviewTypePicker
             value={context}
-            onChange={(event) => setContext(event.target.value as InterviewContext)}
-          >
-            {(Object.keys(INTERVIEW_CONTEXT_LABELS) as InterviewContext[]).map((value) => (
-              <option key={value} value={value}>
-                {INTERVIEW_CONTEXT_LABELS[value]}
-              </option>
-            ))}
-          </select>
-          <span className="mt-1 block text-xs text-muted">{INTERVIEW_CONTEXT_DESCRIPTIONS[context]}</span>
-        </label>
+            onChange={setContext}
+            idPrefix="pack-settings-interview-type"
+          />
+          <p className="mt-2 text-xs text-muted">
+            Regenerate after changing the type so the questions, coaching and evaluation guidance match it.
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">

@@ -26,6 +26,7 @@ import { getUsage } from '@/lib/billing/usage';
 import {
   INTERVIEW_PREP_FEATURE,
   InterviewPrepPackNotFoundError,
+  PrepSessionNotFoundError,
   PrepValidationError,
   createPracticeSession,
   createPrepPack,
@@ -47,8 +48,12 @@ import {
 } from '@/lib/interview-prep/ai-client';
 import { rubricDimensionsForCategory } from '@/lib/interview-prep/service';
 import {
+  INTERVIEW_CONTEXT_LABELS,
   INTERVIEW_PREP_SCHEMA_VERSION,
+  INTERVIEW_TRACK_CONTEXTS,
+  INTERVIEW_TRACK_PREFERRED_CATEGORIES,
   modelPackSchema,
+  type InterviewContext,
   type ModelFeedback,
   type ModelPack,
   type QuestionCategory,
@@ -60,6 +65,7 @@ import {
   normaliseResearchUrls,
   ResearchFetchError,
 } from '@/lib/interview-prep/research';
+import { summariseSession } from '@/lib/interview-prep/plan';
 import {
   INTERVIEW_PREP_MAX_QUESTIONS,
   INTERVIEW_PREP_MAX_RESEARCH_URLS,
@@ -323,6 +329,10 @@ function fakeProvider(
       if (options.throwError) throw options.throwError;
       return (
         options.feedback ?? {
+          score: 7,
+          scoreRationale: 'A competent answer with a clear example, but the result was not quantified.',
+          modelAnswer:
+            'Use the technical structure: state the context, the decision you made, the trade-off you accepted and the result you measured.',
           dimensions: [
             {
               dimension: 'RELEVANCE',
@@ -425,9 +435,9 @@ async function setup(opts: { plan?: 'FREE' | 'PRO' | 'PREMIUM'; jobDescription?:
   return { user, job };
 }
 
-async function generatedPack(provider = fakeProvider()) {
+async function generatedPack(provider = fakeProvider(), context: InterviewContext = 'BALANCED') {
   const { user, job } = await setup({ plan: 'PRO' });
-  const created = await createPrepPack({ userId: user.id, jobId: job.id, context: 'BALANCED' });
+  const created = await createPrepPack({ userId: user.id, jobId: job.id, context });
   const result = await generatePrepPack({
     userId: user.id,
     packId: created.pack.id,
@@ -462,6 +472,15 @@ describe('rubric selection', () => {
     const debugging = rubricDimensionsForCategory('DEBUGGING' as QuestionCategory);
     expect(debugging).toContain('TECHNICAL_CORRECTNESS');
     expect(debugging).not.toContain('SUPPORTED_OUTCOMES');
+  });
+
+  it('maps every interview context to exactly one track', () => {
+    const contexts = Object.keys(INTERVIEW_CONTEXT_LABELS) as InterviewContext[];
+    const mapped = Object.values(INTERVIEW_TRACK_CONTEXTS).flat();
+    expect(new Set(mapped).size).toBe(mapped.length);
+    for (const context of contexts) {
+      expect(mapped).toContain(context);
+    }
   });
 });
 
@@ -618,6 +637,9 @@ describe('verification', () => {
   it('drops feedback evidence quotes that are not in the answer', () => {
     const feedback = verifyFeedback({
       feedback: {
+        score: 7,
+        scoreRationale: 'The answer addresses the question with a concrete example.',
+        modelAnswer: 'I used TypeScript to build the API and measured the result.',
         dimensions: [
           {
             dimension: 'RELEVANCE',
@@ -643,6 +665,9 @@ describe('verification', () => {
   it('neutralises hiring promises in feedback', () => {
     const feedback = verifyFeedback({
       feedback: {
+        score: 7,
+        scoreRationale: 'The answer is relevant and clear.',
+        modelAnswer: 'A concise answer that states the result.',
         dimensions: [],
         whatWorked: 'You will get the job for sure.',
         needsImprovement: '',
@@ -657,6 +682,36 @@ describe('verification', () => {
     });
     expect(feedback.whatWorked).not.toContain('get the job');
     expect(feedback.whatWorked.toLowerCase()).toContain('cannot predict');
+  });
+
+  it('preserves a first-person model answer that describes employer next steps', () => {
+    const modelAnswer =
+      'I would present the trade-off and recommend the smaller rollout. The company will need to decide the final budget, so I would ask [stakeholder] to confirm the constraint.';
+    const feedback = verifyFeedback({
+      feedback: {
+        score: 8,
+        scoreRationale: 'The answer makes a clear recommendation and names the open decision.',
+        modelAnswer,
+        dimensions: [
+          {
+            dimension: 'RELEVANCE',
+            rating: 'EVIDENT',
+            note: 'Directly answers the question.',
+            evidenceQuote: null,
+          },
+        ],
+        whatWorked: 'You made a clear recommendation.',
+        needsImprovement: '',
+        missing: '',
+        structureSuggestion: '',
+        revisedStructure: null,
+        followUpPractice: [],
+        adaptiveFollowUp: null,
+        limitations: null,
+      },
+      answerText: 'I would recommend the smaller rollout and confirm the budget.',
+    });
+    expect(feedback.modelAnswer).toBe(modelAnswer);
   });
 });
 
@@ -989,6 +1044,183 @@ describe('practice, feedback and sessions', () => {
     expect(refreshed?.readiness.practiceEvidence.questionsAttempted).toBe(1);
     expect(refreshed?.pack.practicedCount).toBe(1);
     expect(refreshed?.pack.feedbackCount).toBe(1);
+  });
+
+  it('scores feedback, persists a standard answer and reuses it without charging twice', async () => {
+    const provider = fakeProvider();
+    const { user, pack, detail } = await generatedPack(provider);
+    const question = detail.data.questions[0];
+
+    const attempt = await submitPracticeAnswer({
+      userId: user.id,
+      packId: pack.id,
+      questionId: question.id,
+      answer:
+        'In my API integration project I used TypeScript and Node.js to reduce latency by 20 percent.',
+    });
+
+    const first = await generatePracticeFeedback({
+      userId: user.id,
+      packId: pack.id,
+      attemptId: attempt.id,
+      provider,
+      route: ROUTE,
+    });
+    expect(first.creditsConsumed).toBe(1);
+    expect(first.feedback.score).toBe(7);
+    expect(first.feedback.scoreRationale).toContain('competent');
+    expect(first.feedback.modelAnswer).toContain('technical structure');
+    expect(provider.feedbackCalls).toBe(1);
+    expect(await getUsage(user.id, INTERVIEW_PREP_FEATURE)).toBe(2);
+
+    const second = await generatePracticeFeedback({
+      userId: user.id,
+      packId: pack.id,
+      attemptId: attempt.id,
+      provider,
+      route: ROUTE,
+    });
+    expect(second.creditsConsumed).toBe(0);
+    expect(second.feedback.score).toBe(7);
+    expect(provider.feedbackCalls).toBe(1);
+    expect(await getUsage(user.id, INTERVIEW_PREP_FEATURE)).toBe(2);
+
+    const loaded = await getQuestionForPractice({
+      userId: user.id,
+      packId: pack.id,
+      questionId: question.id,
+    });
+    expect(loaded?.attempt?.feedback?.score).toBe(7);
+    expect(loaded?.attempt?.feedback?.modelAnswer).toContain('technical structure');
+
+    // Legacy feedback (before scoring existed) is re-evaluated once. The
+    // original metering key makes that repair free and prevents double-charge.
+    await prisma.interviewPracticeAttempt.update({
+      where: { id: attempt.id },
+      data: {
+        feedback: {
+          dimensions: [
+            {
+              dimension: 'RELEVANCE',
+              rating: 'EVIDENT',
+              note: 'Legacy feedback without a score.',
+              evidenceQuote: 'TypeScript',
+            },
+          ],
+          whatWorked: 'You addressed the question directly.',
+          needsImprovement: 'Add a concrete example.',
+          missing: 'A measured result.',
+          structureSuggestion: 'Use the technical structure.',
+          revisedStructure: null,
+          followUpPractice: [],
+          adaptiveFollowUp: null,
+          limitations: null,
+        },
+      },
+    });
+
+    const legacy = await getQuestionForPractice({
+      userId: user.id,
+      packId: pack.id,
+      questionId: question.id,
+    });
+    expect(legacy?.attempt?.feedback?.score).toBeNull();
+    expect(legacy?.attempt?.feedback?.modelAnswer).toBeNull();
+
+    const repaired = await generatePracticeFeedback({
+      userId: user.id,
+      packId: pack.id,
+      attemptId: attempt.id,
+      provider,
+      route: ROUTE,
+    });
+    expect(repaired.creditsConsumed).toBe(0);
+    expect(repaired.feedback.score).toBe(7);
+    expect(repaired.feedback.modelAnswer).toContain('technical structure');
+    expect(provider.feedbackCalls).toBe(2);
+    expect(await getUsage(user.id, INTERVIEW_PREP_FEATURE)).toBe(2);
+  });
+
+  it('defaults a mock to the pack interview type and scopes questions to the session', async () => {
+    const { user, pack, detail } = await generatedPack(fakeProvider(), 'TECHNICAL');
+    expect(detail.data.context).toBe('TECHNICAL');
+    expect(pack.context).toBe('TECHNICAL');
+
+    const session = await createPracticeSession({ userId: user.id, packId: pack.id });
+    expect(session.mode).toBe('ROLE_SPECIFIC');
+
+    const loaded = await getPracticeSession({
+      userId: user.id,
+      packId: pack.id,
+      sessionId: session.id,
+    });
+    const preferred = new Set(INTERVIEW_TRACK_PREFERRED_CATEGORIES.TECHNICAL);
+    expect(loaded?.questions.length).toBeGreaterThan(0);
+    expect(loaded?.questions.every((question) => preferred.has(question.category))).toBe(true);
+
+    const outside = detail.data.questions.find((question) => !session.questionIds.includes(question.id));
+    expect(outside).toBeDefined();
+    await expect(
+      getQuestionForPractice({
+        userId: user.id,
+        packId: pack.id,
+        questionId: outside!.id,
+        sessionId: session.id,
+      }),
+    ).rejects.toBeInstanceOf(PrepSessionNotFoundError);
+    await expect(
+      submitPracticeAnswer({
+        userId: user.id,
+        packId: pack.id,
+        questionId: outside!.id,
+        sessionId: session.id,
+        answer: 'This answer is long enough to be saved but belongs to another question.',
+      }),
+    ).rejects.toBeInstanceOf(PrepSessionNotFoundError);
+  });
+
+  it('summarises the latest attempt per question and averages only scored evaluations', () => {
+    const summary = summariseSession({
+      attempts: [
+        {
+          questionId: 'q1',
+          attemptNumber: 1,
+          feedback: {
+            score: 4,
+            whatWorked: 'Old strength',
+            needsImprovement: 'Old priority',
+            dimensions: [],
+          },
+        },
+        {
+          questionId: 'q1',
+          attemptNumber: 2,
+          feedback: {
+            score: 8,
+            whatWorked: 'New strength',
+            needsImprovement: 'New priority',
+            dimensions: [],
+          },
+        },
+        {
+          questionId: 'q2',
+          attemptNumber: 1,
+          feedback: {
+            whatWorked: 'Unscored legacy strength',
+            needsImprovement: 'Unscored legacy priority',
+            dimensions: [],
+          },
+        },
+      ],
+      questionCount: 2,
+    });
+
+    expect(summary.questionsAttempted).toBe(2);
+    expect(summary.questionsWithFeedback).toBe(2);
+    expect(summary.scoredAttempts).toBe(1);
+    expect(summary.averageScore).toBe(8);
+    expect(summary.strengths).toContain('New strength');
+    expect(summary.strengths).not.toContain('Old strength');
   });
 
   it('updates task status and readiness without AI credits', async () => {

@@ -19,7 +19,7 @@
 import { z } from 'zod';
 
 export const INTERVIEW_PREP_SCHEMA_VERSION = 2;
-export const INTERVIEW_PREP_PROMPT_VERSION = 2;
+export const INTERVIEW_PREP_PROMPT_VERSION = 3;
 export const INTERVIEW_PREP_SCHEMA_NAME = 'interview_preparation_pack';
 
 // ─── Vocabularies ───────────────────────────────────────────────────────────
@@ -84,6 +84,76 @@ export const INTERVIEW_CONTEXT_DESCRIPTIONS: Record<InterviewContext, string> = 
   BALANCED: 'A spread across the competencies this role emphasizes.',
 };
 
+// ─── Interview tracks ──────────────────────────────────────────────────────
+
+/**
+ * A small, stable grouping used for UI filtering, question ranking and prompt
+ * playbooks. Contexts remain the precise user choice; tracks are derived so a
+ * pack can never belong to two tracks at once.
+ */
+export const interviewTrackSchema = z.enum([
+  'BEHAVIORAL',
+  'TECHNICAL',
+  'CASE_STUDY',
+  'ROLE_AND_COMPANY',
+  'MIXED',
+]);
+export type InterviewTrack = z.infer<typeof interviewTrackSchema>;
+
+export const INTERVIEW_TRACK_LABELS: Record<InterviewTrack, string> = {
+  BEHAVIORAL: 'Behavioural',
+  TECHNICAL: 'Technical',
+  CASE_STUDY: 'Case study',
+  ROLE_AND_COMPANY: 'Role and company',
+  MIXED: 'Mixed',
+};
+
+export const INTERVIEW_TRACK_DESCRIPTIONS: Record<InterviewTrack, string> = {
+  BEHAVIORAL:
+    'Questions about your own experience, judgement and collaboration. Answers should use real examples with a clear situation, action and result.',
+  TECHNICAL:
+    'Role-specific fundamentals, applied problem solving, debugging, architecture and trade-offs. Answers should show reasoning, not just a conclusion.',
+  CASE_STUDY:
+    'A structured analysis of a realistic business or product case. Answers should state assumptions, use a clear framework, weigh options and recommend a defensible next step.',
+  ROLE_AND_COMPANY:
+    'Motivation, role fit, employer understanding and the questions you ask. Answers should connect verified company facts to your own evidence.',
+  MIXED:
+    'A balanced preparation pack covering behavioural, technical and role-specific ground. Use it when the actual interview format is unknown or spans several stages.',
+};
+
+export const INTERVIEW_TRACK_CONTEXTS: Record<InterviewTrack, InterviewContext[]> = {
+  BEHAVIORAL: ['BEHAVIORAL', 'SITUATIONAL', 'CULTURE_FIT'],
+  TECHNICAL: ['TECHNICAL', 'SYSTEM_DESIGN', 'PRACTICAL_ASSESSMENT', 'PROBLEM_SOLVING', 'PROJECT_DISCUSSION'],
+  CASE_STUDY: ['CASE_STUDY'],
+  ROLE_AND_COMPANY: ['RECRUITER_SCREEN', 'HIRING_MANAGER', 'FINAL_ROUND', 'QUESTIONS_TO_ASK'],
+  MIXED: ['BALANCED', 'PANEL'],
+};
+
+/** Every context maps to exactly one track. */
+export function interviewTrackForContext(context: InterviewContext): InterviewTrack {
+  for (const track of Object.keys(INTERVIEW_TRACK_CONTEXTS) as InterviewTrack[]) {
+    if (INTERVIEW_TRACK_CONTEXTS[track].includes(context)) return track;
+  }
+  return 'MIXED';
+}
+
+/** The most representative context for a track, used when one is needed. */
+export function primaryContextForTrack(track: InterviewTrack): InterviewContext {
+  switch (track) {
+    case 'BEHAVIORAL':
+      return 'BEHAVIORAL';
+    case 'TECHNICAL':
+      return 'TECHNICAL';
+    case 'CASE_STUDY':
+      return 'CASE_STUDY';
+    case 'ROLE_AND_COMPANY':
+      return 'HIRING_MANAGER';
+    case 'MIXED':
+    default:
+      return 'BALANCED';
+  }
+}
+
 /** What a single question is evaluating. */
 export const questionCategorySchema = z.enum([
   'TECHNICAL_FUNDAMENTALS',
@@ -116,6 +186,53 @@ export const QUESTION_CATEGORY_LABELS: Record<QuestionCategory, string> = {
   ROLE_SCENARIO: 'Role-specific scenario',
   EMPLOYER_QUESTIONS: 'Questions to ask the employer',
   MOTIVATION: 'Motivation and employer understanding',
+};
+
+/**
+ * Deterministic question preferences per track. These influence ranking and
+ * fallback selection only; the provider still chooses the actual questions.
+ */
+export const INTERVIEW_TRACK_PREFERRED_CATEGORIES: Record<InterviewTrack, QuestionCategory[]> = {
+  BEHAVIORAL: ['BEHAVIORAL', 'COLLABORATION', 'OWNERSHIP', 'HANDLING_AMBIGUITY', 'COMMUNICATION'],
+  TECHNICAL: [
+    'TECHNICAL_FUNDAMENTALS',
+    'APPLIED_PROBLEM_SOLVING',
+    'ARCHITECTURE_TRADE_OFFS',
+    'DEBUGGING',
+    'PROJECT_DECISIONS',
+    'ROLE_SCENARIO',
+  ],
+  CASE_STUDY: ['APPLIED_PROBLEM_SOLVING', 'ARCHITECTURE_TRADE_OFFS', 'HANDLING_AMBIGUITY', 'COMMUNICATION', 'ROLE_SCENARIO'],
+  ROLE_AND_COMPANY: ['MOTIVATION', 'EMPLOYER_QUESTIONS', 'ROLE_SCENARIO', 'PROJECT_DECISIONS', 'COMMUNICATION'],
+  MIXED: [
+    'BEHAVIORAL',
+    'TECHNICAL_FUNDAMENTALS',
+    'APPLIED_PROBLEM_SOLVING',
+    'ARCHITECTURE_TRADE_OFFS',
+    'COLLABORATION',
+    'OWNERSHIP',
+    'HANDLING_AMBIGUITY',
+    'DEBUGGING',
+    'PROJECT_DECISIONS',
+    'ROLE_SCENARIO',
+    'MOTIVATION',
+    'COMMUNICATION',
+    'EMPLOYER_QUESTIONS',
+  ],
+};
+
+/** Prompt-ready guidance for how material should differ by track. */
+export const INTERVIEW_TRACK_GUIDANCE: Record<InterviewTrack, string> = {
+  BEHAVIORAL:
+    'Build a behavioural bank. At least two-thirds of questions should ask for a real past example and use the STAR structure. Cover ownership, collaboration, conflict, ambiguity, failure and impact. Every sample wording must contain bracketed placeholders rather than an invented story. In feedback, reward a specific situation, the candidate’s own actions and a verified result; penalise vague generalisations and “we” answers that hide personal contribution.',
+  TECHNICAL:
+    'Build a technical bank. Cover fundamentals, applied reasoning, debugging, architecture and trade-offs appropriate to the seniority in the posting. Questions should ask the candidate to explain assumptions, alternatives, failure modes and validation. In feedback, check technical correctness explicitly, reward reasoning and trade-offs, and correct misconceptions in the model answer without inventing production facts.',
+  CASE_STUDY:
+    'Build a case-study bank. Questions should present a realistic business or product situation with incomplete information and ask for structure, assumptions, analysis, options, a recommendation and success measures. Include at least one quantitative or prioritisation case when the role supports it. In feedback, reward a clear framework, explicit assumptions, quantified reasoning where possible and a decision with trade-offs; penalise jumping to a solution without diagnosis.',
+  ROLE_AND_COMPANY:
+    'Build a role-and-company bank. Cover motivation, understanding of the employer, role fit, recruiter-screen questions, stakeholder scenarios and thoughtful questions to ask. Use only sourced company facts and the candidate’s verified evidence. In feedback, reward a specific, honest connection between the candidate’s evidence and the role; penalise generic praise of the company and unsupported claims about its culture or process.',
+  MIXED:
+    'Build a balanced bank across behavioural, technical, case-style and role-and-company questions, weighted to the posting. Do not let one track dominate unless the job description clearly demands it. In feedback, apply the rubric that fits the individual question rather than forcing one framework onto every answer.',
 };
 
 export const difficultySchema = z.enum(['FOUNDATION', 'APPLIED', 'ADVANCED']);
@@ -609,6 +726,16 @@ export type ModelAdaptiveFollowUp = z.infer<typeof modelAdaptiveFollowUpSchema>;
 
 export const modelFeedbackSchema = z
   .object({
+    /** Honest overall score out of 10, anchored to the rubric. */
+    score: z.number().min(0).max(10),
+    /** One or two sentences explaining exactly why the score was awarded. */
+    scoreRationale: sentence,
+    /**
+     * A complete, ready-to-say model answer to this exact question. Personal
+     * facts not present in the candidate evidence must use [bracketed
+     * placeholders]; never invent an employer, metric, project or outcome.
+     */
+    modelAnswer: z.string().max(2400),
     dimensions: z.array(modelDimensionRatingSchema).max(12),
     whatWorked: sentence,
     needsImprovement: sentence,
@@ -858,6 +985,10 @@ export type PracticeSessionView = {
 export type PracticeSessionSummary = {
   questionsAttempted: number;
   questionsWithFeedback: number;
+  /** Average of the latest scored attempt per question, or null when unscored. */
+  averageScore: number | null;
+  /** How many questions in this session have a scored evaluation. */
+  scoredAttempts: number;
   strengths: string[];
   priorities: string[];
   dimensions: Array<{ dimension: RubricDimension; rating: Rating; count: number }>;
@@ -881,6 +1012,10 @@ export type PracticeAttemptView = {
 };
 
 export type StoredFeedback = {
+  /** Null on feedback generated before scoring was introduced. */
+  score: number | null;
+  scoreRationale: string | null;
+  modelAnswer: string | null;
   dimensions: Array<{
     dimension: RubricDimension;
     rating: Rating;

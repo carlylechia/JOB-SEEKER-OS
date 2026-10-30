@@ -7,20 +7,23 @@
  * work the candidate actually completed.
  */
 
-import type {
-  EvidenceStatus,
-  ModelTask,
-  PrepContent,
-  PrepHorizon,
-  PrepTask,
-  Priority,
-  PracticeMode,
-  PracticeSessionSummary,
-  QuestionCategory,
-  ReadinessSummary,
-  ResearchStatus,
-  RubricDimension,
-  Rating,
+import {
+  INTERVIEW_TRACK_PREFERRED_CATEGORIES,
+  interviewTrackForContext,
+  type EvidenceStatus,
+  type InterviewContext,
+  type ModelTask,
+  type PrepContent,
+  type PrepHorizon,
+  type PrepTask,
+  type Priority,
+  type PracticeMode,
+  type PracticeSessionSummary,
+  type QuestionCategory,
+  type ReadinessSummary,
+  type ResearchStatus,
+  type RubricDimension,
+  type Rating,
 } from './schema';
 
 export const HORIZON_LABELS: Record<PrepHorizon, string> = {
@@ -83,6 +86,7 @@ export function horizonIsImminent(horizon: PrepHorizon): boolean {
  */
 export function fallbackTasks(params: {
   horizon: PrepHorizon;
+  context: InterviewContext;
   roleTitle: string;
   company: string;
   researchAvailable: boolean;
@@ -90,8 +94,9 @@ export function fallbackTasks(params: {
   hadInterviewerInfo: boolean;
   concerns: string | null;
 }): ModelTask[] {
-  const { horizon, roleTitle, company, researchAvailable, hasCandidateEvidence, hadInterviewerInfo, concerns } = params;
+  const { horizon, context, roleTitle, company, researchAvailable, hasCandidateEvidence, hadInterviewerInfo, concerns } = params;
   const tasks: ModelTask[] = [];
+  const track = interviewTrackForContext(context);
 
   if (horizonIsImminent(horizon)) {
     tasks.push({
@@ -119,17 +124,55 @@ export function fallbackTasks(params: {
     horizon: horizonIsImminent(horizon) ? 'WITHIN_24_HOURS' : 'TWO_THREE_DAYS',
   });
 
-  tasks.push({
-    taskKey: 'prepare-star-examples',
-    title: 'Prepare three concrete examples',
-    description: 'Choose three real situations from your own experience that can support different competencies. Write the situation, your action and the verified result.',
-    whyItMatters: 'Concrete evidence is more convincing than adjectives, and reused stories can be adapted honestly.',
-    expectedOutput: 'Three STAR outlines based only on work you actually did.',
-    priority: 'HIGH',
-    category: 'WRITING',
-    estimatedMinutes: 25,
-    horizon: horizonIsImminent(horizon) ? 'WITHIN_24_HOURS' : 'TWO_THREE_DAYS',
-  });
+  if (track === 'BEHAVIORAL' || track === 'MIXED') {
+    tasks.push({
+      taskKey: 'prepare-star-examples',
+      title: 'Prepare three concrete examples',
+      description: 'Choose three real situations from your own experience that can support different competencies. Write the situation, your action and the verified result.',
+      whyItMatters: 'Concrete evidence is more convincing than adjectives, and reused stories can be adapted honestly.',
+      expectedOutput: 'Three STAR outlines based only on work you actually did.',
+      priority: 'HIGH',
+      category: 'WRITING',
+      estimatedMinutes: 25,
+      horizon: horizonIsImminent(horizon) ? 'WITHIN_24_HOURS' : 'TWO_THREE_DAYS',
+    });
+  } else if (track === 'TECHNICAL') {
+    tasks.push({
+      taskKey: 'prepare-technical-explanations',
+      title: 'Explain two technical decisions out loud',
+      description: 'Choose two real technical decisions from your work. For each, state the problem, assumptions, alternatives, trade-offs and how you validated the result. Record a two-minute explanation.',
+      whyItMatters: 'Technical interviews reward visible reasoning, not just a correct final answer.',
+      expectedOutput: 'Two recorded or written technical explanations with explicit trade-offs.',
+      priority: 'HIGH',
+      category: 'PRACTICE',
+      estimatedMinutes: 30,
+      horizon: horizonIsImminent(horizon) ? 'WITHIN_24_HOURS' : 'TWO_THREE_DAYS',
+    });
+  } else if (track === 'CASE_STUDY') {
+    tasks.push({
+      taskKey: 'prepare-case-framework',
+      title: 'Practise one case with a repeatable framework',
+      description: 'Take one case-style question from this pack. State your assumptions, structure the analysis, compare at least two options, make a recommendation and define success measures. Timebox it to 20 minutes.',
+      whyItMatters: 'A clear structure and explicit assumptions matter more than a lucky answer.',
+      expectedOutput: 'One written case outline with assumptions, options, recommendation and measures.',
+      priority: 'HIGH',
+      category: 'PRACTICE',
+      estimatedMinutes: 30,
+      horizon: horizonIsImminent(horizon) ? 'WITHIN_24_HOURS' : 'TWO_THREE_DAYS',
+    });
+  } else {
+    tasks.push({
+      taskKey: 'prepare-role-and-company-answers',
+      title: 'Draft your role-fit and motivation answers',
+      description: 'Write a short answer for why this role, why this employer and what you would contribute. Use only sourced company facts and your own verified evidence; mark anything you still need to check.',
+      whyItMatters: 'Specific, honest motivation is far stronger than generic praise of the company.',
+      expectedOutput: 'Three short drafts with every unsupported personal detail marked for completion.',
+      priority: 'HIGH',
+      category: 'WRITING',
+      estimatedMinutes: 25,
+      horizon: horizonIsImminent(horizon) ? 'WITHIN_24_HOURS' : 'TWO_THREE_DAYS',
+    });
+  }
 
   tasks.push({
     taskKey: 'research-employer',
@@ -382,7 +425,24 @@ const ROLE_CATEGORIES: QuestionCategory[] = [
   'DEBUGGING',
   'PROJECT_DECISIONS',
   'ROLE_SCENARIO',
+  'HANDLING_AMBIGUITY',
 ];
+
+/** The most useful mock focus for the interview type the user selected. */
+export function defaultPracticeModeForContext(context: InterviewContext): PracticeMode {
+  switch (interviewTrackForContext(context)) {
+    case 'BEHAVIORAL':
+      return 'BEHAVIORAL';
+    case 'TECHNICAL':
+    case 'CASE_STUDY':
+      return 'ROLE_SPECIFIC';
+    case 'ROLE_AND_COMPANY':
+      return 'COMPANY_MOTIVATION';
+    case 'MIXED':
+    default:
+      return 'FULL';
+  }
+}
 
 type PracticeQuestion = {
   id: string;
@@ -391,67 +451,127 @@ type PracticeQuestion = {
   ordinal: number;
 };
 
-/** Select a bounded, deterministic question set for a practice mode. */
+/**
+ * Select a bounded, deterministic question set for a practice mode.
+ *
+ * Within a mode, questions are ranked by how well their category fits the
+ * selected interview context before priority is considered. This keeps a
+ * technical mock technical even when the provider marked a generic
+ * behavioural question as high priority.
+ */
 export function selectPracticeQuestionIds(params: {
   mode: PracticeMode;
   questions: PracticeQuestion[];
   attemptedQuestionIds?: Set<string>;
+  context?: InterviewContext;
 }): string[] {
   const priorityRank: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
-  const byPriority = [...params.questions].sort((a, b) => {
-    const diff = (priorityRank[a.priority] ?? 1) - (priorityRank[b.priority] ?? 1);
-    return diff !== 0 ? diff : a.ordinal - b.ordinal;
+  const preferred = params.context
+    ? INTERVIEW_TRACK_PREFERRED_CATEGORIES[interviewTrackForContext(params.context)]
+    : [];
+  const preferenceRank = new Map(preferred.map((category, index) => [category, index]));
+  const fallbackPreference = preferred.length;
+
+  const byPreference = [...params.questions].sort((a, b) => {
+    const preferenceDiff =
+      (preferenceRank.get(a.category as QuestionCategory) ?? fallbackPreference) -
+      (preferenceRank.get(b.category as QuestionCategory) ?? fallbackPreference);
+    if (preferenceDiff !== 0) return preferenceDiff;
+    const priorityDiff = (priorityRank[a.priority] ?? 1) - (priorityRank[b.priority] ?? 1);
+    return priorityDiff !== 0 ? priorityDiff : a.ordinal - b.ordinal;
   });
 
-  let selected = byPriority;
+  let selected = byPreference;
   switch (params.mode) {
     case 'BEHAVIORAL':
-      selected = byPriority.filter((question) => BEHAVIORAL_CATEGORIES.includes(question.category as QuestionCategory));
+      selected = byPreference.filter((question) => BEHAVIORAL_CATEGORIES.includes(question.category as QuestionCategory));
       break;
     case 'ROLE_SPECIFIC':
-      selected = byPriority.filter((question) => ROLE_CATEGORIES.includes(question.category as QuestionCategory));
+      selected = byPreference.filter((question) => ROLE_CATEGORIES.includes(question.category as QuestionCategory));
       break;
     case 'COMPANY_MOTIVATION':
-      selected = byPriority.filter((question) => question.category === 'MOTIVATION');
+      selected = byPreference.filter(
+        (question) => question.category === 'MOTIVATION' || question.category === 'EMPLOYER_QUESTIONS',
+      );
       break;
     case 'WEAK_AREA':
-      selected = byPriority.filter((question) => !params.attemptedQuestionIds?.has(question.id));
-      if (selected.length === 0) selected = byPriority;
+      selected = byPreference.filter((question) => !params.attemptedQuestionIds?.has(question.id));
+      if (selected.length === 0) selected = byPreference;
       break;
     case 'QUICK':
-      return byPriority.slice(0, 3).map((question) => question.id);
+      return byPreference.slice(0, 3).map((question) => question.id);
     case 'FULL':
     default:
       break;
   }
 
-  if (selected.length === 0) selected = byPriority;
+  if (selected.length === 0) selected = byPreference;
   const cap = params.mode === 'FULL' ? 10 : 6;
   return selected.slice(0, cap).map((question) => question.id);
 }
 
-/** Summarise a completed session from persisted attempt feedback. */
+type SessionAttempt = {
+  questionId: string;
+  feedback: unknown | null;
+  attemptNumber?: number;
+  createdAt?: Date | string | null;
+};
+
+function attemptOrderValue(attempt: SessionAttempt, index: number): number {
+  if (typeof attempt.attemptNumber === 'number' && Number.isFinite(attempt.attemptNumber)) {
+    return attempt.attemptNumber;
+  }
+  if (attempt.createdAt) {
+    const value = new Date(attempt.createdAt).getTime();
+    if (Number.isFinite(value)) return value;
+  }
+  return index;
+}
+
+/**
+ * Summarise a session from the LATEST attempt for each question. A revision
+ * supersedes the earlier answer; counting both would inflate coverage and mix
+ * an old weakness with a new strength.
+ */
 export function summariseSession(params: {
-  attempts: Array<{ questionId: string; feedback: unknown | null }>;
+  attempts: SessionAttempt[];
   questionCount: number;
 }): PracticeSessionSummary {
   const strengths: string[] = [];
   const priorities: string[] = [];
   const dimensionCounts = new Map<RubricDimension, Map<Rating, number>>();
-  const seenQuestions = new Set<string>();
-  let withFeedback = 0;
+  const latestByQuestion = new Map<string, { attempt: SessionAttempt; order: number }>();
 
-  for (const attempt of params.attempts) {
-    seenQuestions.add(attempt.questionId);
+  params.attempts.forEach((attempt, index) => {
+    if (!attempt.questionId) return;
+    const order = attemptOrderValue(attempt, index);
+    const current = latestByQuestion.get(attempt.questionId);
+    if (!current || order >= current.order) {
+      latestByQuestion.set(attempt.questionId, { attempt, order });
+    }
+  });
+
+  let withFeedback = 0;
+  let scoredAttempts = 0;
+  let scoreTotal = 0;
+
+  for (const { attempt } of latestByQuestion.values()) {
     const feedback = attempt.feedback as
       | {
           dimensions?: Array<{ dimension?: string; rating?: string }>;
           whatWorked?: string;
           needsImprovement?: string;
+          score?: number | null;
         }
       | null;
     if (!feedback) continue;
     withFeedback += 1;
+
+    if (typeof feedback.score === 'number' && Number.isFinite(feedback.score)) {
+      scoredAttempts += 1;
+      scoreTotal += feedback.score;
+    }
+
     if (feedback.whatWorked && strengths.length < 3 && !strengths.includes(feedback.whatWorked)) {
       strengths.push(feedback.whatWorked);
     }
@@ -474,15 +594,22 @@ export function summariseSession(params: {
     return { dimension, rating, count: [...ratings.values()].reduce((sum, count) => sum + count, 0) };
   });
 
+  const averageScore =
+    scoredAttempts > 0 ? Math.round((scoreTotal / scoredAttempts) * 10) / 10 : null;
+
   return {
-    questionsAttempted: seenQuestions.size,
+    questionsAttempted: latestByQuestion.size,
     questionsWithFeedback: withFeedback,
+    averageScore,
+    scoredAttempts,
     strengths,
     priorities,
     dimensions,
     note:
       withFeedback === 0
-        ? 'No attempt in this session has feedback yet. Request feedback on an answer to make the summary meaningful.'
-        : 'This summary reflects only the answers saved in this session. It is coaching input, not an interview prediction.',
+        ? 'No attempt in this session has feedback yet. Evaluate an answer to make the summary meaningful.'
+        : averageScore !== null
+          ? `Average score ${averageScore}/10 across ${scoredAttempts} evaluated question${scoredAttempts === 1 ? '' : 's'}. This reflects only the answers saved in this session and is coaching input, not an interview prediction.`
+          : 'Feedback in this session predates scoring. Re-evaluate an answer to add a score and model answer.',
   };
 }

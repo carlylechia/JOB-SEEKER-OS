@@ -5,11 +5,8 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Building2, Download, Loader2, Sparkles } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
-import {
-  INTERVIEW_CONTEXT_DESCRIPTIONS,
-  INTERVIEW_CONTEXT_LABELS,
-  type InterviewContext,
-} from '@/lib/interview-prep/schema';
+import { InterviewTypePicker } from '@/components/interview-prep/interview-type-picker';
+import type { InterviewContext } from '@/lib/interview-prep/schema';
 import type { JobLead } from '@/types';
 
 type Access = { canGenerate: boolean; plan: string; aiCreditsRemaining: number | null };
@@ -26,8 +23,6 @@ type ImportedJob = {
   description: string;
   location: string | null;
 };
-
-const CONTEXTS = Object.keys(INTERVIEW_CONTEXT_LABELS) as InterviewContext[];
 
 const TIMINGS = [
   { value: '', label: 'Let the date decide (or unknown)' },
@@ -422,38 +417,31 @@ function NewPackForm() {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium" htmlFor="context">
-                Interview format
-              </label>
-              <select
-                id="context"
-                className="input"
-                value={context}
-                onChange={(event) => setContext(event.target.value as InterviewContext)}
-              >
-                {CONTEXTS.map((value) => (
-                  <option key={value} value={value}>
-                    {INTERVIEW_CONTEXT_LABELS[value]}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs text-muted">{INTERVIEW_CONTEXT_DESCRIPTIONS[context]}</p>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium" htmlFor="language">
-                Interview language <span className="font-normal text-muted">(optional)</span>
-              </label>
-              <input
-                id="language"
-                className="input"
-                value={interviewLanguage}
-                onChange={(event) => setInterviewLanguage(event.target.value)}
-                placeholder="e.g. English, French"
-                maxLength={80}
-              />
-            </div>
+          <div>
+            <span className="mb-2 block text-sm font-medium">Interview type</span>
+            <InterviewTypePicker
+              value={context}
+              onChange={setContext}
+              idPrefix="new-pack-interview-type"
+            />
+            <p className="mt-2 text-xs text-muted">
+              This changes what the pack generates: behavioural packs build an example bank, technical packs
+              test reasoning and trade-offs, and case-study packs practise structured analysis.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium" htmlFor="language">
+              Interview language <span className="font-normal text-muted">(optional)</span>
+            </label>
+            <input
+              id="language"
+              className="input"
+              value={interviewLanguage}
+              onChange={(event) => setInterviewLanguage(event.target.value)}
+              placeholder="e.g. English, French"
+              maxLength={80}
+            />
           </div>
 
           <div>

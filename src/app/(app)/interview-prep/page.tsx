@@ -4,7 +4,14 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, CalendarDays, FileText, Plus, Search, Sparkles } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
+import { InterviewTypeBadge } from '@/components/interview-prep/interview-type-picker';
 import type { PackSummary } from '@/components/interview-prep/types';
+import {
+  INTERVIEW_TRACK_LABELS,
+  interviewTrackForContext,
+  type InterviewContext,
+  type InterviewTrack,
+} from '@/lib/interview-prep/schema';
 
 type Access = {
   canGenerate: boolean;
@@ -67,6 +74,7 @@ export default function InterviewPrepPage() {
   const [packs, setPacks] = useState<PackSummary[]>([]);
   const [access, setAccess] = useState<Access | null>(null);
   const [includeArchived, setIncludeArchived] = useState(false);
+  const [trackFilter, setTrackFilter] = useState<'ALL' | InterviewTrack>('ALL');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -92,9 +100,14 @@ export default function InterviewPrepPage() {
     void load();
   }, [load]);
 
-  const filtered = packs.filter((pack) =>
-    `${pack.company} ${pack.roleTitle} ${pack.title}`.toLowerCase().includes(query.toLowerCase()),
-  );
+  const filtered = packs.filter((pack) => {
+    const matchesQuery = `${pack.company} ${pack.roleTitle} ${pack.title}`
+      .toLowerCase()
+      .includes(query.toLowerCase());
+    if (!matchesQuery) return false;
+    if (trackFilter === 'ALL') return true;
+    return interviewTrackForContext(pack.context as InterviewContext) === trackFilter;
+  });
 
   return (
     <div className="space-y-6 pb-8">
@@ -146,6 +159,34 @@ export default function InterviewPrepPage() {
         </label>
       </div>
 
+      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by interview type">
+        <button
+          type="button"
+          onClick={() => setTrackFilter('ALL')}
+          aria-pressed={trackFilter === 'ALL'}
+          className={`badge transition-colors ${
+            trackFilter === 'ALL' ? 'bg-accent text-accent-ink' : 'bg-surface-sunken text-muted hover:text-ink'
+          }`}
+        >
+          All types
+        </button>
+        {(Object.keys(INTERVIEW_TRACK_LABELS) as InterviewTrack[]).map((track) => (
+          <button
+            key={track}
+            type="button"
+            onClick={() => setTrackFilter(track)}
+            aria-pressed={trackFilter === track}
+            className={`badge transition-colors ${
+              trackFilter === track
+                ? 'bg-accent text-accent-ink'
+                : 'bg-surface-sunken text-muted hover:text-ink'
+            }`}
+          >
+            {INTERVIEW_TRACK_LABELS[track]}
+          </button>
+        ))}
+      </div>
+
       {error ? (
         <div className="rounded-xl border border-danger/25 bg-danger/[0.06] p-4 text-sm">{error}</div>
       ) : null}
@@ -162,12 +203,12 @@ export default function InterviewPrepPage() {
             <FileText className="h-6 w-6" aria-hidden />
           </div>
           <h2 className="text-lg font-semibold">
-            {packs.length === 0 ? 'No preparation packs yet' : 'No packs match that search'}
+            {packs.length === 0 ? 'No preparation packs yet' : 'No packs match those filters'}
           </h2>
           <p className="muted mx-auto mt-2 max-w-md">
             {packs.length === 0
               ? 'Create a pack from a saved job or paste a role you are preparing for. We will build a briefing, research notes, questions, a plan and a mock interview.'
-              : 'Try a different company or role, or clear the search.'}
+              : 'Try a different company, role, or interview type, or clear the search.'}
           </p>
           {packs.length === 0 ? (
             <Link className="btn-primary mt-4 inline-flex" href="/interview-prep/new">
@@ -184,9 +225,12 @@ export default function InterviewPrepPage() {
               <article key={pack.id} className="card-pad flex flex-col gap-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-xs font-medium uppercase tracking-wide text-muted">
-                      {pack.company}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="truncate text-xs font-medium uppercase tracking-wide text-muted">
+                        {pack.company}
+                      </p>
+                      <InterviewTypeBadge context={pack.context as InterviewContext} />
+                    </div>
                     <h2 className="mt-1 line-clamp-2 text-base font-semibold text-ink">
                       {pack.roleTitle}
                     </h2>

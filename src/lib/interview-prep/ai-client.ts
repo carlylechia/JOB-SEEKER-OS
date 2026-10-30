@@ -19,6 +19,8 @@ import {
   INTERVIEW_PREP_SCHEMA_VERSION,
   modelFeedbackSchema,
   modelPackSchema,
+  type InterviewContext,
+  type InterviewTrack,
   type ModelFeedback,
   type ModelPack,
 } from './schema';
@@ -70,7 +72,8 @@ export type GeneratePackParams = {
   candidateBlock: string;
   sourceBlock: string;
   jobText: string;
-  context: string;
+  context: InterviewContext;
+  track: InterviewTrack;
   horizon: string;
   maxQuestions: number;
   maxTasks: number;
@@ -80,11 +83,18 @@ export type GeneratePackParams = {
 export type GenerateFeedbackParams = {
   question: string;
   category: string;
+  difficulty: string;
+  competency: string;
+  whyMatters: string;
   answer: string;
   roleTitle: string;
   company: string;
+  context: InterviewContext;
+  track: InterviewTrack;
   dimensions: string[];
   framework: string | null;
+  /** What the interviewer assesses, key points and what a strong answer shows. */
+  coachingContext: string;
   jobContext: string;
   candidateContext: string;
 };
@@ -153,6 +163,7 @@ export function createOpenAiInterviewPrepProvider(options?: {
                 sourceBlock: params.sourceBlock,
                 jobText: params.jobText,
                 context: params.context,
+                track: params.track,
                 horizon: params.horizon,
                 maxQuestions: params.maxQuestions,
                 maxTasks: params.maxTasks,
@@ -209,11 +220,17 @@ export function createOpenAiInterviewPrepProvider(options?: {
               content: buildFeedbackPrompt({
                 question: params.question,
                 category: params.category,
+                difficulty: params.difficulty,
+                competency: params.competency,
+                whyMatters: params.whyMatters,
                 answer: params.answer,
                 roleTitle: params.roleTitle,
                 company: params.company,
+                context: params.context,
+                track: params.track,
                 dimensions: params.dimensions,
                 framework: params.framework,
+                coachingContext: params.coachingContext,
                 jobContext: params.jobContext,
                 candidateContext: params.candidateContext,
               }),

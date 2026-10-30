@@ -24,7 +24,9 @@ const ROUTE = '/api/interview-prep/[packId]/sessions';
 const RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 60_000;
 
-const createSchema = z.object({ mode: practiceModeSchema }).strict();
+// Mode is optional: omitting it starts the mock in the focus that matches the
+// pack's interview type (behavioural, technical, case study, role/company).
+const createSchema = z.object({ mode: practiceModeSchema.optional() }).strict();
 
 type Params = { params: Promise<{ packId: string }> };
 
