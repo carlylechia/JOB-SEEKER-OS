@@ -29,6 +29,18 @@ The catalog ingests exclusively from primary ATS endpoints, official government 
 - **Arbeitnow API** (`arbeitnow.ts`): Free European and global remote tech job feed.
 - **Remote OK API** (`remoteok.ts`): Free remote tech postings. Automatically ignores legal/sponsor header records.
 - **4dayweek free feed** (`fourdayweek.ts`): Curated 4-day workweek jobs. Ingestion begins at page 24+ (`FOURDAYWEEK_START_PAGE=24`) to read unlocked public listings and skips locked premium posts.
+- **Jobicy API** (`jobicy.ts`): Free remote job feed with opaque cursor pagination (100 records/page, capped at three pages per run).
+  - *Compliance & Attribution*: Jobicy must be visibly credited and links must point to the supplied listing URL. The free feed intentionally returns Jobicy listing URLs rather than direct employer ATS URLs, so the listing page is both the canonical and application URL. Direct ATS URLs require Jobicy's commercial API.
+  - *Structured data*: Disabled, consistent with the other aggregator feeds.
+
+### English-Only Listing Policy
+
+The product is English-only. Listings that are clearly written in another language are not recommended and are not persisted into the shared catalogue.
+
+- `language.ts` scores title + description against distinctive function-word profiles for German, French, Spanish, Portuguese, Dutch, Italian and Polish, with diacritic evidence as a secondary signal.
+- Detection is conservative: it returns `non-en` only with substantial evidence. Short or missing descriptions return `unknown` and are allowed through, because incomplete data is not proof of a non-English posting.
+- The gate runs twice: at catalog persistence (`persistSourceJobs`) so new non-English rows never accumulate, and in `checkHardEligibility` so legacy rows are still excluded from recommendations.
+- Sync metrics report `languageFiltered` at the run, provider and note level. No schema change is required.
 
 ### Credentialed & Government Sources
 - **USAJOBS API** (`usajobs.ts`): Official United States Federal Government employment search API.
@@ -48,7 +60,7 @@ The catalog ingests exclusively from primary ATS endpoints, official government 
 flowchart TD
     subgraph Ingestion ["Phase 1: Catalog Sync (Background Cron / Admin)"]
         Cron["Vercel Cron (06:00 UTC)"] --> Sync["runCatalogSync()"]
-        Sync --> Providers["9 Provider Adapters\n(Ashby, Greenhouse, Lever, Himalayas, etc.)"]
+        Sync --> Providers["10 Provider Adapters\n(Ashby, Greenhouse, Lever, Himalayas, Jobicy, etc.)"]
         Providers --> Dedupe["Catalog Persistence & Deduplication"]
         Dedupe --> DB[(PostgreSQL ExternalJob)]
         Sync --> Health["JobSourceHealth Record"]
@@ -69,16 +81,29 @@ flowchart TD
 - Providers fetch job listings with pagination and budget tracking.
 - If a provider run is truncated due to time budget or page limits, the adapter explicitly flags `complete: false`.
 - **Closure Safety (`closeMissingFromBoard`)**: Missing board jobs are marked as closed in `ExternalJob` **only** if the adapter achieved a complete board crawl (`complete === true`). Partial syncs never falsely close valid opportunities.
+- **Link Repair**: Persistence always stores `applicationUrl`, `canonicalUrl` and `employerUrl`. When a stored row matches by fingerprint but is missing a link the provider now supplies, the row is updated on the next sync. This repairs catalogue rows written before URL persistence was added.
+- **Language Filter**: Non-English listings are discarded before deduplication/persistence and counted in sync metrics.
 
 ### 2. Hard Eligibility Filtering (`eligibility.ts`)
 Before computing relevance, candidates undergo strict deterministic gating:
-- **Status & Freshness**: Requisition must be open, unexpired, and verified within 21 days.
+- **Status & Freshness**: Requisition must be open, unexpired, published within 60 days (or have no publication date), and verified within 21 days. The older 30-day hard cutoff was removed; the 60-day window and fit floor remain.
+- **Language**: Clearly non-English postings are rejected (English-only product policy).
 - **Workplace Model**: If user preferences are strictly remote (`WORKPLACE_TYPE_REMOTE`), explicit on-site roles are rejected.
 - **Geographic Restrictions**: Validates candidate target countries (`workCountries`) against job `countryCodes` and `locationRestrictions`.
 - **Visa Sponsorship**: If the user requires visa sponsorship (`requiresVisaSponsorship: true`), listings that explicitly state sponsorship is not offered are excluded.
 - **Citizenship & Clearances**: Roles requiring specific citizenship or security clearances (e.g., US Federal roles) are gated according to user eligibility.
 
-### 3. Multi-Factor Scoring & Confidence Metrics (`scoring.ts`, `confidence.ts`)
+### 3. Candidate Recall
+
+Discovery does not load the whole catalogue for every user, and it does not rely on the newest 1,000 rows:
+
+- `buildCandidateTitleTerms` derives phrases and tokens from target roles, preferred titles and preferred stack.
+- The primary query fetches up to 2,000 recent listings whose titles match those terms (case-insensitive), so relevant roles older than the previous 30-day cutoff are still considered.
+- A 400-row recent fallback catches relevant roles with unusual titles.
+- The pool remains bounded per user, which protects the cron's serverless time budget as the catalogue grows.
+- `fitScore >= 30` remains the quality floor; the shortlist is never padded.
+
+### 4. Multi-Factor Scoring & Confidence Metrics (`scoring.ts`, `confidence.ts`)
 Scoring separates user fit from data quality and source reliability:
 - **Match Score (0–100)**: Evaluates 9 dimensions: target titles & role synonyms, seniority tier, required & preferred tech stack skills, workplace & timezone overlap, domain/industry alignment, employment type, and compensation bounds.
 - **Listing Quality (0–100)**: Measures the richness of the job posting (structured responsibilities, qualification clarity, compensation transparency).
@@ -86,7 +111,7 @@ Scoring separates user fit from data quality and source reliability:
 - **Data Completeness (0–100)**: Verifies presence of essential fields (company, title, description, application link, location, publication date).
 - **Composite Ranking Score**: Combines match score with quality and reliability weights to prevent poorly-described or low-trust listings from outranking verified primary listings.
 
-### 4. Timezone-Aware Daily Snapshots
+### 5. Timezone-Aware Daily Snapshots
 - Discovery runs are keyed to each user's local calendar day using their IANA timezone (`UserProfile.timezone`, e.g., `America/New_York`, `Europe/Berlin`, `UTC`).
 - **Snapshot Stability**: Once recommendations are generated for a given local date, the run is stored as `COMPLETED`. Subsequent page visits or manual refreshes on the same calendar day reuse the existing snapshot (`reused: true`), ensuring a stable, non-shifting shortlist for the user.
 
@@ -103,7 +128,7 @@ Scoring separates user fit from data quality and source reliability:
   - Next, processes active Pro/Premium users whose local calendar day needs a fresh snapshot.
 
 ### Admin Operations & Observability
-- **Dashboard**: `/admin/system` displays real-time health status, success rates, listing counts, and recent sync runs for all 9 providers.
+- **Dashboard**: `/admin/system` displays real-time health status, success rates, listing counts, and recent sync runs for all 10 providers.
 - **API**: `GET /api/admin/job-sources` (health summary) and `POST /api/admin/job-sources` (trigger on-demand catalog sync or toggle provider availability).
 
 ---
@@ -122,6 +147,7 @@ Scoring separates user fit from data quality and source reliability:
 | `REMOTEOK_ENABLED` | No | `true` | Enable/disable Remote OK feed ingestion |
 | `FOURDAYWEEK_ENABLED` | No | `true` | Enable/disable 4dayweek feed ingestion |
 | `FOURDAYWEEK_START_PAGE` | No | `24` | Starting page for 4dayweek public feed |
+| `JOBICY_ENABLED` | No | `true` | Enable/disable Jobicy feed ingestion |
 | `USAJOBS_ENABLED` | No | `true` | Enable/disable USAJOBS provider |
 | `USAJOBS_API_KEY` | No | `""` | Required for USAJOBS; fails closed if empty |
 | `USAJOBS_USER_AGENT` | No | `""` | Contact email header required by USAJOBS API |

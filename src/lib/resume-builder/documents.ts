@@ -260,11 +260,13 @@ export async function getResume(params: {
 export async function listTargetableJobs(
   userId: string,
   limit = 50,
+  requestedJobId?: string | null,
 ): Promise<Array<{ id: string; title: string; company: string; status: string; hasDescription: boolean; updatedAt: Date }>> {
+  const take = Math.min(Math.max(limit, 1), 200);
   const rows = await prisma.jobLead.findMany({
     where: { userId, deletedAt: null },
     orderBy: [{ updatedAt: 'desc' }],
-    take: Math.min(Math.max(limit, 1), 200),
+    take,
     select: {
       id: true,
       title: true,
@@ -274,6 +276,27 @@ export async function listTargetableJobs(
       updatedAt: true,
     },
   });
+
+  // A job-page entry point links here with `?job=`. The requested role may be
+  // older than the library page, so include it explicitly when the caller owns
+  // it. Ownership is enforced by the same `userId` + `deletedAt` filter; a
+  // missing, deleted or foreign id is silently ignored, never confirmed.
+  const requested = requestedJobId?.trim();
+  if (requested && !rows.some((row) => row.id === requested)) {
+    const requestedRow = await prisma.jobLead.findFirst({
+      where: { id: requested, userId, deletedAt: null },
+      select: {
+        id: true,
+        title: true,
+        company: true,
+        status: true,
+        jobDescription: true,
+        updatedAt: true,
+      },
+    });
+    if (requestedRow) rows.unshift(requestedRow);
+  }
+
   return rows.map((row) => ({
     id: row.id,
     title: row.title,

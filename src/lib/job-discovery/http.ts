@@ -5,6 +5,8 @@ const ALLOWED_HOSTS = new Set([
   'remoteok.com',
   'remoteok.io',
   '4dayweek.io',
+  'jobicy.com',
+  'www.jobicy.com',
   'data.usajobs.gov',
   'api.headcountlabs.com',
   'boards-api.greenhouse.io',

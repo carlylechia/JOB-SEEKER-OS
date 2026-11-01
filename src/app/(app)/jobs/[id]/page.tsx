@@ -210,12 +210,21 @@ export default function JobDetailsPage() {
         title={job.title}
         subtitle={job.company}
         action={
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2">
             {job.jobUrl ? (
               <Link className="btn-secondary" href={job.jobUrl} target="_blank">
                 Open listing
               </Link>
             ) : null}
+            <Link href={`/resumes?job=${encodeURIComponent(job.id)}`} className="btn-secondary">
+              Tailor resume
+            </Link>
+            <Link
+              href={`/application-materials/new?job=${encodeURIComponent(job.id)}`}
+              className="btn-secondary"
+            >
+              New material
+            </Link>
             <Link
               href={`/application-materials/jobs/${job.id}`}
               className="btn-secondary"

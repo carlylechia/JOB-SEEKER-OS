@@ -8,6 +8,7 @@ import {
   listResumes,
 } from '@/lib/resume-builder/documents';
 import { RESUME_BUILDER_FEATURE } from '@/lib/resume-builder/entitlements';
+import { sanitizeTargetJobId } from '@/lib/resume-builder/targeting';
 import { ResumeListClient } from '@/components/resume-builder/resume-list-client';
 import { PageHeader } from '@/components/shared/page-header';
 
@@ -26,8 +27,16 @@ export const dynamic = 'force-dynamic';
  * handed to the client rather than fetched after paint. The client component only
  * renders what it is given — it never decides access.
  */
-export default async function ResumesPage() {
+export default async function ResumesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ job?: string | string[] }>;
+}) {
   const user = await requireUser();
+  const params = await searchParams;
+  const initialTargetJobId = sanitizeTargetJobId(
+    typeof params.job === 'string' ? params.job : null,
+  );
 
   const [entitlements, resumes, profile, total] = await Promise.all([
     getEntitlements(user.id),
@@ -64,6 +73,7 @@ export default async function ResumesPage() {
             resume.content.experiences.length > 0,
         }))}
         careerProfile={profile}
+        initialTargetJobId={initialTargetJobId}
         access={{
           canBuild,
           canOptimize: entitlements.features.RESUME_OPTIMIZATION,

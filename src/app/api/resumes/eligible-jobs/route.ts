@@ -20,6 +20,7 @@ import { getEntitlements } from '@/lib/billing/subscriptions';
 import { listTargetableJobs } from '@/lib/resume-builder/documents';
 import { RESUME_OPTIMIZATION_FEATURE } from '@/lib/resume-builder/entitlements';
 import { serialiseTargetableJob } from '@/lib/resume-builder/wire';
+import { sanitizeTargetJobId } from '@/lib/resume-builder/targeting';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -44,7 +45,11 @@ export async function GET(request: Request) {
       }
 
       const [jobs, entitlements] = await Promise.all([
-        listTargetableJobs(userId),
+        listTargetableJobs(
+          userId,
+          50,
+          sanitizeTargetJobId(new URL(request.url).searchParams.get('job')),
+        ),
         getEntitlements(userId),
       ]);
 

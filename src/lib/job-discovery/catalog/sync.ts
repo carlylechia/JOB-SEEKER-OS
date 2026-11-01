@@ -18,7 +18,7 @@ import { recordProviderHealth } from '../source-health';
 const DEFAULT_TIME_BUDGET_MS = 45_000;
 const MAX_TIME_BUDGET_MS = 55_000;
 const MAX_JOBS_PER_BOARD = 300;
-const MAX_JOBS_PER_FEED = 150;
+const MAX_JOBS_PER_FEED = 300;
 const MAX_BOARDS_PER_PROVIDER: Record<string, number> = {
   greenhouse: 30,
   lever: 5,
@@ -36,6 +36,7 @@ type TaskOutcome = {
   error?: string;
   jobsRetrieved: number;
   jobsAccepted: number;
+  languageFiltered: number;
   created: number;
   updated: number;
   closed: number;
@@ -84,6 +85,7 @@ async function executeSource(
     success: false,
     jobsRetrieved: 0,
     jobsAccepted: 0,
+    languageFiltered: 0,
     created: 0,
     updated: 0,
     closed: 0,
@@ -153,6 +155,7 @@ async function executeSource(
       success: true,
       jobsRetrieved: jobs.length,
       jobsAccepted: persisted.accepted,
+      languageFiltered: persisted.languageFiltered,
       created: persisted.created,
       updated: persisted.updated,
       closed,
@@ -161,7 +164,10 @@ async function executeSource(
       latencyMs: Date.now() - started,
       rateLimitRemaining: result.rateLimitRemaining ?? null,
       quotaExhausted: result.quotaExhausted,
-      notes: result.notes,
+      notes: [
+        ...(result.notes ?? []),
+        ...(persisted.languageFiltered > 0 ? [`LANGUAGE_FILTERED:${persisted.languageFiltered}`] : []),
+      ],
     };
   } catch (error) {
     const category = error instanceof ProviderHttpError ? error.category : 'UNKNOWN';
@@ -218,6 +224,7 @@ function providerRollup(outcomes: TaskOutcome[]) {
     requests: number;
     jobsRetrieved: number;
     jobsAccepted: number;
+    languageFiltered: number;
     boardsAttempted: number;
     boardsSucceeded: number;
     latencyMs: number;
@@ -235,6 +242,7 @@ function providerRollup(outcomes: TaskOutcome[]) {
       requests: 0,
       jobsRetrieved: 0,
       jobsAccepted: 0,
+      languageFiltered: 0,
       boardsAttempted: 0,
       boardsSucceeded: 0,
       latencyMs: 0,
@@ -249,6 +257,7 @@ function providerRollup(outcomes: TaskOutcome[]) {
     row.requests += outcome.requests;
     row.jobsRetrieved += outcome.jobsRetrieved;
     row.jobsAccepted += outcome.jobsAccepted;
+    row.languageFiltered += outcome.languageFiltered;
     if (outcome.sourceType === 'board') {
       row.boardsAttempted += outcome.attempted ? 1 : 0;
       row.boardsSucceeded += outcome.success ? 1 : 0;
@@ -315,6 +324,7 @@ export async function runCatalogSync(options: CatalogSyncOptions = {}) {
           success: false,
           jobsRetrieved: 0,
           jobsAccepted: 0,
+          languageFiltered: 0,
           created: 0,
           updated: 0,
           closed: 0,
@@ -366,6 +376,7 @@ export async function runCatalogSync(options: CatalogSyncOptions = {}) {
     const jobsUpdated = outcomes.reduce((sum, outcome) => sum + outcome.updated, 0);
     const jobsClosed = outcomes.reduce((sum, outcome) => sum + outcome.closed, 0) + closedStale;
     const duplicatesDiscarded = outcomes.reduce((sum, outcome) => sum + outcome.duplicatesDiscarded, 0);
+    const languageFiltered = outcomes.reduce((sum, outcome) => sum + outcome.languageFiltered, 0);
     const quotaStopped = outcomes.some((outcome) => outcome.quotaExhausted || outcome.skipped === 'MONTHLY_BUDGET');
     const providerNames = [...new Set(outcomes.map((outcome) => outcome.provider))];
     const providerSucceeded = providerNames.filter((provider) => providers[provider]?.succeeded > 0).length;
@@ -391,6 +402,7 @@ export async function runCatalogSync(options: CatalogSyncOptions = {}) {
       skipped: outcomes.filter((outcome) => outcome.skipped).map((outcome) => ({ sourceId: outcome.sourceId, reason: outcome.skipped })),
       providers,
       closedStale,
+      languageFiltered,
       errors: failed.slice(0, 10).map((outcome) => `${outcome.sourceId}: ${outcome.error ?? outcome.category ?? 'unknown'}`),
       notes: outcomes.flatMap((outcome) => (outcome.notes ?? []).map((note) => `${outcome.sourceId}:${note}`)).slice(0, 20),
     } satisfies Prisma.InputJsonObject;

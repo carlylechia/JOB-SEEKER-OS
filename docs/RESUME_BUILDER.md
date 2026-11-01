@@ -156,6 +156,17 @@ Why not snapshots:
 
 "Create a tailored version" is one action: `duplicateResume({ targetJobId })`.
 
+### Starting from a job page
+
+`/jobs/[id]` links to `/resumes?job=<jobId>` ("Tailor resume"). The library
+loads the caller's eligible jobs and preselects that id, while leaving the
+selector editable. `GET /api/resumes/eligible-jobs?job=<id>` explicitly includes
+the requested job when the caller owns it, even when it falls outside the
+default 50-row library window. Ownership is enforced server-side; a foreign,
+deleted or unknown id is ignored, and `POST /api/resumes` validates
+`targetJobId` again. The query string is a UI convenience, never an
+authorization signal.
+
 ---
 
 ## 5. Templates
@@ -729,7 +740,7 @@ Ordinary saves and template changes are **not** alerted.
 | `POST` | `/api/resumes/[id]/duplicate` | `RESUME_BUILDER` | Independent copy, optionally retargeted |
 | `GET`, `POST` | `/api/resumes/[id]/preview` | session | Same blocks the PDF consumes, including validated unsaved editor drafts. No cost. |
 | `GET` | `/api/resumes/[id]/export.pdf` | session | Real PDF bytes, streamed |
-| `GET` | `/api/resumes/eligible-jobs` | session | The caller's own jobs only |
+| `GET` | `/api/resumes/eligible-jobs` | session | The caller's own jobs only; `?job=` includes a specific owned job |
 | `GET` | `/api/resumes/[id]/optimization` | session | Entitlements, readiness, stored proposal |
 | `POST` | `/api/resumes/[id]/optimization` | `RESUME_OPTIMIZATION` | Run or reuse |
 | `POST` | `/api/resumes/[id]/optimization/apply` | session | Accepted subset only |

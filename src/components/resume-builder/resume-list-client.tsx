@@ -17,11 +17,12 @@
  * you only discover by hitting it is a bad limit.
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Copy, FilePlus2, Loader, Sparkles, Trash2 } from 'lucide-react';
 
+import { preselectedTargetJobId } from '@/lib/resume-builder/targeting';
 import type { TargetableJob } from './types';
 
 type Summary = {
@@ -57,6 +58,8 @@ type Props = {
     resumeLimit: number | null;
     resumesUsed: number;
   };
+  /** Job-page entry point (`/resumes?job=…`). Ownership is verified server-side. */
+  initialTargetJobId?: string | null;
 };
 
 type StartFrom = 'PROFILE' | 'BLANK' | 'DUPLICATE';
@@ -69,7 +72,7 @@ const ORIGIN_LABELS: Record<string, string> = {
   ONE_PAGE: 'One-page version',
 };
 
-export function ResumeListClient({ initialResumes, careerProfile, access }: Props) {
+export function ResumeListClient({ initialResumes, careerProfile, access, initialTargetJobId }: Props) {
   const router = useRouter();
   const [resumes, setResumes] = useState(initialResumes);
   const [startFrom, setStartFrom] = useState<StartFrom>(
@@ -82,21 +85,56 @@ export function ResumeListClient({ initialResumes, careerProfile, access }: Prop
   const [message, setMessage] = useState('');
   const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
   const inFlight = useRef(false);
+  // Cache the eligible-job list in a ref so the loader identity stays stable.
+  // Without this, an empty result would re-render, re-create the callback and
+  // make the preselection effect fetch forever.
+  const jobsRef = useRef<TargetableJob[]>([]);
+  const jobsLoadedRef = useRef(false);
 
-  const loadJobs = useCallback(async () => {
-    if (jobs.length > 0) return;
+  const loadJobs = useCallback(async (requestedJobId?: string): Promise<TargetableJob[]> => {
+    const cached = jobsRef.current;
+    if (
+      jobsLoadedRef.current &&
+      (!requestedJobId || cached.some((job) => job.id === requestedJobId))
+    ) {
+      return cached;
+    }
     try {
-      const response = await fetch('/api/resumes/eligible-jobs', {
+      // A deep link may point at a job older than the default library window;
+      // ask the API to include it so the selector can actually preselect it.
+      const query = requestedJobId ? `?job=${encodeURIComponent(requestedJobId)}` : '';
+      const response = await fetch(`/api/resumes/eligible-jobs${query}`, {
         cache: 'no-store',
         credentials: 'same-origin',
       });
-      if (!response.ok) return;
-      const payload = (await response.json()) as { jobs: TargetableJob[] };
-      setJobs(payload.jobs);
+      if (!response.ok) return cached;
+      const payload = (await response.json()) as { jobs?: TargetableJob[] };
+      const list = Array.isArray(payload.jobs) ? payload.jobs : [];
+      jobsRef.current = list;
+      jobsLoadedRef.current = true;
+      setJobs(list);
+      return list;
     } catch {
       // Targeting is optional; a failure here must not block creating a resume.
+      return cached;
     }
-  }, [jobs.length]);
+  }, []);
+
+  // A job page links here with `?job=`. Load the selector immediately and keep
+  // the requested id only if the server returned it as an eligible job; the
+  // user can still change or clear the selection afterwards.
+  useEffect(() => {
+    if (!initialTargetJobId) return;
+    let cancelled = false;
+    void (async () => {
+      const list = await loadJobs(initialTargetJobId);
+      if (cancelled) return;
+      setTargetJobId(preselectedTargetJobId(initialTargetJobId, list));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialTargetJobId, loadJobs]);
 
   const create = useCallback(async () => {
     if (inFlight.current) return;

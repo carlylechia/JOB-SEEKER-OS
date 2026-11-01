@@ -1,12 +1,17 @@
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { normalizeCompany, normalizeTitle } from './normalize';
 import { buildMatchExplanation, scoreExternalJob } from './scoring';
 import { selectDiverseTop } from './ranking';
 import { checkHardEligibility } from './eligibility';
 import { computeConfidences, compositeRankingScore } from './confidence';
+import { buildCandidateTitleTerms } from './candidates';
 import { mapDbPreferences } from '@/lib/db-helpers';
 import { logImportantInfo, logImportantError } from '@/lib/observability';
 import { dateKeyInTimeZone } from '@/lib/calendar';
+
+const TITLE_POOL_LIMIT = 2_000;
+const RECENT_FALLBACK_LIMIT = 400;
 
 export function localDateKey(timezone: string, date = new Date()): string {
   return dateKeyInTimeZone(date, timezone);
@@ -94,37 +99,76 @@ export async function runDiscoveryForUser(userId: string, options: RunDiscoveryO
       select: { id: true },
     });
 
-    // Read active catalogue listings from PostgreSQL
+    // Read active catalogue listings from PostgreSQL. A title-relevance query
+    // keeps older relevant roles visible without loading the entire catalogue
+    // for every user; a small recent fallback catches unusual titles.
     const now = new Date();
     const freshnessCutoff = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
     const sourceFreshnessCutoff = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000);
-
-    const pool = await prisma.externalJob.findMany({
-      where: {
-        status: 'OPEN',
-        lastSeenAt: { gte: sourceFreshnessCutoff },
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: now } },
-        ],
-        AND: [
-          {
-            OR: [
-              { publishedAt: null },
-              { publishedAt: { gte: freshnessCutoff } },
-            ],
-          },
-          {
-            OR: [
-              { applicationUrl: { not: null } },
-              { canonicalUrl: { not: null } },
-            ],
-          },
-        ],
-      },
-      orderBy: [{ lastSeenAt: 'desc' }, { publishedAt: 'desc' }],
-      take: 1000,
+    const titleTerms = buildCandidateTitleTerms({
+      targetRoles: preferences.targetRoles,
+      preferredTitles: preferences.preferredTitles,
+      preferredStack: preferences.preferredStack,
     });
+
+    const baseFilters: Prisma.ExternalJobWhereInput = {
+      status: 'OPEN',
+      lastSeenAt: { gte: sourceFreshnessCutoff },
+      OR: [
+        { expiresAt: null },
+        { expiresAt: { gt: now } },
+      ],
+      AND: [
+        {
+          OR: [
+            { publishedAt: null },
+            { publishedAt: { gte: freshnessCutoff } },
+          ],
+        },
+        {
+          OR: [
+            { applicationUrl: { not: null } },
+            { canonicalUrl: { not: null } },
+          ],
+        },
+      ],
+    };
+
+    const titleFilters: Prisma.ExternalJobWhereInput | null =
+      titleTerms.length > 0
+        ? {
+            ...baseFilters,
+            AND: [
+              ...(baseFilters.AND as Prisma.ExternalJobWhereInput[]),
+              {
+                OR: titleTerms.map((term) => ({
+                  title: { contains: term, mode: 'insensitive' as const },
+                })),
+              },
+            ],
+          }
+        : null;
+
+    const [titleMatches, recentFallback] = await Promise.all([
+      titleFilters
+        ? prisma.externalJob.findMany({
+            where: titleFilters,
+            orderBy: [{ lastSeenAt: 'desc' }, { publishedAt: 'desc' }],
+            take: TITLE_POOL_LIMIT,
+          })
+        : Promise.resolve([]),
+      prisma.externalJob.findMany({
+        where: baseFilters,
+        orderBy: [{ lastSeenAt: 'desc' }, { publishedAt: 'desc' }],
+        take: RECENT_FALLBACK_LIMIT,
+      }),
+    ]);
+
+    const poolById = new Map<string, (typeof recentFallback)[number]>();
+    for (const job of [...titleMatches, ...recentFallback]) {
+      poolById.set(job.id, job);
+    }
+    const pool = [...poolById.values()];
 
     // Deduplicate any cross-source duplicates in memory by canonical key
     const seenDedupeKeys = new Set<string>();
@@ -163,6 +207,7 @@ export async function runDiscoveryForUser(userId: string, options: RunDiscoveryO
         {
           status: job.status,
           title: job.title,
+          description: job.description,
           applicationUrl: job.applicationUrl,
           canonicalUrl: job.canonicalUrl,
           expiresAt: job.expiresAt,
@@ -215,7 +260,6 @@ export async function runDiscoveryForUser(userId: string, options: RunDiscoveryO
       );
 
       if (fitScore < 30) continue;
-      if (scoreFields.postedWithinThirtyDays === false) continue;
 
       const confidences = computeConfidences({
         company: job.company,
@@ -301,6 +345,9 @@ export async function runDiscoveryForUser(userId: string, options: RunDiscoveryO
         runId,
         localDate,
         candidates: uniquePool.length,
+        titleTerms: titleTerms.length,
+        titleMatches: titleMatches.length,
+        recentFallback: recentFallback.length,
         eligible: eligibleCandidates.length,
         recommendations: top.length,
       },

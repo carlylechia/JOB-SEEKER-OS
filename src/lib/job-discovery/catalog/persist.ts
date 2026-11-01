@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { computeConfidences } from '../confidence';
 import { dedupeExternalJobs } from '../dedupe';
+import { isEnglishPosting } from '../language';
 import type { NormalizedExternalJob } from '../types';
 
 export type PersistResult = {
@@ -9,6 +10,7 @@ export type PersistResult = {
   updated: number;
   touched: number;
   duplicatesDiscarded: number;
+  languageFiltered: number;
   accepted: number;
 };
 
@@ -38,6 +40,9 @@ function jobData(job: NormalizedExternalJob, now: Date, existing: boolean): Pris
     salaryPeriod: job.salaryPeriod ?? null,
     publishedAt: job.publishedAt ?? null,
     expiresAt: job.expiresAt ?? null,
+    canonicalUrl: job.canonicalUrl ?? null,
+    applicationUrl: job.applicationUrl ?? null,
+    employerUrl: job.employerUrl ?? null,
     firstSeenAt: existing ? undefined : now,
     lastSeenAt: now,
     lastVerifiedAt: now,
@@ -63,20 +68,32 @@ function updateData(job: NormalizedExternalJob, now: Date): Prisma.ExternalJobUp
 
 /**
  * Upsert a source's batch with one read, one bulk insert for new rows and
- * targeted updates only where the fingerprint changed. This keeps a daily sync
- * with tens of thousands of listing checks within a small write budget.
+ * targeted updates only where the fingerprint changed or a previously missing
+ * URL can now be filled. Non-English listings are discarded before persistence
+ * so the catalogue cannot accumulate roles the product will never recommend.
  */
 export async function persistSourceJobs(sourceId: string, rawJobs: NormalizedExternalJob[]): Promise<PersistResult> {
-  const { jobs, discarded } = dedupeExternalJobs(rawJobs);
+  const englishJobs = rawJobs.filter((job) =>
+    isEnglishPosting({ title: job.title, description: job.description }),
+  );
+  const languageFiltered = rawJobs.length - englishJobs.length;
+  const { jobs, discarded } = dedupeExternalJobs(englishJobs);
   if (jobs.length === 0) {
-    return { created: 0, updated: 0, touched: 0, duplicatesDiscarded: discarded, accepted: 0 };
+    return { created: 0, updated: 0, touched: 0, duplicatesDiscarded: discarded, languageFiltered, accepted: 0 };
   }
 
   const now = new Date();
   const ids = jobs.map((job) => job.sourceJobId);
   const existing = await prisma.externalJob.findMany({
     where: { source: sourceId, sourceJobId: { in: ids } },
-    select: { id: true, sourceJobId: true, contentFingerprint: true },
+    select: {
+      id: true,
+      sourceJobId: true,
+      contentFingerprint: true,
+      applicationUrl: true,
+      canonicalUrl: true,
+      employerUrl: true,
+    },
   });
   const existingByKey = new Map(existing.map((row) => [row.sourceJobId, row]));
   const creates: Prisma.ExternalJobCreateManyInput[] = [];
@@ -90,7 +107,14 @@ export async function persistSourceJobs(sourceId: string, rawJobs: NormalizedExt
       continue;
     }
     touchedIds.push(match.id);
-    if (match.contentFingerprint !== job.contentFingerprint) {
+    // A previous release could persist a row without its URLs even when the
+    // fingerprint matched. Fill any missing link on the next sync instead of
+    // leaving most of the catalogue unreachable by discovery.
+    const needsLinkRepair =
+      (!match.applicationUrl && Boolean(job.applicationUrl)) ||
+      (!match.canonicalUrl && Boolean(job.canonicalUrl)) ||
+      (!match.employerUrl && Boolean(job.employerUrl));
+    if (match.contentFingerprint !== job.contentFingerprint || needsLinkRepair) {
       updates.push({ id: match.id, job });
     }
   }
@@ -138,6 +162,7 @@ export async function persistSourceJobs(sourceId: string, rawJobs: NormalizedExt
     updated,
     touched: touchedIds.length,
     duplicatesDiscarded: discarded,
+    languageFiltered,
     accepted: created + touchedIds.length,
   };
 }

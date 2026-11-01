@@ -1031,7 +1031,7 @@ export default function ApplicationKitWorkspace({ initialWorkspace }: Props) {
               <h2 id="kit-resumes-heading" className="text-lg font-semibold text-ink">
                 Resumes for this role
               </h2>
-              <Link href="/resumes" className="text-xs text-accent-text underline underline-offset-2">
+              <Link href={`/resumes?job=${encodeURIComponent(jobId)}`} className="text-xs text-accent-text underline underline-offset-2">
                 All resumes
               </Link>
             </div>
@@ -1072,7 +1072,7 @@ export default function ApplicationKitWorkspace({ initialWorkspace }: Props) {
             ) : (
               <p className="muted mt-3 text-sm">
                 No resume is linked yet. Link one below, or{' '}
-                <Link href="/resumes" className="underline underline-offset-2">
+                <Link href={`/resumes?job=${encodeURIComponent(jobId)}`} className="underline underline-offset-2">
                   build a tailored resume
                 </Link>
                 .

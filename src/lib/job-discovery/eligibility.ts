@@ -1,9 +1,11 @@
 import type { UserPreferences } from '@/types';
 import { employmentTypeMatches, normalizeEmploymentType } from './location';
+import { detectJobLanguage } from './language';
 
 export type EligibilityJob = {
   status?: string | null;
   title?: string | null;
+  description?: string | null;
   applicationUrl?: string | null;
   canonicalUrl?: string | null;
   expiresAt?: Date | null;
@@ -81,6 +83,14 @@ export function checkHardEligibility(job: EligibilityJob, context: EligibilityCo
     if (stale) reasons.push('The source has not confirmed this listing recently');
   } else {
     checks.sourceFreshness = 'UNKNOWN';
+  }
+
+  // English-only product policy. Short or missing text is `unknown` and does
+  // not fail; only a confident non-English detection is excluded.
+  const language = detectJobLanguage({ title: job.title, description: job.description });
+  checks.language = language.language === 'non-en' ? 'FAIL' : language.language === 'en' ? 'PASS' : 'UNKNOWN';
+  if (language.language === 'non-en') {
+    reasons.push(`The posting appears to be written in ${language.code ?? 'another language'}`);
   }
 
   if (context.remoteOnly) {

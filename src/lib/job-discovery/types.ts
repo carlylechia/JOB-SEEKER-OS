@@ -39,6 +39,7 @@ export type ProviderId =
   | 'himalayas'
   | 'remoteok'
   | 'fourdayweek'
+  | 'jobicy'
   | 'usajobs'
   | 'headcountlabs'
   | 'greenhouse'

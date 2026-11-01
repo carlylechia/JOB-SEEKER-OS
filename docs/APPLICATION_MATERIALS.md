@@ -352,8 +352,18 @@ copy/download/edit).
 
 The job details page (`/jobs/[id]`) shows that job's application kit: its
 progress steps, linked resumes, latest materials and a direct link to
-`/application-materials/jobs/[jobId]`. A "Create material" link pre-selects the
-target job, so a draft started from the job page belongs to the same kit.
+`/application-materials/jobs/[jobId]`. The header also exposes two direct
+entry points:
+
+- **Tailor resume** → `/resumes?job=<jobId>`, which preselects the job in the
+  resume library while leaving the selector editable.
+- **New material** → `/application-materials/new?job=<jobId>`, which preselects
+  the job in the material editor.
+
+Both preselections are convenience only. The create endpoints validate that the
+job belongs to the caller, and the kit's "All resumes" / "build a tailored
+resume" links carry the same `?job=` id so a draft started from the job page
+belongs to the same kit.
 
 Inside the kit, every material type is generated with the job, its linked
 resume and the application's earlier materials already in context. The full

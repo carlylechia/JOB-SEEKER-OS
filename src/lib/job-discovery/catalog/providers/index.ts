@@ -5,6 +5,7 @@ import { fetchFourDayWeek } from './fourdayweek';
 import { fetchGreenhouse } from './greenhouse';
 import { fetchHeadcountLabs, isHeadcountLabsConfigured } from './headcountlabs';
 import { fetchHimalayas } from './himalayas';
+import { fetchJobicy } from './jobicy';
 import { fetchLever } from './lever';
 import { fetchRemoteOk } from './remoteok';
 import { fetchUsaJobs, isUsaJobsConfigured } from './usajobs';
@@ -49,6 +50,16 @@ export const PROVIDER_DEFINITIONS: Record<ProviderId, ProviderDefinition> = {
     maxRequestsPerRun: 6,
     refreshAfterMs: 20 * 60 * 60 * 1000,
     siteUrl: 'https://4dayweek.io',
+  },
+  jobicy: {
+    id: 'jobicy',
+    displayName: 'Jobicy',
+    sourceType: 'free_aggregator',
+    kind: 'feed',
+    sourceConfidence: 0.7,
+    maxRequestsPerRun: 3,
+    refreshAfterMs: 20 * 60 * 60 * 1000,
+    siteUrl: 'https://jobicy.com',
   },
   usajobs: {
     id: 'usajobs',
@@ -127,6 +138,8 @@ export async function runProviderFetch(
       return fetchRemoteOk(input);
     case 'fourdayweek':
       return fetchFourDayWeek(input);
+    case 'jobicy':
+      return fetchJobicy(input);
     case 'usajobs':
       return fetchUsaJobs(input);
     case 'headcountlabs':

@@ -68,6 +68,7 @@ const COUNTRY_NAMES: Record<string, string> = {
   'united kingdom': 'GB',
   'united states': 'US',
   'united states of america': 'US',
+  usa: 'US',
   uruguay: 'UY',
   vietnam: 'VN',
 };
