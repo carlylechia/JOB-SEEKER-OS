@@ -2,42 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import {
-  Bell,
-  Briefcase,
-  FileBadge,
-  KanbanSquare,
-  LayoutDashboard,
-  LogOut,
-  Mail,
-  Menu,
-  Settings,
-  Sparkles,
-  Target,
-  UserCircle2,
-  Users,
-  X,
-} from 'lucide-react';
+import { LogOut, Menu, X } from 'lucide-react';
 import { signOut } from 'next-auth/react';
+import { appNavItems } from './nav-items';
 
-const mobileLinks = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/jobs', label: 'Jobs', icon: Briefcase },
-  { href: '/queue', label: 'Queue', icon: Target },
-  { href: '/pipeline', label: 'Pipeline', icon: KanbanSquare },
-  { href: '/contacts', label: 'Contacts', icon: Users },
-  { href: '/profile', label: 'Profile', icon: UserCircle2 },
-  { href: '/career-profile', label: 'Career Profile', icon: Sparkles },
-  { href: '/prep', label: 'Prep Packs', icon: FileBadge },
-  { href: '/templates', label: 'Templates', icon: FileBadge },
-  { href: '/resumes', label: 'Resumes', icon: FileBadge },
-  { href: '/application-materials', label: 'Application materials', icon: Mail },
-  { href: '/settings', label: 'Settings', icon: Settings },
-  { href: '/settings/billing', label: 'Plan & Billing', icon: Settings },
-];
-
-export function TopbarMobileMenu({ label }: { label: string }) {
+export function TopbarMobileMenu({ label, isAdmin = false }: { label: string; isAdmin?: boolean }) {
   const [open, setOpen] = useState(false);
+  const items = appNavItems(isAdmin);
 
   async function handleSignOut() {
     await signOut({ callbackUrl: '/login' });
@@ -63,16 +34,22 @@ export function TopbarMobileMenu({ label }: { label: string }) {
 
           <div className="grid gap-2">
             <Link href="/jobs/new" onClick={() => setOpen(false)} className="btn-primary inline-flex w-full items-center justify-center gap-1.5">Add Job</Link>
-            <button type="button" className="inline-flex items-center justify-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink transition-colors hover:bg-surface-hover"><Bell className="h-4 w-4" />Notifications</button>
           </div>
 
           <div className="my-3 h-px bg-line" />
 
-          <nav className="grid gap-2">
-            {mobileLinks.map((item) => {
+          <nav className="grid gap-2" aria-label="Main navigation">
+            {items.map((item) => {
               const Icon = item.icon;
               return (
-                <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className="inline-flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink transition-colors hover:bg-surface-hover">
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  className={`inline-flex items-center gap-3 rounded-xl border bg-surface px-4 py-3 text-sm text-ink transition-colors hover:bg-surface-hover ${
+                    item.adminOnly ? 'border-accent/40 text-accent-text' : 'border-line'
+                  }`}
+                >
                   <Icon className="h-4 w-4 text-muted" />
                   {item.label}
                 </Link>

@@ -10,6 +10,7 @@ type TopbarUser = {
   name?: string | null;
   email?: string | null;
   image?: string | null;
+  role?: string | null;
 };
 
 function UserAvatar({ user }: { user: TopbarUser }) {
@@ -39,6 +40,7 @@ function UserAvatar({ user }: { user: TopbarUser }) {
 
 export function Topbar({ user }: { user: TopbarUser }) {
   const label = user.name || user.email || 'Account';
+  const isAdmin = user.role === 'ADMIN';
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-[color:var(--nav-scrim)] backdrop-blur-xl supports-[backdrop-filter]:bg-[color:var(--nav-scrim)]">
@@ -55,23 +57,26 @@ export function Topbar({ user }: { user: TopbarUser }) {
           </div>
         </div>
 
-        <div className="hidden shrink-0 items-center gap-3 lg:flex">
-          <Link href="/profile" className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-ink">
+        {/* A single action group keeps one NotificationBell mounted at every
+            breakpoint. Desktop-only actions are hidden below lg; the mobile
+            menu renders the same shared navigation list as the sidebar. */}
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
+          <Link href="/profile" className="hidden items-center gap-2 rounded-xl border border-line bg-surface px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-ink lg:flex">
             <UserAvatar user={user} />
             <span>{label}</span>
           </Link>
-          <ThemeSwitch size="sm" />
-          <NotificationBell />
-          <Link href="/jobs/new" className="btn-primary inline-flex items-center justify-center">Add Job</Link>
-          <Link href="/settings" className="btn-secondary inline-flex items-center justify-center">Settings</Link>
-          <SignOutButton />
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 lg:hidden">
           {/* Icon-only pill on phones; the fuller switch once space allows. */}
           <ThemeSwitch size="xs" className="sm:hidden" />
           <ThemeSwitch size="sm" className="hidden sm:flex" />
-          <TopbarMobileMenu label={label} />
+          <NotificationBell />
+          <Link href="/jobs/new" className="btn-primary hidden items-center justify-center lg:inline-flex">Add Job</Link>
+          <Link href="/settings" className="btn-secondary hidden items-center justify-center lg:inline-flex">Settings</Link>
+          <div className="hidden lg:block">
+            <SignOutButton />
+          </div>
+          <div className="lg:hidden">
+            <TopbarMobileMenu label={label} isAdmin={isAdmin} />
+          </div>
         </div>
       </div>
     </header>

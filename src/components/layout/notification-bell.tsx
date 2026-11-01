@@ -133,7 +133,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 max-h-[calc(100dvh-6rem)] w-[min(20rem,92vw)] overflow-y-auto overscroll-contain rounded-xl border border-line bg-background shadow-2xl">
+        <div className="fixed left-4 right-4 top-[4.5rem] z-50 max-h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain rounded-xl border border-line bg-background shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[min(20rem,92vw)]">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             {selectedNotification ? (
