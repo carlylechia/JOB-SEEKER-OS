@@ -148,9 +148,6 @@ export function PublicJobBrowser({ onImport }: Props) {
                     <p className="mt-1 text-xs text-muted">
                       {[job.remoteType, job.location].filter(Boolean).join(' · ') || 'Location not specified'}
                     </p>
-                    {job.notes && (
-                      <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted">{job.notes}</p>
-                    )}
                   </div>
                   <div className="shrink-0 pt-0.5">
                     {imported ? (

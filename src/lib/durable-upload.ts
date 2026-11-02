@@ -6,7 +6,7 @@ import {
   isVercelBlobUrl,
 } from './blob-url';
 
-type AssetKind = 'resume' | 'avatar';
+export type AssetKind = 'resume' | 'avatar';
 
 export class ResumeBlobStoreConfigurationError extends Error {
   readonly status = 503;
@@ -63,6 +63,10 @@ function sanitizeFilenamePart(value: string): string {
   return value.replace(/[^a-zA-Z0-9.-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').toLowerCase();
 }
 
+function safeUserId(userId: string): string {
+  return sanitizeFilenamePart(userId) || 'user';
+}
+
 function hasBlobToken(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
@@ -88,18 +92,65 @@ export function isPrivateResumeUrl(url: string): boolean {
   return isPrivateVercelBlobUrl(url);
 }
 
-export async function deleteStoredAsset(url: string | null | undefined): Promise<void> {
-  if (!url) return;
+/**
+ * True only when the URL belongs to this user's own namespace for this kind of
+ * asset. Storage names are generated as `resumes/<userId>/…` or
+ * `avatars/<userId>/…` for blobs, and `<userId>-…` for local uploads.
+ *
+ * Both deletion and private-file proxying must call this before touching
+ * storage: a URL stored in a user-controlled column must never be able to
+ * delete another tenant's object or fetch it with the store token.
+ */
+export function isOwnedStoredAssetUrl(
+  url: string | null | undefined,
+  owner: { kind: AssetKind; userId: string },
+): boolean {
+  if (!url) return false;
+  const config = ASSET_CONFIG[owner.kind];
+  const userId = safeUserId(owner.userId);
 
-  if (isVercelBlobUrl(url) && hasBlobToken()) {
+  if (isVercelBlobUrl(url)) {
+    try {
+      const pathname = new URL(url).pathname;
+      return pathname.startsWith(`/${config.blobPrefix}/${userId}/`);
+    } catch {
+      return false;
+    }
+  }
+
+  if (!isLocalUploadUrl(url)) return false;
+  const clean = url.split(/[?#]/)[0];
+  const prefix = `${config.localUrlPrefix}/`;
+  if (!clean.startsWith(prefix)) return false;
+
+  const fileName = clean.slice(prefix.length);
+  if (!fileName || fileName.includes('/') || fileName.includes('\\') || fileName.includes('..')) {
+    return false;
+  }
+  return fileName.startsWith(`${userId}-`);
+}
+
+export async function deleteStoredAsset(
+  url: string | null | undefined,
+  owner: { kind: AssetKind; userId: string },
+): Promise<void> {
+  if (!url || !isOwnedStoredAssetUrl(url, owner)) return;
+
+  if (isVercelBlobUrl(url)) {
+    if (!hasBlobToken()) return;
     await del(url).catch(() => undefined);
     return;
   }
 
-  if (isLocalUploadUrl(url)) {
-    const filePath = path.join(process.cwd(), 'public', url.replace(/^\//, ''));
-    await fs.unlink(filePath).catch(() => undefined);
-  }
+  if (!isLocalUploadUrl(url)) return;
+
+  // Defence in depth: even after the ownership check, resolve the path and
+  // verify it is still inside public/uploads before unlinking.
+  const uploadsRoot = path.resolve(process.cwd(), 'public', 'uploads');
+  const clean = url.split(/[?#]/)[0];
+  const resolved = path.resolve(process.cwd(), 'public', clean.replace(/^\//, ''));
+  if (resolved === uploadsRoot || !resolved.startsWith(uploadsRoot + path.sep)) return;
+  await fs.unlink(resolved).catch(() => undefined);
 }
 
 export async function uploadUserAsset(params: {
@@ -111,11 +162,13 @@ export async function uploadUserAsset(params: {
 }): Promise<string> {
   const { kind, userId, file, ext, existingUrl } = params;
   const config = ASSET_CONFIG[kind];
+  const owner = { kind, userId };
+  const safeId = safeUserId(userId);
   const safeExt = sanitizeFilenamePart(ext) || 'bin';
   const safeOriginalBase = sanitizeFilenamePart(file.name.replace(/\.[^.]+$/, '')) || kind;
 
   if (hasBlobToken()) {
-    const pathname = `${config.blobPrefix}/${userId}/${Date.now()}-${safeOriginalBase}.${safeExt}`;
+    const pathname = `${config.blobPrefix}/${safeId}/${Date.now()}-${safeOriginalBase}.${safeExt}`;
     let blob;
     try {
       blob = await put(pathname, file, {
@@ -134,18 +187,18 @@ export async function uploadUserAsset(params: {
       throw error;
     }
 
-    await deleteStoredAsset(existingUrl);
+    await deleteStoredAsset(existingUrl, owner);
     return blob.url;
   }
 
   assertProductionStorageConfig();
 
   await fs.mkdir(config.localDir, { recursive: true });
-  const fileName = `${userId}-${Date.now()}-${safeOriginalBase}.${safeExt}`;
+  const fileName = `${safeId}-${Date.now()}-${safeOriginalBase}.${safeExt}`;
   const filePath = path.join(config.localDir, fileName);
   const bytes = await file.arrayBuffer();
   await fs.writeFile(filePath, Buffer.from(bytes));
 
-  await deleteStoredAsset(existingUrl);
+  await deleteStoredAsset(existingUrl, owner);
   return `${config.localUrlPrefix}/${fileName}`;
 }

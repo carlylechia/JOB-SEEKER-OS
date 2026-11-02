@@ -16,9 +16,8 @@ export async function POST(request: Request, { params }: Params) {
   const userId = session.user.id;
   const { id } = await params;
 
-  try {
-    await hasEntitlement(userId, 'DAILY_JOB_DISCOVERY');
-  } catch {
+  const entitled = await hasEntitlement(userId, 'DAILY_JOB_DISCOVERY');
+  if (!entitled) {
     return jsonError('Plan required', 403, undefined, request);
   }
 

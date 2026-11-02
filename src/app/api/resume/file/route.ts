@@ -18,7 +18,11 @@ import { auth } from '@/auth';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logImportantError } from '@/lib/observability';
-import { isPrivateResumeUrl } from '@/lib/durable-upload';
+import {
+  isOwnedStoredAssetUrl,
+  isPrivateResumeUrl,
+} from '@/lib/durable-upload';
+import { isVercelBlobUrl } from '@/lib/blob-url';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -55,10 +59,27 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'No resume uploaded' }, { status: 404 });
     }
 
-    // Legacy public blob uploads (created before private storage) still work:
-    // redirect rather than proxy, so existing users are not locked out.
+    // A resume URL is only usable when it points inside this user's own
+    // namespace. This prevents the token-gated proxy from becoming a reader
+    // for another tenant's private blob or an arbitrary external URL.
+    const owned = isOwnedStoredAssetUrl(resumeUrl, {
+      kind: 'resume',
+      userId: session.user.id,
+    });
+    if (!owned) {
+      return NextResponse.json({ error: 'No resume uploaded' }, { status: 404 });
+    }
+
+    // Legacy public blob/local uploads (created before private storage) still
+    // work: redirect rather than proxy, so existing users are not locked out.
     if (!isPrivateResumeUrl(resumeUrl)) {
-      return NextResponse.redirect(resumeUrl, 302);
+      if (isVercelBlobUrl(resumeUrl)) {
+        return NextResponse.redirect(resumeUrl, 302);
+      }
+      if (resumeUrl.startsWith('/uploads/')) {
+        return NextResponse.redirect(new URL(resumeUrl, request.url), 302);
+      }
+      return NextResponse.json({ error: 'No resume uploaded' }, { status: 404 });
     }
 
     if (!process.env.BLOB_READ_WRITE_TOKEN) {

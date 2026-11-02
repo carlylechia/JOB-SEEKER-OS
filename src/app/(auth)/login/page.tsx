@@ -6,6 +6,7 @@ import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
+import { safeInternalPath } from '@/lib/safe-redirect';
 
 function LoginForm() {
   const router = useRouter();
@@ -17,7 +18,7 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const callbackUrl = safeInternalPath(searchParams.get('callbackUrl'), '/dashboard');
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

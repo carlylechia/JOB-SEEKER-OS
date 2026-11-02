@@ -3,6 +3,12 @@ import Link from 'next/link';
 import { requireAdmin } from '@/lib/authz';
 import { prisma } from '@/lib/prisma';
 import { PlanBadge, StatusBadge } from '@/components/billing/plan-badge';
+import { Pagination } from '@/components/ui/pagination';
+import {
+  ADMIN_USERS_PAGE_SIZE,
+  buildAdminUserWhere,
+  parseAdminUserFilters,
+} from '@/lib/admin/user-filters';
 
 export const metadata: Metadata = {
   title: 'Users — Admin — teChia Jobs',
@@ -11,90 +17,72 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-const PAGE_SIZE = 25;
-
-type SearchParams = {
+type AdminUsersSearchParams = {
   q?: string;
   access?: string;
   role?: string;
+  plan?: string;
   status?: string;
+  joinedFrom?: string;
+  joinedTo?: string;
   page?: string;
 };
 
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<SearchParams>;
+  searchParams: Promise<AdminUsersSearchParams>;
 }) {
   await requireAdmin();
 
-  const params = await searchParams;
-  const q = (params.q ?? '').trim().slice(0, 120);
-  const access = ['all', 'trial', 'paid', 'free'].includes(params.access ?? '')
-    ? (params.access as string)
-    : 'all';
-  const role = ['USER', 'ADMIN'].includes(params.role ?? '') ? (params.role as string) : '';
+  const params = (await searchParams) as AdminUsersSearchParams;
+  const filters = parseAdminUserFilters({
+    q: params.q ?? '',
+    access: params.access ?? '',
+    role: params.role ?? '',
+    plan: params.plan ?? '',
+    status: params.status ?? '',
+    joinedFrom: params.joinedFrom ?? '',
+    joinedTo: params.joinedTo ?? '',
+  });
+
   const page = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1);
+  const where = buildAdminUserWhere(filters);
+  const total = await prisma.user.count({ where });
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_USERS_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
 
-  const userWhere: Record<string, unknown> = {};
-  if (role) userWhere.role = role;
-  if (q) {
-    userWhere.OR = [
-      { name: { contains: q, mode: 'insensitive' } },
-      { email: { contains: q, mode: 'insensitive' } },
-    ];
-  }
-
-  const subscriptionWhere: Record<string, unknown> = {};
-  if (access === 'trial') subscriptionWhere.status = 'TRIALING';
-  if (access === 'paid') {
-    subscriptionWhere.status = 'ACTIVE';
-    subscriptionWhere.plan = { code: { in: ['PRO', 'PREMIUM'] } };
-  }
-  if (access === 'free') {
-    subscriptionWhere.status = 'ACTIVE';
-    subscriptionWhere.plan = { code: 'FREE' };
-  }
-
-  const where =
-    Object.keys(subscriptionWhere).length > 0
-      ? { AND: [userWhere, { subscription: subscriptionWhere }] }
-      : userWhere;
-
-  const [total, users] = await Promise.all([
-    prisma.user.count({ where: where as never }),
-    prisma.user.findMany({
-      where: where as never,
-      take: PAGE_SIZE,
-      skip: (page - 1) * PAGE_SIZE,
-      orderBy: { createdAt: 'desc' },
-      // Selective fields — no password hashes, tokens, or private content.
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        emailVerified: true,
-        createdAt: true,
-        subscription: {
-          select: {
-            status: true,
-            trialEndsAt: true,
-            endsAt: true,
-            plan: { select: { code: true } },
-          },
+  const users = await prisma.user.findMany({
+    where,
+    take: ADMIN_USERS_PAGE_SIZE,
+    skip: (currentPage - 1) * ADMIN_USERS_PAGE_SIZE,
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      emailVerified: true,
+      createdAt: true,
+      subscription: {
+        select: {
+          status: true,
+          trialEndsAt: true,
+          endsAt: true,
+          plan: { select: { code: true } },
         },
       },
-    }),
-  ]);
-
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    },
+  });
 
   const buildUrl = (nextPage: number) => {
     const sp = new URLSearchParams();
-    if (q) sp.set('q', q);
-    if (access !== 'all') sp.set('access', access);
-    if (role) sp.set('role', role);
+    if (filters.q) sp.set('q', filters.q);
+    if (filters.access !== 'all') sp.set('access', filters.access);
+    if (filters.role) sp.set('role', filters.role);
+    if (filters.plan) sp.set('plan', filters.plan);
+    if (filters.joinedFrom) sp.set('joinedFrom', filters.joinedFrom);
+    if (filters.joinedTo) sp.set('joinedTo', filters.joinedTo);
     if (nextPage > 1) sp.set('page', String(nextPage));
     const qs = sp.toString();
     return qs ? `/admin/users?${qs}` : '/admin/users';
@@ -119,7 +107,7 @@ export default async function AdminUsersPage({
             id="q"
             type="search"
             name="q"
-            defaultValue={q}
+            defaultValue={filters.q}
             placeholder="Name or email"
             className="input"
           />
@@ -128,7 +116,7 @@ export default async function AdminUsersPage({
           <label htmlFor="access" className="mb-1.5 block text-sm text-ink">
             Access
           </label>
-          <select id="access" name="access" defaultValue={access} className="select">
+          <select id="access" name="access" defaultValue={filters.access} className="select">
             <option value="all">All</option>
             <option value="trial">Trialing</option>
             <option value="paid">Paid</option>
@@ -136,14 +124,50 @@ export default async function AdminUsersPage({
           </select>
         </div>
         <div>
+          <label htmlFor="plan" className="mb-1.5 block text-sm text-ink">
+            Plan
+          </label>
+          <select id="plan" name="plan" defaultValue={filters.plan ?? ''} className="select">
+            <option value="">All plans</option>
+            <option value="FREE">Free</option>
+            <option value="PRO">Pro</option>
+            <option value="PREMIUM">Premium</option>
+            <option value="NONE">No plan</option>
+          </select>
+        </div>
+        <div>
           <label htmlFor="role" className="mb-1.5 block text-sm text-ink">
             Role
           </label>
-          <select id="role" name="role" defaultValue={role} className="select">
+          <select id="role" name="role" defaultValue={filters.role ?? ''} className="select">
             <option value="">All</option>
             <option value="USER">User</option>
             <option value="ADMIN">Admin</option>
           </select>
+        </div>
+        <div>
+          <label htmlFor="joinedFrom" className="mb-1.5 block text-sm text-ink">
+            Joined from
+          </label>
+          <input
+            id="joinedFrom"
+            type="date"
+            name="joinedFrom"
+            defaultValue={filters.joinedFrom}
+            className="input"
+          />
+        </div>
+        <div>
+          <label htmlFor="joinedTo" className="mb-1.5 block text-sm text-ink">
+            Joined until
+          </label>
+          <input
+            id="joinedTo"
+            type="date"
+            name="joinedTo"
+            defaultValue={filters.joinedTo}
+            className="input"
+          />
         </div>
         <button type="submit" className="btn-secondary">
           Filter
@@ -163,7 +187,7 @@ export default async function AdminUsersPage({
               <th scope="col">Trial ends</th>
               <th scope="col">Plan ends</th>
               <th scope="col">Joined</th>
-              <th scope="col">
+              <th className="text-right" scope="col">
                 <span className="sr-only">Actions</span>
               </th>
             </tr>
@@ -196,7 +220,7 @@ export default async function AdminUsersPage({
                 <td className="whitespace-nowrap text-xs">
                   {new Date(user.createdAt).toLocaleDateString()}
                 </td>
-                <td>
+                <td className="text-right">
                   <Link
                     href={`/admin/users/${user.id}`}
                     className="btn-secondary px-3 py-1 text-xs"
@@ -237,27 +261,7 @@ export default async function AdminUsersPage({
       ) : null}
 
       {/* Pagination */}
-      {totalPages > 1 ? (
-        <nav aria-label="Pagination" className="flex items-center justify-between gap-3">
-          {page > 1 ? (
-            <Link href={buildUrl(page - 1)} className="btn-secondary text-xs">
-              Previous
-            </Link>
-          ) : (
-            <span />
-          )}
-          <span className="muted text-xs">
-            Page {page} of {totalPages}
-          </span>
-          {page < totalPages ? (
-            <Link href={buildUrl(page + 1)} className="btn-secondary text-xs">
-              Next
-            </Link>
-          ) : (
-            <span />
-          )}
-        </nav>
-      ) : null}
+      <Pagination page={currentPage} totalPages={totalPages} hrefForPage={buildUrl} label="Admin users pagination" />
     </div>
   );
 }

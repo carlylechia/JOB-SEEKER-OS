@@ -16,6 +16,7 @@ import { z } from 'zod';
 import { apiError, handleRoute, jsonOk, privateNoStore } from '@/lib/api';
 import { getCurrentAdmin } from '@/lib/authz';
 import { prisma } from '@/lib/prisma';
+import { buildAdminUserWhere, parseAdminUserFilters } from '@/lib/admin/user-filters';
 import { logImportantInfo } from '@/lib/observability';
 
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,8 @@ const querySchema = z.object({
   order: z.enum(['asc', 'desc']).optional(),
   page: z.coerce.number().int().min(1).max(10_000).optional(),
   pageSize: z.coerce.number().int().min(1).max(100).optional(),
+  joinedFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  joinedTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
 export async function GET(request: Request) {
@@ -63,44 +66,32 @@ export async function GET(request: Request) {
         pageSize = 25,
       } = parsed.data;
 
-      const userWhere: Record<string, unknown> = {};
-      if (role) userWhere.role = role;
-      if (q) {
-        // Parameterised by Prisma — never string-concatenated into SQL.
-        userWhere.OR = [{ name: { contains: q, mode: 'insensitive' } }, { email: { contains: q, mode: 'insensitive' } }];
-      }
+      const filters = parseAdminUserFilters({
+        q,
+        access,
+        role,
+        plan,
+        status,
+        joinedFrom: parsed.data.joinedFrom,
+        joinedTo: parsed.data.joinedTo,
+      });
 
-      const subscriptionWhere: Record<string, unknown> = {};
-      if (status) subscriptionWhere.status = status;
-      if (plan === 'NONE') subscriptionWhere.plan = undefined;
-      else if (plan) subscriptionWhere.plan = { code: plan };
-
-      if (access === 'trial') {
-        subscriptionWhere.status = 'TRIALING';
-      } else if (access === 'paid') {
-        subscriptionWhere.status = 'ACTIVE';
-        subscriptionWhere.plan = { code: { in: ['PRO', 'PREMIUM'] } };
-      } else if (access === 'free') {
-        subscriptionWhere.status = 'ACTIVE';
-        subscriptionWhere.plan = { code: 'FREE' };
-      }
-
-      const where =
-        Object.keys(subscriptionWhere).length > 0
-          ? { AND: [userWhere, { subscription: subscriptionWhere }] }
-          : userWhere;
-
+      const where = buildAdminUserWhere(filters);
       const skip = (page - 1) * pageSize;
 
       const [total, users] = await Promise.all([
-        prisma.user.count({ where: where as never }),
+        prisma.user.count({ where }),
         prisma.user.findMany({
-          where: where as never,
+          where,
           take: pageSize,
           skip,
           // Bounded offset pagination: acceptable to this data volume, and
           // avoids the complexity of cursor pagination in the admin UI.
-          orderBy: { [sort]: order } as never,
+          orderBy: {
+            ...(sort === 'trialEndsAt'
+              ? { subscription: { trialEndsAt: order } }
+              : { [sort]: order }),
+          } as never,
           select: {
             id: true,
             name: true,

@@ -5,6 +5,7 @@ import { getEffectiveSubscription } from '@/lib/billing/subscriptions';
 import { getUserUsageBreakdown } from '@/lib/billing/usage';
 import { PlanBadge, StatusBadge } from '@/components/billing/plan-badge';
 import { PlanChangePanel } from '@/components/admin/plan-change-panel';
+import { DeleteUserButton } from '@/components/admin/delete-user-button';
 import { buildMailtoUrl, buildWhatsappUrl, whatsappPrefill } from '@/lib/billing/upgrade-requests';
 
 export const dynamic = 'force-dynamic';
@@ -22,7 +23,7 @@ export default async function AdminUserDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const { id } = await params;
 
   const user = await prisma.user.findUnique({
@@ -302,6 +303,24 @@ export default async function AdminUserDetailPage({
           <p className="mt-2 text-sm text-ink">{subscription.adminNote}</p>
         </section>
       ) : null}
+
+      {/* Danger zone — irreversible user deletion */}
+      <section aria-labelledby="danger-heading" className="card-pad">
+        <h2 id="danger-heading" className="text-sm font-semibold text-ink">
+          Danger zone
+        </h2>
+        <p className="mt-2 text-sm text-muted">
+          Deleting a user removes their account and owned data — jobs, resumes, notes and billing
+          history. This action cannot be undone.
+        </p>
+        <div className="mt-4">
+          <DeleteUserButton
+            userId={user.id}
+            userEmail={user.email}
+            isSelf={admin.id === user.id}
+          />
+        </div>
+      </section>
     </div>
   );
 }

@@ -17,8 +17,6 @@
  * and the candidate's profile, with the gap stated explicitly.
  */
 
-import { lookup } from 'node:dns/promises';
-import { isIP } from 'node:net';
 import {
   INTERVIEW_PREP_MAX_REDIRECTS,
   INTERVIEW_PREP_MAX_RESEARCH_BYTES,
@@ -36,6 +34,12 @@ import type {
   ResearchVerification,
 } from './schema';
 import { normalizeHttpUrl } from '@/lib/url';
+import {
+  assertPublicHttpUrl,
+  UnsafeUrlError,
+} from '@/lib/network-safety';
+
+export { isPublicIpAddress } from '@/lib/network-safety';
 
 export type ResearchSource = {
   kind: ResearchSourceKind;
@@ -84,59 +88,6 @@ export class ResearchFetchError extends Error {
 
 // ─── Address safety ────────────────────────────────────────────────────────
 
-function parseIpv4(address: string): number[] | null {
-  const parts = address.split('.');
-  if (parts.length !== 4) return null;
-  const octets = parts.map((part) => Number(part));
-  return octets.every((part) => Number.isInteger(part) && part >= 0 && part <= 255) ? octets : null;
-}
-
-function isPrivateIpv4(octets: number[]): boolean {
-  const [a, b, c] = octets;
-  if (a === 0) return true; // "this" network
-  if (a === 10) return true;
-  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
-  if (a === 127) return true;
-  if (a === 169 && b === 254) return true; // link-local + cloud metadata
-  if (a === 172 && b >= 16 && b <= 31) return true;
-  if (a === 192 && b === 0 && c === 0) return true;
-  if (a === 192 && b === 0 && c === 2) return true; // documentation
-  if (a === 192 && b === 168) return true;
-  if (a === 198 && (b === 18 || b === 19)) return true; // benchmarking
-  if (a >= 224) return true; // multicast/reserved/broadcast
-  return false;
-}
-
-function isPrivateIpv6(raw: string): boolean {
-  const address = raw.toLowerCase().split('%')[0];
-  if (address === '::' || address === '::1') return true;
-  if (address.startsWith('fc') || address.startsWith('fd')) return true; // unique local
-  if (/^fe[89ab]/.test(address)) return true; // link-local
-  if (address.startsWith('::ffff:')) {
-    const tail = address.slice('::ffff:'.length);
-    const mapped = parseIpv4(tail);
-    if (mapped) return isPrivateIpv4(mapped);
-    // Hex-encoded IPv4-mapped address, e.g. ::ffff:7f00:1
-    const hex = tail.match(/^([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
-    if (hex) {
-      const high = parseInt(hex[1], 16);
-      const low = parseInt(hex[2], 16);
-      return isPrivateIpv4([high >> 8, high & 0xff, low >> 8, low & 0xff]);
-    }
-  }
-  return false;
-}
-
-export function isPublicIpAddress(address: string): boolean {
-  const family = isIP(address);
-  if (family === 4) {
-    const octets = parseIpv4(address);
-    return octets ? !isPrivateIpv4(octets) : false;
-  }
-  if (family === 6) return !isPrivateIpv6(address);
-  return false;
-}
-
 /** Validate a URL and every address its hostname currently resolves to. */
 export async function assertSafeResearchUrl(raw: string): Promise<URL> {
   const normalised = normalizeHttpUrl(raw);
@@ -149,38 +100,18 @@ export async function assertSafeResearchUrl(raw: string): Promise<URL> {
     throw new ResearchFetchError('RESEARCH_URL_INVALID', 'That URL is not valid.');
   }
 
-  if (!['http:', 'https:'].includes(url.protocol)) {
-    throw new ResearchFetchError('RESEARCH_URL_UNSAFE', 'Only public http and https pages can be read.');
-  }
-  if (url.username || url.password) {
-    throw new ResearchFetchError('RESEARCH_URL_UNSAFE', 'URLs containing credentials cannot be read.');
-  }
-  if (url.port && !['80', '443'].includes(url.port)) {
-    throw new ResearchFetchError('RESEARCH_URL_UNSAFE', 'Only standard web ports can be read.');
-  }
-  const hostname = url.hostname.trim().toLowerCase();
-  if (!hostname || hostname === 'localhost' || hostname.endsWith('.local') || hostname.endsWith('.internal')) {
-    throw new ResearchFetchError('RESEARCH_URL_UNSAFE', 'Private addresses cannot be read.');
-  }
-
-  if (isIP(hostname)) {
-    if (!isPublicIpAddress(hostname)) {
-      throw new ResearchFetchError('RESEARCH_URL_UNSAFE', 'Private addresses cannot be read.');
-    }
-    return url;
-  }
-
-  let addresses: Array<{ address: string }>;
   try {
-    addresses = await lookup(hostname, { all: true });
-  } catch {
-    throw new ResearchFetchError('RESEARCH_DNS_FAILED', 'That hostname could not be resolved.');
+    return await assertPublicHttpUrl(url);
+  } catch (error) {
+    if (error instanceof UnsafeUrlError) {
+      const code =
+        error.code === 'DNS_FAILED' || error.code === 'DNS_TIMEOUT'
+          ? 'RESEARCH_DNS_FAILED'
+          : 'RESEARCH_URL_UNSAFE';
+      throw new ResearchFetchError(code, error.message);
+    }
+    throw new ResearchFetchError('RESEARCH_URL_UNSAFE', 'That URL cannot be read.');
   }
-  if (!addresses.length || addresses.some((entry) => !isPublicIpAddress(entry.address))) {
-    throw new ResearchFetchError('RESEARCH_URL_UNSAFE', 'Private addresses cannot be read.');
-  }
-
-  return url;
 }
 
 // ─── Fetching ──────────────────────────────────────────────────────────────

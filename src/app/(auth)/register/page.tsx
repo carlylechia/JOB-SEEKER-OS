@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
+import { safeInternalPath } from '@/lib/safe-redirect';
 
 function RegisterForm() {
   const searchParams = useSearchParams();
@@ -19,7 +20,7 @@ function RegisterForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const callbackUrl = searchParams.get('callbackUrl') || '/onboarding';
+  const callbackUrl = safeInternalPath(searchParams.get('callbackUrl'), '/onboarding');
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,7 +58,14 @@ function RegisterForm() {
               We sent a verification link to <strong className="text-ink">{email}</strong>.
               Click it to activate your account.
             </p>
-            <Link href="/login" className="btn-primary mt-5 inline-block">
+            <Link
+              href={
+                callbackUrl !== '/onboarding'
+                  ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`
+                  : '/login'
+              }
+              className="btn-primary mt-5 inline-block"
+            >
               Go to sign in
             </Link>
           </div>

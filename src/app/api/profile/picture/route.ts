@@ -83,7 +83,10 @@ export async function DELETE(request: Request) {
       select: { profilePictureUrl: true },
     });
 
-    await deleteStoredAsset(currentProfile?.profilePictureUrl);
+    await deleteStoredAsset(currentProfile?.profilePictureUrl, {
+      kind: 'avatar',
+      userId: session.user.id,
+    });
 
     await prisma.userProfile.update({
       where: { userId: session.user.id },

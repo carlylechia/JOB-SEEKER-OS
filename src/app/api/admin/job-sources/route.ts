@@ -4,6 +4,7 @@ import { listSourceHealth, recentCatalogRuns } from '@/lib/job-discovery/source-
 import { runCatalogSync } from '@/lib/job-discovery/catalog/sync';
 import { prisma } from '@/lib/prisma';
 import { jsonError, jsonOk } from '@/lib/api';
+import { logImportantError } from '@/lib/observability';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -43,6 +44,12 @@ export async function POST(request: Request) {
 
     return jsonError('Invalid action', 400, undefined, request);
   } catch (error) {
-    return jsonError('Operation failed', 500, [error instanceof Error ? error.message : 'Unknown error'], request);
+    await logImportantError({
+      event: 'admin_job_sources_failed',
+      userId: admin.id,
+      route: '/api/admin/job-sources',
+      error,
+    });
+    return jsonError('Operation failed', 500, undefined, request);
   }
 }

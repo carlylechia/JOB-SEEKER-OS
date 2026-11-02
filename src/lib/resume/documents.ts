@@ -14,7 +14,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { prisma } from '@/lib/prisma';
-import { isPrivateResumeUrl } from '@/lib/durable-upload';
+import { isOwnedStoredAssetUrl, isPrivateResumeUrl } from '@/lib/durable-upload';
 import { logImportantError } from '@/lib/observability';
 import {
   RESUME_MAX_FILE_BYTES,
@@ -151,6 +151,15 @@ export async function loadOwnedResumeDocument(params: {
   if (!document) throw new ResumeDocumentNotFoundError();
 
   if (!isTrustedStorageUrl(document.url)) {
+    throw new ResumeStorageError();
+  }
+
+  if (
+    !isOwnedStoredAssetUrl(document.url, {
+      kind: 'resume',
+      userId: params.userId,
+    })
+  ) {
     throw new ResumeStorageError();
   }
 

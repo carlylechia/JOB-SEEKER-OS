@@ -1,39 +1,50 @@
 import { sanitizeText, sanitizeUrl } from './sanitize';
-
-const PRIVATE_HOST_PATTERNS = [
-  /^localhost$/i,
-  /^127\./,
-  /^10\./,
-  /^192\.168\./,
-  /^0\.0\.0\.0$/,
-  /^169\.254\./,
-  /^::1$/i,
-  /^fc00:/i,
-  /^fe80:/i,
-];
+import { assertPublicHttpUrl, isUnsafeHostname } from './network-safety';
 
 export function normalizeHttpUrl(value: unknown) {
   return sanitizeUrl(value);
 }
 
+/**
+ * Synchronous best-effort check for URLs that are stored or rendered.
+ *
+ * This catches literal private addresses, loopback hostnames and internal
+ * domains. Anything that will actually be fetched server-side must use
+ * `assertSafeExternalUrl`, which also re-checks DNS and redirects.
+ */
 export function isSafeExternalUrl(raw: string) {
   try {
     const url = new URL(raw);
     if (!['http:', 'https:'].includes(url.protocol)) return false;
-
-    const host = url.hostname.trim().toLowerCase();
-    if (!host) return false;
-    if (PRIVATE_HOST_PATTERNS.some((pattern) => pattern.test(host))) return false;
-
-    const octets = host.split('.').map((part) => Number(part));
-    if (octets.length === 4 && octets.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)) {
-      const [a, b] = octets;
-      if (a === 172 && b >= 16 && b <= 31) return false;
-    }
-
-    return true;
+    if (url.username || url.password) return false;
+    if (url.port && !['80', '443'].includes(url.port)) return false;
+    return !isUnsafeHostname(url.hostname);
   } catch {
     return false;
+  }
+}
+
+/**
+ * Validate a URL that the server is about to fetch. Resolves DNS and rejects
+ * private/loopback/link-local/metadata addresses.
+ */
+export async function assertSafeExternalUrl(raw: string) {
+  const normalized = normalizeHttpUrl(raw);
+  if (!normalized) {
+    throw new Error('Only public http(s) URLs are supported.');
+  }
+
+  let url: URL;
+  try {
+    url = new URL(normalized);
+  } catch {
+    throw new Error('Only public http(s) URLs are supported.');
+  }
+
+  try {
+    return await assertPublicHttpUrl(url);
+  } catch {
+    throw new Error('Only public http(s) job URLs are supported.');
   }
 }
 

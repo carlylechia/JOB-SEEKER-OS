@@ -1,7 +1,7 @@
 import { auth } from '@/auth';
 import { jsonOk, jsonError } from '@/lib/api';
 import { markNotificationRead, markAllNotificationsRead } from '@/lib/notifications';
-import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
+import { applyRateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -10,11 +10,11 @@ const schema = z.object({
 });
 
 export async function PATCH(request: Request) {
-  const rl = applyRateLimit(`notif-read:${getRequestIp(request)}`, 30, 60_000);
-  if (!rl.ok) return jsonError('Too many requests', 429);
-
   const session = await auth();
   if (!session?.user?.id) return jsonError('Unauthorized', 401);
+
+  const rl = applyRateLimit(`notif-read:${session.user.id}`, 60, 60_000);
+  if (!rl.ok) return jsonError('Too many requests', 429);
 
   const body = await request.json().catch(() => ({}));
   const parsed = schema.safeParse(body);
@@ -25,7 +25,7 @@ export async function PATCH(request: Request) {
   if (all) {
     await markAllNotificationsRead(session.user.id);
   } else if (id) {
-    await markNotificationRead(id);
+    await markNotificationRead(id, session.user.id);
   } else {
     return jsonError('Provide id or all=true', 400);
   }

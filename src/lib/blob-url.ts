@@ -55,3 +55,14 @@ export function isOwnedPrivateAvatarUrl(url: string, userId: string): boolean {
   if (!parsed || !isPrivateVercelBlobUrl(url)) return false;
   return parsed.pathname.startsWith(`/avatars/${userId}/`);
 }
+
+/**
+ * True only for a private resume owned by this user. The resume proxy attaches
+ * the store token, so it must never fetch another tenant's object even when the
+ * profile row somehow contains one.
+ */
+export function isOwnedPrivateResumeUrl(url: string, userId: string): boolean {
+  const parsed = parseHttpUrl(url);
+  if (!parsed || !isPrivateVercelBlobUrl(url)) return false;
+  return parsed.pathname.startsWith(`/resumes/${userId}/`);
+}

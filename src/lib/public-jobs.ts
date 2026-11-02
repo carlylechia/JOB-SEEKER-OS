@@ -28,7 +28,6 @@ export type PublicJobRecord = {
   location: string | null;
   remoteType: string | null;
   createdAt: Date;
-  notes: string | null;
 };
 
 export function getPublicJobsSinceDate(days = 30) {
@@ -73,13 +72,15 @@ export async function getPublicJobs(options: PublicJobsQueryOptions = {}): Promi
     : {};
 
   const where = {
-    OR: [
-      { expiresAt: null },
-      { expiresAt: { gt: new Date() } },
+    deletedAt: null,
+    AND: [
+      {
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+      dateFilter,
+      textFilter,
+      titleFilter,
     ],
-    ...dateFilter,
-    ...textFilter,
-    ...titleFilter,
   };
 
   // Fetch one extra to detect next page without a second COUNT query
@@ -93,7 +94,6 @@ export async function getPublicJobs(options: PublicJobsQueryOptions = {}): Promi
       location: true,
       remoteType: true,
       createdAt: true,
-      notes: true,
     },
   });
 
@@ -269,7 +269,24 @@ export async function clonePublicJobForUser(
   userId: string,
 ): Promise<string> {
   const sourceJob = await prisma.jobLead.findFirst({
-    where: { id: sourceJobId },
+    where: { id: sourceJobId, deletedAt: null },
+    // Public cloning never needs the owner's private free-text notes. Selecting
+    // explicit fields also stops `notes` reaching the cloned row or the fit
+    // scorer.
+    select: {
+      company: true,
+      title: true,
+      source: true,
+      jobUrl: true,
+      location: true,
+      remoteType: true,
+      timezoneRequirement: true,
+      eligibilityRegion: true,
+      salaryMin: true,
+      salaryMax: true,
+      currency: true,
+      expiresAt: true,
+    },
   });
 
   if (!sourceJob) {
@@ -311,7 +328,7 @@ export async function clonePublicJobForUser(
       eligibilityRegion: sourceJob.eligibilityRegion,
       salaryMin: sourceJob.salaryMin,
       salaryMax: sourceJob.salaryMax,
-      notes: sourceJob.notes,
+      notes: null,
     },
     preferences,
   );
@@ -329,7 +346,7 @@ export async function clonePublicJobForUser(
       salaryMin: sourceJob.salaryMin,
       salaryMax: sourceJob.salaryMax,
       currency: sourceJob.currency,
-      notes: sourceJob.notes,
+      notes: '',
       status: 'LEAD',
       dateFound: new Date().toISOString().slice(0, 10),
       ...inferred,

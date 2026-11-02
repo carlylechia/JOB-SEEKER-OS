@@ -4,6 +4,7 @@ import LinkedIn from 'next-auth/providers/linkedin';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { logImportantInfo } from '@/lib/observability';
+import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: 'jwt' },
@@ -19,14 +20,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
-        const email = credentials?.email as string | undefined;
+      async authorize(credentials, request) {
+        const rawEmail = credentials?.email as string | undefined;
         const password = credentials?.password as string | undefined;
 
+        const email = rawEmail?.trim().toLowerCase();
         if (!email || !password) return null;
+        // Bound work before touching bcrypt or the database.
+        if (email.length > 254 || password.length > 200) return null;
+
+        const ip = getRequestIp(request);
+        const byIp = applyRateLimit(`login-ip:${ip}`, 40, 15 * 60_000);
+        const byEmail = applyRateLimit(`login-email:${email}`, 8, 15 * 60_000);
+        if (!byIp.ok || !byEmail.ok) {
+          await logImportantInfo({
+            event: 'login_rate_limited',
+            route: '/api/auth/callback/credentials',
+            context: { email, ip, byIp: byIp.ok, byEmail: byEmail.ok },
+          });
+          return null;
+        }
 
         const user = await prisma.user.findUnique({
-          where: { email: email.toLowerCase() },
+          where: { email },
           select: { id: true, email: true, passwordHash: true, name: true, emailVerified: true },
         });
         if (!user) return null;

@@ -178,10 +178,6 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
                     <p>{formatPublicJobLocation(job.remoteType, job.location)}</p>
                   </div>
 
-                  {job.notes ? (
-                    <p className="mt-4 line-clamp-3 text-sm leading-7 text-ink-2/85">{job.notes}</p>
-                  ) : null}
-
                   <div className="mt-6 flex flex-wrap gap-3">
                     <SavePublicJobButton jobId={job.id} isAuthenticated={!!session} />
                   </div>

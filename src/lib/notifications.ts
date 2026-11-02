@@ -78,9 +78,15 @@ export async function createNotification(
   });
 }
 
-/** Mark a single notification as read. */
-export async function markNotificationRead(id: string): Promise<void> {
-  await prisma.notification.update({ where: { id }, data: { read: true } });
+/** Mark a single notification as read, scoped to its owner. */
+export async function markNotificationRead(id: string, userId: string): Promise<void> {
+  // updateMany with a userId predicate is intentionally used instead of
+  // update({ where: { id } }): a caller-supplied id must never let one user
+  // mark (or probe) another user's notification.
+  await prisma.notification.updateMany({
+    where: { id, userId },
+    data: { read: true },
+  });
 }
 
 /**
