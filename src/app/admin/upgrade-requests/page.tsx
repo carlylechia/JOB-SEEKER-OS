@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/authz';
 import { prisma } from '@/lib/prisma';
 import { StatusBadge, PlanBadge } from '@/components/billing/plan-badge';
 import { buildMailtoUrl, buildWhatsappUrl, whatsappPrefill } from '@/lib/billing/upgrade-requests';
+import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 
 export const metadata: Metadata = {
   title: 'Upgrade Requests — Admin — teChia Jobs',
@@ -93,6 +94,7 @@ export default async function AdminUpgradeRequestsPage({
 
   return (
     <div className="space-y-5">
+      <Breadcrumbs items={[{ label: 'Upgrade requests' }]} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="title">Upgrade requests</h1>
         <p className="muted">

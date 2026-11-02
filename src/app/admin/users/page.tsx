@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { requireAdmin } from '@/lib/authz';
 import { prisma } from '@/lib/prisma';
+import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { PlanBadge, StatusBadge } from '@/components/billing/plan-badge';
 import { Pagination } from '@/components/ui/pagination';
 import {
@@ -90,6 +91,7 @@ export default async function AdminUsersPage({
 
   return (
     <div className="space-y-5">
+      <Breadcrumbs items={[{ label: 'Users' }]} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="title">Users</h1>
         <p className="muted">

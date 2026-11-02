@@ -6,6 +6,7 @@ import { getUserUsageBreakdown } from '@/lib/billing/usage';
 import { PlanBadge, StatusBadge } from '@/components/billing/plan-badge';
 import { PlanChangePanel } from '@/components/admin/plan-change-panel';
 import { DeleteUserButton } from '@/components/admin/delete-user-button';
+import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { buildMailtoUrl, buildWhatsappUrl, whatsappPrefill } from '@/lib/billing/upgrade-requests';
 
 export const dynamic = 'force-dynamic';
@@ -86,6 +87,7 @@ export default async function AdminUserDetailPage({
 
   return (
     <div className="space-y-5">
+      <Breadcrumbs items={[{ label: 'Users' }, { label: user.email }]} />
       <div>
         <h1 className="title">{user.name ?? user.email}</h1>
         <p className="muted mt-1">{user.email}</p>

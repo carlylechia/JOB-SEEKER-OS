@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { getEmailOutboxHealth } from '@/lib/billing/email-outbox';
 import { addDays, now } from '@/lib/billing/clock';
 import { PlanBadge, StatusBadge } from '@/components/billing/plan-badge';
+import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 
 export const metadata: Metadata = {
   title: 'Admin — teChia Jobs',
@@ -82,6 +83,7 @@ export default async function AdminOverviewPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[]} />
       <div>
         <h1 className="title">Admin overview</h1>
         <p className="muted mt-1">teChia Jobs operations</p>

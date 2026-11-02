@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { requireAdmin } from '@/lib/authz';
 import { prisma } from '@/lib/prisma';
+import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 
 export const metadata: Metadata = {
   title: 'Subscription History — Admin — teChia Jobs',
@@ -46,6 +47,7 @@ export default async function AdminSubscriptionHistoryPage({
 
   return (
     <div className="space-y-5">
+      <Breadcrumbs items={[{ label: 'Subscription history' }]} />
       <h1 className="title">Subscription history</h1>
       <p className="muted">
         {total} recorded {total === 1 ? 'change' : 'changes'}

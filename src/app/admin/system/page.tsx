@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/authz';
 import { prisma } from '@/lib/prisma';
 import { getEmailOutboxHealth } from '@/lib/billing/email-outbox';
 import { listSourceHealth, recentCatalogRuns } from '@/lib/job-discovery/source-health';
+import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 
 export const metadata: Metadata = {
   title: 'System — Admin — teChia Jobs',
@@ -45,6 +46,7 @@ export default async function AdminSystemPage() {
 
   return (
     <div className="space-y-5">
+      <Breadcrumbs items={[{ label: 'System' }]} />
       <h1 className="title">System</h1>
 
       <section aria-labelledby="health-heading" className="card-pad">

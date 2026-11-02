@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { requireAdmin } from '@/lib/authz';
 import { prisma } from '@/lib/prisma';
+import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 
 export const metadata: Metadata = {
   title: 'Analytics — teChia Jobs',
@@ -25,6 +26,7 @@ export default async function AdminAnalyticsPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: 'Analytics' }]} />
       <div>
         <h1 className="title">Product analytics</h1>
         <p className="muted mt-1">First-party events, last 30 days. {total} total events.</p>

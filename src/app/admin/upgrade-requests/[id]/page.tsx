@@ -7,6 +7,7 @@ import { getUserUsageBreakdown } from '@/lib/billing/usage';
 import { StatusBadge, PlanBadge } from '@/components/billing/plan-badge';
 import { RequestActions } from '@/components/admin/request-actions';
 import { buildMailtoUrl, buildWhatsappUrl, whatsappPrefill } from '@/lib/billing/upgrade-requests';
+import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,6 +79,7 @@ export default async function AdminUpgradeRequestDetailPage({
 
   return (
     <div className="space-y-5">
+      <Breadcrumbs items={[{ label: 'Upgrade requests' }, { label: request.user.name ?? request.user.email }]} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="title">Upgrade request</h1>
