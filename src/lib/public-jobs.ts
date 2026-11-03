@@ -164,7 +164,7 @@ function buildPublicJobFilters(options: PublicJobsQueryOptions) {
   const filters: Prisma.Sql[] = [];
 
   if (days > 0) {
-    filters.push(Prisma.sql`"listedAt" >= NOW() - make_interval(days => ${Math.floor(days)})`);
+    filters.push(Prisma.sql`"listedAt" >= ${getPublicJobsSinceDate(Math.floor(days))}`);
   }
   if (q) {
     const like = `%${q}%`;
@@ -327,7 +327,7 @@ export async function getPublicJobFacets(options: PublicJobsQueryOptions = {}): 
   const combined = combinedInventorySql();
   const dayFilter =
     days > 0
-      ? Prisma.sql`WHERE "listedAt" >= NOW() - make_interval(days => ${Math.floor(days)})`
+      ? Prisma.sql`WHERE "listedAt" >= ${getPublicJobsSinceDate(Math.floor(days))}`
       : Prisma.empty;
 
   const [categoryRows, sourceRows, seniorityRows] = await Promise.all([
