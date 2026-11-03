@@ -26,7 +26,13 @@ export const preferencesPayloadSchema = z.object({
 export const ingestJobSchema = z.object({
   jobUrl: z.string().optional().default('').transform((value) => sanitizeUrl(value)),
   jobDescription: z.string().optional().default('').transform((value) => sanitizeText(value, 25_000)),
-}).refine((data) => Boolean(data.jobUrl || data.jobDescription), {
-  message: 'Provide a job URL or paste a job description.',
+  /**
+   * Downscaled screenshots as data URLs. The byte limit is a transport guard;
+   * `validateIngestionImages` re-checks the signature and decoded size before
+   * any image is sent to the provider.
+   */
+  images: z.array(z.string().max(3_000_000)).max(3).optional().default([]),
+}).refine((data) => Boolean(data.jobUrl || data.jobDescription || data.images.length > 0), {
+  message: 'Provide a job URL, paste a job description, or attach a screenshot.',
   path: ['jobDescription'],
 });

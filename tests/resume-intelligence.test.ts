@@ -65,7 +65,7 @@ const FIXTURE_DIR = path.join(process.cwd(), 'public', 'uploads', 'resumes');
 const writtenFixtures: string[] = [];
 
 function writeFixture(userId: string): { url: string; name: string } {
-  const name = `resume-${userId}.txt`;
+  const name = `${userId}-resume.txt`;
   fs.mkdirSync(FIXTURE_DIR, { recursive: true });
   fs.writeFileSync(path.join(FIXTURE_DIR, name), FULL_RESUME_TEXT, 'utf8');
   writtenFixtures.push(name);

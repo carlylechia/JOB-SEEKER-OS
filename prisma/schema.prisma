@@ -146,6 +146,17 @@ model JobLead {
   remoteType           String?
   timezoneRequirement  String?
   eligibilityRegion    String?
+  /// Canonical taxonomy values shared with the catalog and public filters.
+  employmentType       String?
+  seniority            String?
+  category             String?
+  industry             String?
+  skills               String[]                  @default([])
+  /// Structured extraction: must-have / nice-to-have / responsibilities / etc.
+  requirements         Json?
+  companyProfile       Json?
+  /// Provenance for AI capture (model, confidence, warnings, image count).
+  ingestionMeta        Json?
   salaryMin            Int?
   salaryMax            Int?
   currency             String?                   @default("USD")
@@ -195,6 +206,9 @@ model JobLead {
   @@index([userId, updatedAt])
   @@index([createdAt])
   @@index([expiresAt])
+  @@index([category])
+  @@index([seniority])
+  @@index([employmentType])
 }
 
 model FollowUpTemplate {
@@ -1405,6 +1419,10 @@ model ExternalJob {
   @@index([canonicalUrl])
   @@index([expiresAt])
   @@index([source])
+  @@index([status, category])
+  @@index([status, seniority])
+  @@index([status, employmentType])
+  @@index([status, firstSeenAt])
 }
 
 model JobSource {

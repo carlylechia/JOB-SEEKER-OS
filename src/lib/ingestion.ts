@@ -1,8 +1,16 @@
 import { extractJobFields } from './extract-job-fields';
 import { assertSafeExternalUrl } from './url';
+import {
+  JobIngestionAiError,
+  resolveJobIngestionAiProvider,
+} from './job-ingestion/ai-client';
+import { ingestionSourceMode, normalizeModelIngestion } from './job-ingestion/normalize';
+import type { ValidatedImage } from './job-ingestion/images';
+import type { JobIngestionResult } from '@/types';
 
 const MAX_REDIRECTS = 5;
 const MAX_HTML_BYTES = 2_000_000;
+const MAX_AI_TEXT_CHARS = 24_000;
 
 function stripHtml(value: string) {
   return value
@@ -115,32 +123,100 @@ async function fetchJobPage(
   throw new Error('That job page redirected too many times.');
 }
 
-export async function ingestJobInput(input: { jobUrl?: string; jobDescription?: string }) {
+async function fetchPageText(jobUrl: string) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const page = await fetchJobPage(jobUrl, controller.signal);
+    const pageTitle = extractTitleFromHtml(page.html);
+    const description = extractDescriptionFromHtml(page.html);
+    const structured = extractJsonLdText(page.html);
+    return {
+      pageTitle,
+      fetchedUrl: page.finalUrl,
+      text: [pageTitle, description, structured, stripHtml(page.html)].filter(Boolean).join('\n\n'),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function ingestJobInput(input: {
+  jobUrl?: string;
+  jobDescription?: string;
+  images?: ValidatedImage[];
+}): Promise<JobIngestionResult> {
+  const images = input.images ?? [];
   let combinedText = input.jobDescription?.trim() || '';
   let pageTitle = '';
   let fetchedUrl = '';
 
   if (input.jobUrl) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-    try {
-      const page = await fetchJobPage(input.jobUrl, controller.signal);
-      pageTitle = extractTitleFromHtml(page.html);
-      const description = extractDescriptionFromHtml(page.html);
-      const structured = extractJsonLdText(page.html);
-      combinedText = [combinedText, pageTitle, description, structured, stripHtml(page.html)]
-        .filter(Boolean)
-        .join('\n\n');
-      fetchedUrl = page.finalUrl;
-    } finally {
-      clearTimeout(timeout);
-    }
+    const page = await fetchPageText(input.jobUrl);
+    pageTitle = page.pageTitle;
+    fetchedUrl = page.fetchedUrl;
+    combinedText = [combinedText, page.text].filter(Boolean).join('\n\n');
   }
 
-  const extracted = extractJobFields({ text: combinedText, jobUrl: input.jobUrl, pageTitle });
-  return {
-    ...extracted,
-    fetchedUrl,
-    sourceMode: input.jobUrl ? (input.jobDescription ? 'url+description' : 'url') : 'description',
-  };
+  const fallback = extractJobFields({
+    text: combinedText,
+    jobUrl: input.jobUrl,
+    pageTitle,
+  });
+
+  const sourceMode = ingestionSourceMode({
+    jobUrl: Boolean(input.jobUrl),
+    description: Boolean(input.jobDescription?.trim()),
+    images: images.length,
+  });
+
+  const hasUsableText = combinedText.trim().length > 0;
+  if (!hasUsableText && images.length === 0) {
+    throw new Error('Provide a job URL, a description, or a screenshot.');
+  }
+
+  try {
+    const provider = resolveJobIngestionAiProvider();
+    const model = await provider.extract({
+      text: combinedText.slice(0, MAX_AI_TEXT_CHARS),
+      jobUrl: input.jobUrl,
+      images,
+    });
+    const normalized = normalizeModelIngestion(model, {
+      text: combinedText,
+      jobUrl: input.jobUrl,
+      fallback,
+    });
+
+    return {
+      prefill: normalized.prefill,
+      signals: normalized.signals,
+      previewText: normalized.previewText,
+      fetchedUrl,
+      sourceMode,
+      ai: { used: true, model: provider.model },
+      imageCount: images.length,
+      confidence: normalized.confidence,
+      warnings: normalized.warnings,
+    };
+  } catch (error) {
+    // A screenshot has no deterministic fallback: without vision the request
+    // has produced nothing useful, so the user gets an honest error instead of
+    // an empty form.
+    if (!hasUsableText) throw error;
+
+    const fallbackReason = error instanceof JobIngestionAiError ? error.code : 'AI_UNAVAILABLE';
+    return {
+      ...fallback,
+      fetchedUrl,
+      sourceMode,
+      ai: { used: false, fallbackReason },
+      imageCount: images.length,
+      signals: [
+        ...fallback.signals,
+        'AI capture was unavailable, so these fields come from the deterministic parser.',
+      ],
+      warnings: ['AI capture was unavailable. Review the extracted fields carefully before saving.'],
+    };
+  }
 }

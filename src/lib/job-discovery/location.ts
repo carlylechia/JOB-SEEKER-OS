@@ -193,9 +193,9 @@ export function normalizeEmploymentType(value: string | null | undefined): Emplo
   if (!value) return null;
   const text = value.toLowerCase();
   if (/\bintern(ship)?\b|\bco-?op\b/.test(text)) return 'INTERNSHIP';
-  if (/\bpart[\s-]?time\b/.test(text)) return 'PART_TIME';
-  if (/\b(full[\s-]?time|regular|permanent)\b/.test(text)) return 'FULL_TIME';
-  if (/\b(contract(or)?|freelance|fixed[\s-]?term)\b/.test(text)) return 'CONTRACT';
+  if (/\bpart[\s_-]?time\b/.test(text)) return 'PART_TIME';
+  if (/\b(full[\s_-]?time|regular|permanent)\b/.test(text)) return 'FULL_TIME';
+  if (/\b(contract(or)?|freelance|fixed[\s_-]?term)\b/.test(text)) return 'CONTRACT';
   if (/\b(temporary|temp|seasonal)\b/.test(text)) return 'TEMPORARY';
   if (/\bvolunteer\b/.test(text)) return 'VOLUNTEER';
   return null;

@@ -4,6 +4,11 @@ import { defaultPreferences, defaultTitleOptions } from './preferences';
 import { JobLead, JobFormValues, Template, UserPreferences, UserProfileDetails } from '@/types';
 import { calculateFitScore, calculateFitTier, calculatePriority } from './scoring';
 import { deriveStreak } from './streak-core';
+import {
+  sanitizeCompanyProfile,
+  sanitizeJobStructuredFields,
+  sanitizeRequirements,
+} from './job-structured';
 
 export type DbJob = {
   id: string;
@@ -15,6 +20,14 @@ export type DbJob = {
   remoteType: string | null;
   timezoneRequirement: string | null;
   eligibilityRegion: string | null;
+  employmentType?: string | null;
+  seniority?: string | null;
+  category?: string | null;
+  industry?: string | null;
+  skills?: string[];
+  requirements?: unknown;
+  companyProfile?: unknown;
+  ingestionMeta?: unknown;
   salaryMin: number | null;
   salaryMax: number | null;
   currency: string | null;
@@ -47,6 +60,14 @@ export function mapDbJob(job: DbJob): JobLead {
     remoteType: job.remoteType || '',
     timezoneRequirement: job.timezoneRequirement || '',
     eligibilityRegion: job.eligibilityRegion || '',
+    employmentType: job.employmentType || '',
+    seniority: job.seniority || '',
+    category: job.category || '',
+    industry: job.industry || '',
+    skills: job.skills ?? [],
+    requirements: sanitizeRequirements(job.requirements),
+    companyProfile: sanitizeCompanyProfile(job.companyProfile),
+    ingestionMeta: (job.ingestionMeta as JobLead['ingestionMeta']) ?? null,
     salaryMin: job.salaryMin ?? undefined,
     salaryMax: job.salaryMax ?? undefined,
     currency: job.currency || 'USD',
@@ -192,6 +213,17 @@ export async function getUserPreferences(userId: string) {
 }
 
 export function buildStoredJobPayload(values: JobFormValues | any, preferences: UserPreferences) {
+  const structured = sanitizeJobStructuredFields({
+    employmentType: values.employmentType,
+    seniority: values.seniority,
+    category: values.category,
+    industry: values.industry,
+    skills: values.skills,
+    requirements: values.requirements,
+    companyProfile: values.companyProfile,
+    contacts: values.contacts,
+    title: values.title,
+  });
   const job = {
     id: values.id || '',
     company: values.company,
@@ -202,6 +234,8 @@ export function buildStoredJobPayload(values: JobFormValues | any, preferences: 
     remoteType: values.remoteType,
     timezoneRequirement: values.timezoneRequirement,
     eligibilityRegion: values.eligibilityRegion,
+    ...structured,
+    ingestionMeta: values.ingestionMeta || null,
     salaryMin: values.salaryMin ? Number(values.salaryMin) : undefined,
     salaryMax: values.salaryMax ? Number(values.salaryMax) : undefined,
     currency: values.currency || 'USD',
@@ -237,7 +271,7 @@ export function buildStoredJobPayload(values: JobFormValues | any, preferences: 
       submitted: false,
       ...(values.checklist || {}),
     },
-    contacts: values.contacts || [],
+    contacts: structured.contacts,
     interviews: values.interviews || [],
     prepPack: values.prepPack || {
       whyThisRole: '',

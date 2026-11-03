@@ -109,7 +109,7 @@ Full behaviour, research safeguards, data model and configuration:
 ### Intelligent Daily Job Discovery (Pro)
 
 - high-relevance daily job shortlist (up to 5 roles) ranked specifically for your confirmed career profile and preferences
-- multi-source global catalog continuously syncing directly with verified employer ATS boards (Ashby, Greenhouse, Lever) and compliant public feeds (Himalayas, Arbeitnow, Remote OK, 4dayweek, USAJOBS, Headcount Labs)
+- multi-source global catalog continuously syncing directly with verified employer ATS boards (Ashby, Greenhouse, Lever) and compliant public feeds (Himalayas, Arbeitnow, Remote OK, 4dayweek, Remotive, Working Nomads, We Work Remotely, Jobspresso, USAJOBS, Headcount Labs)
 - 80 verified tech and startup employer boards pre-configured with automatic stale-posting closure
 - hard eligibility gating before scoring: workplace model, target country restrictions, clearance, and visa sponsorship compatibility
 - transparent multi-factor scoring: 9-dimension fit analysis paired with independent confidence metrics (Listing Quality, Source Reliability, Data Completeness)
@@ -136,10 +136,20 @@ Full behaviour, architecture, sources, and configuration:
 - forgot password and reset password flows
 - protected app routes with per-user workspaces
 
+### AI job capture
+
+- paste a job URL or description and get a structured prefill: company, role, requirements, salary, contacts, links and source metadata
+- upload up to three screenshots (JPEG/PNG/WebP) of a job flyer or advert; the server validates file type, size and image signatures before anything reaches the model
+- deterministic fallback keeps capture useful when AI is not configured or returns an unusable result
+- extracted contacts, requirements and company profile are sanitised and stored separately from your fit score
+
+Full behaviour and configuration:
+[docs/JOB_INGESTION.md](docs/JOB_INGESTION.md).
+
 ### Public and marketing surface
 
 - redesigned landing page and demo experience
-- public jobs browser for recent platform jobs
+- public jobs browser combining community-shared and automatically fetched catalog roles, with category, source, seniority, salary, remote/hybrid/onsite and sort filters
 - save-to-workspace flow for public jobs
 - Vercel Analytics integration
 

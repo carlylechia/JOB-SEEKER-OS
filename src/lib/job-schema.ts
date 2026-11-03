@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { sanitizeText, sanitizeUrl } from './sanitize';
+import { sanitizeArray, sanitizeText, sanitizeUrl } from './sanitize';
 
 const scoreField = z.coerce.number().min(0).max(5);
 
@@ -12,6 +12,15 @@ export const jobPayloadSchema = z.object({
   remoteType: z.string().optional().default('').transform((v) => sanitizeText(v, 60)),
   timezoneRequirement: z.string().optional().default('').transform((v) => sanitizeText(v, 120)),
   eligibilityRegion: z.string().optional().default('').transform((v) => sanitizeText(v, 120)),
+  employmentType: z.string().optional().default('').transform((v) => sanitizeText(v, 40)),
+  seniority: z.string().optional().default('').transform((v) => sanitizeText(v, 40)),
+  category: z.string().optional().default('').transform((v) => sanitizeText(v, 80)),
+  industry: z.string().optional().default('').transform((v) => sanitizeText(v, 120)),
+  skills: z.array(z.unknown()).optional().default([]).transform((v) => sanitizeArray(v, 25)),
+  requirements: z.unknown().optional(),
+  companyProfile: z.unknown().optional(),
+  contacts: z.array(z.unknown()).optional().default([]),
+  ingestionMeta: z.unknown().optional(),
   salaryMin: z.union([z.string(), z.number(), z.null(), z.undefined()]).transform((v) => (v === '' || v == null ? undefined : Number(v))).refine((v) => v === undefined || (Number.isFinite(v) && v >= 0 && v <= 1_000_000), 'Invalid minimum salary'),
   salaryMax: z.union([z.string(), z.number(), z.null(), z.undefined()]).transform((v) => (v === '' || v == null ? undefined : Number(v))).refine((v) => v === undefined || (Number.isFinite(v) && v >= 0 && v <= 1_000_000), 'Invalid maximum salary'),
   currency: z.string().optional().default('USD').transform((v) => sanitizeText(v, 10).toUpperCase() || 'USD'),

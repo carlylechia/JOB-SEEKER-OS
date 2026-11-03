@@ -336,10 +336,14 @@ export async function runCatalogSync(options: CatalogSyncOptions = {}) {
       }
     }
 
-    const feedPool = await runPool(feeds, 2, deadline, (source) => executeSource(source, run.id, deadline));
-    const boardPool = await runPool(cappedBoards, 3, deadline, (source) => executeSource(source, run.id, deadline));
-    const outcomes = [...preflight, ...feedPool.results, ...boardPool.results];
-    const stoppedForTime = feedPool.stopped || boardPool.stopped || cappedBoards.length + feeds.length > outcomes.length;
+    // Feeds are still queued first, but a single pool lets ATS boards start as
+    // soon as a feed slot frees up instead of waiting for every feed to finish.
+    // With 7 feeds this removes a full round-trip from the critical path while
+    // keeping the same request cap and deadline.
+    const tasks = [...feeds, ...cappedBoards];
+    const pool = await runPool(tasks, 3, deadline, (source) => executeSource(source, run.id, deadline));
+    const outcomes = [...preflight, ...pool.results];
+    const stoppedForTime = pool.stopped || tasks.length > pool.results.length;
     const closedStale = await closeStaleCatalogueJobs();
 
     const providers = providerRollup(outcomes);
