@@ -2,8 +2,26 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { JobFormValues, JobLead } from '@/types';
+import { CATEGORY_OPTIONS, SENIORITY_OPTIONS } from '@/lib/job-discovery/categories';
 
 const statuses = ['LEAD', 'SAVED', 'APPLYING', 'APPLIED', 'INTERVIEWING', 'OFFER', 'REJECTED', 'ARCHIVED'] as const;
+const employmentTypes = [
+  { value: '', label: 'Not specified' },
+  { value: 'FULL_TIME', label: 'Full time' },
+  { value: 'PART_TIME', label: 'Part time' },
+  { value: 'CONTRACT', label: 'Contract' },
+  { value: 'INTERNSHIP', label: 'Internship' },
+  { value: 'TEMPORARY', label: 'Temporary' },
+  { value: 'VOLUNTEER', label: 'Volunteer' },
+];
+const emptyRequirements = {
+  mustHave: [],
+  niceToHave: [],
+  responsibilities: [],
+  qualifications: [],
+  benefits: [],
+};
+const emptyCompanyProfile = { website: '', linkedinUrl: '', size: '', industry: '', description: '' };
 
 function toFormValues(job?: JobLead, initialValues?: Partial<JobFormValues>): JobFormValues {
   return {
@@ -15,6 +33,15 @@ function toFormValues(job?: JobLead, initialValues?: Partial<JobFormValues>): Jo
     remoteType: initialValues?.remoteType ?? job?.remoteType ?? 'Remote',
     timezoneRequirement: initialValues?.timezoneRequirement ?? job?.timezoneRequirement ?? '',
     eligibilityRegion: initialValues?.eligibilityRegion ?? job?.eligibilityRegion ?? '',
+    employmentType: initialValues?.employmentType ?? job?.employmentType ?? '',
+    seniority: initialValues?.seniority ?? job?.seniority ?? '',
+    category: initialValues?.category ?? job?.category ?? '',
+    industry: initialValues?.industry ?? job?.industry ?? '',
+    skills: initialValues?.skills ?? job?.skills ?? [],
+    requirements: initialValues?.requirements ?? job?.requirements ?? emptyRequirements,
+    companyProfile: initialValues?.companyProfile ?? job?.companyProfile ?? emptyCompanyProfile,
+    contacts: initialValues?.contacts ?? job?.contacts ?? [],
+    ingestionMeta: initialValues?.ingestionMeta ?? job?.ingestionMeta ?? null,
     salaryMin: initialValues?.salaryMin ?? (job?.salaryMin ? String(job.salaryMin) : ''),
     salaryMax: initialValues?.salaryMax ?? (job?.salaryMax ? String(job.salaryMax) : ''),
     currency: initialValues?.currency ?? job?.currency ?? 'USD',
@@ -129,6 +156,88 @@ export function JobForm({
               <div><label className="muted">Timezone requirement</label><input className="input mt-1" value={values.timezoneRequirement} onChange={(e) => update('timezoneRequirement', e.target.value)} /></div>
               <div><label className="muted">Eligibility region</label><input className="input mt-1" value={values.eligibilityRegion} onChange={(e) => update('eligibilityRegion', e.target.value)} /></div>
             </div>
+          </div>
+
+          <div className="card-pad">
+            <h3 className="text-lg font-semibold">Role details</h3>
+            <p className="muted mt-1 text-sm">Structured fields power public filters, discovery matching and your own reporting.</p>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="muted">Category</label>
+                <select className="select mt-1" value={values.category} onChange={(e) => update('category', e.target.value)}>
+                  <option value="">Not specified</option>
+                  {CATEGORY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="muted">Seniority</label>
+                <select className="select mt-1" value={values.seniority} onChange={(e) => update('seniority', e.target.value)}>
+                  <option value="">Not specified</option>
+                  {SENIORITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="muted">Employment type</label>
+                <select className="select mt-1" value={values.employmentType} onChange={(e) => update('employmentType', e.target.value)}>
+                  {employmentTypes.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </div>
+              <div><label className="muted">Industry</label><input className="input mt-1" value={values.industry} onChange={(e) => update('industry', e.target.value)} placeholder="Fintech, healthcare, SaaS…" /></div>
+              <div className="md:col-span-2">
+                <label className="muted">Skills</label>
+                <input className="input mt-1" value={values.skills.join(', ')} onChange={(e) => update('skills', e.target.value.split(',').map((value) => value.trim()).filter(Boolean))} placeholder="TypeScript, React, PostgreSQL" />
+                <p className="mt-1 text-xs text-muted">Comma-separated. AI capture fills this from the posting.</p>
+              </div>
+            </div>
+
+            {Object.values(values.requirements).some((items) => items.length > 0) ? (
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                {[
+                  ['Must have', values.requirements.mustHave],
+                  ['Nice to have', values.requirements.niceToHave],
+                  ['Responsibilities', values.requirements.responsibilities],
+                  ['Qualifications', values.requirements.qualifications],
+                  ['Benefits', values.requirements.benefits],
+                ].filter(([, items]) => (items as string[]).length > 0).map(([label, items]) => (
+                  <div key={label as string} className="rounded-xl border border-line bg-surface-sunken p-3">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{label as string}</div>
+                    <ul className="mt-2 space-y-1 text-sm text-ink-2">
+                      {(items as string[]).map((item) => <li key={item}>• {item}</li>)}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {values.contacts.length > 0 ? (
+              <div className="mt-5 rounded-xl border border-line bg-surface-sunken p-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Contacts found in the posting</div>
+                <div className="mt-2 space-y-2">
+                  {values.contacts.map((contact) => (
+                    <div key={contact.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <div>
+                        <span className="font-medium text-ink">{contact.name}</span>
+                        {contact.title ? <span className="text-muted"> · {contact.title}</span> : null}
+                        {contact.email ? <span className="text-muted"> · {contact.email}</span> : null}
+                      </div>
+                      <button type="button" className="text-xs text-danger-text" onClick={() => update('contacts', values.contacts.filter((item) => item.id !== contact.id))}>Remove</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {(values.companyProfile.website || values.companyProfile.linkedinUrl || values.companyProfile.size || values.companyProfile.industry) ? (
+              <div className="mt-5 rounded-xl border border-line bg-surface-sunken p-3 text-sm text-muted">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Company profile</div>
+                <div className="mt-2 flex flex-wrap gap-3">
+                  {values.companyProfile.industry ? <span>{values.companyProfile.industry}</span> : null}
+                  {values.companyProfile.size ? <span>{values.companyProfile.size}</span> : null}
+                  {values.companyProfile.website ? <a className="text-accent-text underline" href={values.companyProfile.website} target="_blank" rel="noreferrer">Website</a> : null}
+                  {values.companyProfile.linkedinUrl ? <a className="text-accent-text underline" href={values.companyProfile.linkedinUrl} target="_blank" rel="noreferrer">LinkedIn</a> : null}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="card-pad">

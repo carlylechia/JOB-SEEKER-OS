@@ -68,10 +68,39 @@ export type Contact = {
   company: string;
   title: string;
   relationshipType: string;
+  email?: string;
+  phone?: string;
+  linkedinUrl?: string;
   outreachDate?: string;
   responseDate?: string;
   nextFollowUp?: string;
   notes?: string;
+};
+
+export type JobRequirements = {
+  mustHave: string[];
+  niceToHave: string[];
+  responsibilities: string[];
+  qualifications: string[];
+  benefits: string[];
+};
+
+export type CompanyProfile = {
+  website: string;
+  linkedinUrl: string;
+  size: string;
+  industry: string;
+  description: string;
+};
+
+export type JobIngestionMeta = {
+  mode: JobIngestionResult['sourceMode'];
+  aiUsed: boolean;
+  model?: string;
+  images: number;
+  confidence?: number;
+  warnings: string[];
+  extractedAt: string;
 };
 
 export type Interview = {
@@ -106,6 +135,14 @@ export type JobLead = {
   remoteType: string;
   timezoneRequirement: string;
   eligibilityRegion: string;
+  employmentType?: string;
+  seniority?: string;
+  category?: string;
+  industry?: string;
+  skills?: string[];
+  requirements?: JobRequirements;
+  companyProfile?: CompanyProfile;
+  ingestionMeta?: JobIngestionMeta | null;
   salaryMin?: number;
   salaryMax?: number;
   currency: string;
@@ -136,6 +173,15 @@ export type JobFormValues = {
   remoteType: string;
   timezoneRequirement: string;
   eligibilityRegion: string;
+  employmentType: string;
+  seniority: string;
+  category: string;
+  industry: string;
+  skills: string[];
+  requirements: JobRequirements;
+  companyProfile: CompanyProfile;
+  contacts: Contact[];
+  ingestionMeta?: JobIngestionMeta | null;
   salaryMin: string;
   salaryMax: string;
   currency: string;
@@ -154,12 +200,29 @@ export type JobFormValues = {
   signalQuality: number;
 };
 
+export type JobIngestionSourceMode =
+  | 'url'
+  | 'description'
+  | 'url+description'
+  | 'image'
+  | 'image+description'
+  | 'image+url'
+  | 'image+url+description';
+
 export type JobIngestionResult = {
   prefill: Partial<JobFormValues>;
   signals: string[];
   previewText: string;
   fetchedUrl?: string;
-  sourceMode: 'url' | 'description' | 'url+description';
+  sourceMode: JobIngestionSourceMode;
+  ai: {
+    used: boolean;
+    model?: string;
+    fallbackReason?: string;
+  };
+  imageCount: number;
+  confidence?: number;
+  warnings?: string[];
 };
 
 export type ApiError = {

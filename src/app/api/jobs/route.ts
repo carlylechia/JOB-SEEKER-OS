@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { auth } from '@/auth';
 import { buildStoredJobPayload, getUserPreferences, mapDbJob } from '@/lib/db-helpers';
 import { handleOptions } from '@/lib/cors';
@@ -60,6 +61,14 @@ export async function POST(request: Request) {
         remoteType: job.remoteType,
         timezoneRequirement: job.timezoneRequirement,
         eligibilityRegion: job.eligibilityRegion,
+        employmentType: job.employmentType || null,
+        seniority: job.seniority || null,
+        category: job.category || null,
+        industry: job.industry || null,
+        skills: job.skills ?? [],
+        requirements: job.requirements,
+        companyProfile: job.companyProfile,
+        ingestionMeta: job.ingestionMeta ?? Prisma.DbNull,
         salaryMin: job.salaryMin ?? null,
         salaryMax: job.salaryMax ?? null,
         currency: job.currency,

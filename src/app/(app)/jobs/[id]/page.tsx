@@ -13,6 +13,7 @@ import { isActiveJobStatus } from "@/lib/job-status";
 import { JobIntelligencePanel } from "@/components/jobs/job-intelligence-panel";
 import { checklistCompletion } from "@/lib/scoring";
 import { Checklist, Contact, JobFormValues, JobStatus } from "@/types";
+import { CATEGORY_LABELS, SENIORITY_LABELS, type JobCategory, type SeniorityLevel } from "@/lib/job-discovery/categories";
 import {
   buildKitSteps,
   type ApplicationWorkspaceData,
@@ -327,6 +328,30 @@ export default function JobDetailsPage() {
                   <div>{job.eligibilityRegion || "—"}</div>
                 </div>
                 <div>
+                  <div className="muted">Category</div>
+                  <div>{job.category ? CATEGORY_LABELS[job.category as JobCategory] ?? job.category : "—"}</div>
+                </div>
+                <div>
+                  <div className="muted">Seniority</div>
+                  <div>{job.seniority ? SENIORITY_LABELS[job.seniority as SeniorityLevel] ?? job.seniority : "—"}</div>
+                </div>
+                <div>
+                  <div className="muted">Employment type</div>
+                  <div>{job.employmentType ? job.employmentType.replace('_', ' ').toLowerCase() : "—"}</div>
+                </div>
+                <div>
+                  <div className="muted">Industry</div>
+                  <div>{job.industry || "—"}</div>
+                </div>
+                <div className="sm:col-span-2">
+                  <div className="muted">Skills</div>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {job.skills?.length ? job.skills.map((skill) => (
+                      <span key={skill} className="rounded-full border border-line bg-surface-sunken px-2.5 py-1 text-xs text-muted">{skill}</span>
+                    )) : <span>—</span>}
+                  </div>
+                </div>
+                <div>
                   <div className="muted">Compensation</div>
                   <div>
                     {job.salaryMin || "—"}
@@ -355,6 +380,44 @@ export default function JobDetailsPage() {
                 </div>
               </div>
             </div>
+            {job.requirements && Object.values(job.requirements).some((items) => items.length > 0) ? (
+              <div className="card-pad">
+                <h3 className="text-lg font-semibold">Structured requirements</h3>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {[
+                    ['Must have', job.requirements.mustHave],
+                    ['Nice to have', job.requirements.niceToHave],
+                    ['Responsibilities', job.requirements.responsibilities],
+                    ['Qualifications', job.requirements.qualifications],
+                    ['Benefits', job.requirements.benefits],
+                  ].filter(([, items]) => (items as string[]).length > 0).map(([label, items]) => (
+                    <div key={label as string} className="rounded-xl border border-line bg-surface-sunken p-3">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{label as string}</div>
+                      <ul className="mt-2 space-y-1 text-sm text-ink-2">
+                        {(items as string[]).map((item) => <li key={item}>• {item}</li>)}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {job.companyProfile && (job.companyProfile.website || job.companyProfile.linkedinUrl || job.companyProfile.size || job.companyProfile.industry || job.companyProfile.description) ? (
+              <div className="card-pad">
+                <h3 className="text-lg font-semibold">Company profile</h3>
+                <div className="mt-3 space-y-2 text-sm text-muted">
+                  {job.companyProfile.industry || job.companyProfile.size ? (
+                    <p>{[job.companyProfile.industry, job.companyProfile.size].filter(Boolean).join(' · ')}</p>
+                  ) : null}
+                  {job.companyProfile.description ? <p className="whitespace-pre-wrap">{job.companyProfile.description}</p> : null}
+                  <div className="flex flex-wrap gap-3">
+                    {job.companyProfile.website ? <a className="text-accent-text underline" href={job.companyProfile.website} target="_blank" rel="noreferrer">Website</a> : null}
+                    {job.companyProfile.linkedinUrl ? <a className="text-accent-text underline" href={job.companyProfile.linkedinUrl} target="_blank" rel="noreferrer">LinkedIn</a> : null}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             <div className="card-pad">
               <h3 className="text-lg font-semibold">Notes</h3>
               <p className="mt-3 whitespace-pre-wrap text-muted">
@@ -417,6 +480,13 @@ export default function JobDetailsPage() {
                           <div className="muted text-sm">
                             {contact.title} · {contact.relationshipType.replace('_', ' ')}
                           </div>
+                          {contact.email || contact.phone || contact.linkedinUrl ? (
+                            <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted">
+                              {contact.email ? <a className="underline" href={`mailto:${contact.email}`}>{contact.email}</a> : null}
+                              {contact.phone ? <a className="underline" href={`tel:${contact.phone}`}>{contact.phone}</a> : null}
+                              {contact.linkedinUrl ? <a className="underline" href={contact.linkedinUrl} target="_blank" rel="noreferrer">LinkedIn</a> : null}
+                            </div>
+                          ) : null}
                           {contact.notes ? (
                             <div className="mt-2 text-sm text-muted">{contact.notes}</div>
                           ) : null}

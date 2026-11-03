@@ -81,7 +81,8 @@ export default function NewJobPage() {
             <div className="card-pad">
               <div className="text-sm font-semibold uppercase tracking-[0.18em] text-accent-text">Extracted preview</div>
               <p className="mt-3 text-sm leading-7 text-muted">
-                Parser mode: {ingestionResult.sourceMode}. Review and edit the prefilled fields below before saving.
+                Capture mode: {ingestionResult.sourceMode}. {ingestionResult.ai.used ? `AI (${ingestionResult.ai.model})` : 'Deterministic parser fallback'}.
+                Review and edit the prefilled fields below before saving.
               </p>
             </div>
           ) : null}
