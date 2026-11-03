@@ -7,6 +7,13 @@ const ALLOWED_HOSTS = new Set([
   '4dayweek.io',
   'jobicy.com',
   'www.jobicy.com',
+  'remotive.com',
+  'www.remotive.com',
+  'www.workingnomads.com',
+  'weworkremotely.com',
+  'www.weworkremotely.com',
+  'jobspresso.co',
+  'www.jobspresso.co',
   'data.usajobs.gov',
   'api.headcountlabs.com',
   'boards-api.greenhouse.io',
@@ -42,6 +49,14 @@ export type FetchJsonOptions = {
 
 export type FetchJsonResult<T> = {
   data: T;
+  status: number;
+  headers: Headers;
+  latencyMs: number;
+  attempts: number;
+};
+
+export type FetchTextResult = {
+  text: string;
   status: number;
   headers: Headers;
   latencyMs: number;
@@ -112,13 +127,16 @@ function sleep(ms: number, signal?: AbortSignal) {
 }
 
 /**
- * Fetch JSON from a documented provider host only.
+ * Fetch text from a documented provider host only.
  *
  * The URL is never accepted from an admin or user; callers construct it from
  * a fixed base plus a validated board token. DNS is not resolved here because
  * the host allowlist is exact and all providers are public SaaS endpoints.
  */
-export async function fetchProviderJson<T>(rawUrl: string, options: FetchJsonOptions): Promise<FetchJsonResult<T>> {
+async function fetchProviderTextInternal(
+  rawUrl: string,
+  options: FetchJsonOptions & { accept?: string },
+): Promise<FetchTextResult> {
   const url = assertAllowedUrl(rawUrl);
   const attempts = Math.max(1, (options.retries ?? 1) + 1);
   const timeoutMs = options.timeoutMs ?? 12_000;
@@ -136,7 +154,7 @@ export async function fetchProviderJson<T>(rawUrl: string, options: FetchJsonOpt
       if (options.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
       const response = await fetch(url, {
         headers: {
-          Accept: 'application/json',
+          Accept: options.accept ?? 'application/json',
           'User-Agent': process.env.JOB_DISCOVERY_USER_AGENT?.trim() || 'teChiaJobs/1.0 (+https://techiacareers.com)',
           ...options.headers,
         },
@@ -170,15 +188,9 @@ export async function fetchProviderJson<T>(rawUrl: string, options: FetchJsonOpt
         throw new ProviderHttpError(`Provider returned HTTP ${response.status}`, 'HTTP_ERROR', response.status);
       }
 
-      let data: T;
-      try {
-        data = (await response.json()) as T;
-      } catch {
-        throw new ProviderHttpError('Provider returned invalid JSON', 'INVALID_JSON', response.status);
-      }
-
+      const text = await response.text();
       return {
-        data,
+        text,
         status: response.status,
         headers: response.headers,
         latencyMs: Date.now() - startedAt,
@@ -207,6 +219,33 @@ export async function fetchProviderJson<T>(rawUrl: string, options: FetchJsonOpt
   }
 
   throw lastError instanceof Error ? lastError : new ProviderHttpError('Provider request failed', 'NETWORK');
+}
+
+export async function fetchProviderJson<T>(rawUrl: string, options: FetchJsonOptions): Promise<FetchJsonResult<T>> {
+  const response = await fetchProviderTextInternal(rawUrl, options);
+  let data: T;
+  try {
+    data = JSON.parse(response.text) as T;
+  } catch {
+    throw new ProviderHttpError('Provider returned invalid JSON', 'INVALID_JSON', response.status);
+  }
+  return {
+    data,
+    status: response.status,
+    headers: response.headers,
+    latencyMs: response.latencyMs,
+    attempts: response.attempts,
+  };
+}
+
+export async function fetchProviderText(
+  rawUrl: string,
+  options: FetchJsonOptions & { accept?: string },
+): Promise<FetchTextResult> {
+  return fetchProviderTextInternal(rawUrl, {
+    ...options,
+    accept: options.accept ?? 'application/rss+xml, application/xml, text/xml, text/html;q=0.9, */*;q=0.1',
+  });
 }
 
 export function parseNumberHeader(headers: Headers, name: string): number | null {

@@ -6,9 +6,13 @@ import { fetchGreenhouse } from './greenhouse';
 import { fetchHeadcountLabs, isHeadcountLabsConfigured } from './headcountlabs';
 import { fetchHimalayas } from './himalayas';
 import { fetchJobicy } from './jobicy';
+import { fetchJobspresso } from './jobspresso';
 import { fetchLever } from './lever';
 import { fetchRemoteOk } from './remoteok';
+import { fetchRemotive } from './remotive';
 import { fetchUsaJobs, isUsaJobsConfigured } from './usajobs';
+import { fetchWeWorkRemotely } from './weworkremotely';
+import { fetchWorkingNomads } from './workingnomads';
 
 export const PROVIDER_DEFINITIONS: Record<ProviderId, ProviderDefinition> = {
   arbeitnow: {
@@ -40,6 +44,46 @@ export const PROVIDER_DEFINITIONS: Record<ProviderId, ProviderDefinition> = {
     maxRequestsPerRun: 1,
     refreshAfterMs: 20 * 60 * 60 * 1000,
     siteUrl: 'https://remoteok.com',
+  },
+  remotive: {
+    id: 'remotive',
+    displayName: 'Remotive',
+    sourceType: 'free_aggregator',
+    kind: 'feed',
+    sourceConfidence: 0.75,
+    maxRequestsPerRun: 1,
+    refreshAfterMs: 20 * 60 * 60 * 1000,
+    siteUrl: 'https://remotive.com',
+  },
+  workingnomads: {
+    id: 'workingnomads',
+    displayName: 'Working Nomads',
+    sourceType: 'free_aggregator',
+    kind: 'feed',
+    sourceConfidence: 0.7,
+    maxRequestsPerRun: 1,
+    refreshAfterMs: 20 * 60 * 60 * 1000,
+    siteUrl: 'https://www.workingnomads.com',
+  },
+  weworkremotely: {
+    id: 'weworkremotely',
+    displayName: 'We Work Remotely',
+    sourceType: 'free_aggregator',
+    kind: 'feed',
+    sourceConfidence: 0.75,
+    maxRequestsPerRun: 4,
+    refreshAfterMs: 20 * 60 * 60 * 1000,
+    siteUrl: 'https://weworkremotely.com',
+  },
+  jobspresso: {
+    id: 'jobspresso',
+    displayName: 'Jobspresso',
+    sourceType: 'free_aggregator',
+    kind: 'feed',
+    sourceConfidence: 0.65,
+    maxRequestsPerRun: 1,
+    refreshAfterMs: 20 * 60 * 60 * 1000,
+    siteUrl: 'https://jobspresso.co',
   },
   fourdayweek: {
     id: 'fourdayweek',
@@ -136,6 +180,14 @@ export async function runProviderFetch(
       return fetchHimalayas(input);
     case 'remoteok':
       return fetchRemoteOk(input);
+    case 'remotive':
+      return fetchRemotive(input);
+    case 'workingnomads':
+      return fetchWorkingNomads(input);
+    case 'weworkremotely':
+      return fetchWeWorkRemotely(input);
+    case 'jobspresso':
+      return fetchJobspresso(input);
     case 'fourdayweek':
       return fetchFourDayWeek(input);
     case 'jobicy':

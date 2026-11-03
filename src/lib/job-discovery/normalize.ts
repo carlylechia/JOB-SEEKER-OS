@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { isSafeExternalUrl } from '@/lib/url';
 import type { NormalizedExternalJob } from './types';
 import { inferCountryCodes, inferVisaSponsorship, normalizeEmploymentType, normalizeWorkArrangement } from './location';
+import { normalizeJobCategory, normalizeSeniority } from './categories';
 
 export function normalizeCompany(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -54,9 +55,11 @@ export function normalizeJob(job: NormalizedExternalJob): NormalizedExternalJob 
     remoteType: workArrangement,
     workArrangement,
     employmentType: normalizeEmploymentType(job.employmentType) ?? job.employmentType ?? null,
-    seniority: job.seniority?.trim() || null,
+    // Canonical values make the public filters work across providers that use
+    // different words for the same bucket.
+    seniority: normalizeSeniority(job.seniority, job.title),
     industry: job.industry?.trim() || null,
-    category: job.category?.trim() || null,
+    category: normalizeJobCategory(job.category, job.title, job.skills),
     skills: cleanList(job.skills, 30),
     visaSponsorship: job.visaSponsorship ?? inferVisaSponsorship(description),
     description,
