@@ -72,10 +72,30 @@ export async function touchStreak(
   }
 
   const newStreak = snapshot.streakCount + 1;
-  await prisma.user.update({
-    where: { id: userId },
+  const update = await prisma.user.updateMany({
+    where: {
+      id: userId,
+      // Conditional on the values we read: if another request advanced or
+      // normalised the streak first, this update must not overwrite it.
+      streakCount: user.streakCount,
+      lastActiveDate: user.lastActiveDate,
+    },
     data: { streakCount: newStreak, lastActiveDate: at },
   });
+
+  if (update.count === 0) {
+    const latest = await loadStreakUser(userId);
+    if (latest) {
+      const latestSnapshot = deriveStreak(
+        latest.streakCount,
+        latest.lastActiveDate,
+        at,
+        latest.profile?.timezone,
+      );
+      return { ...latestSnapshot, changed: false };
+    }
+    return { ...snapshot, changed: false };
+  }
 
   const updated = deriveStreak(newStreak, at, at, timeZone);
 
@@ -91,14 +111,23 @@ export async function touchStreak(
   });
 
   if ((STREAK_MILESTONES as readonly number[]).includes(newStreak)) {
-    await createNotification(userId, {
-      type: 'streak',
-      title: `🔥 ${newStreak}-day streak unlocked`,
-      message:
-        `You've shown up ${newStreak} days in a row. That is not luck — it is a promise you keep ` +
-        `to yourself. Next stop: ${updated.nextMilestone} days. Keep the fire alive.`,
-      sendEmail: newStreak >= 7,
-    }).catch(() => null);
+    const alreadyNotified = await notificationExistsOnLocalDay(
+      userId,
+      'streak',
+      at,
+      timeZone,
+    ).catch(() => false);
+
+    if (!alreadyNotified) {
+      await createNotification(userId, {
+        type: 'streak',
+        title: `🔥 ${newStreak}-day streak unlocked`,
+        message:
+          `You've shown up ${newStreak} days in a row. That is not luck — it is a promise you keep ` +
+          `to yourself. Next stop: ${updated.nextMilestone} days. Keep the fire alive.`,
+        sendEmail: newStreak >= 7,
+      }).catch(() => null);
+    }
   }
 
   return { ...updated, changed: true };

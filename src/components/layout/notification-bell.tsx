@@ -68,8 +68,14 @@ export function NotificationBell() {
       const res = await fetch('/api/notifications');
       if (!res.ok) return;
       const data = await res.json();
-      setNotifications(data.notifications ?? []);
-      setUnread((data.notifications ?? []).filter((n: Notification) => !n.read).length);
+      const notifications = data.notifications ?? [];
+      setNotifications(notifications);
+      const serverUnread = Number(data.unreadCount);
+      setUnread(
+        Number.isFinite(serverUnread)
+          ? serverUnread
+          : notifications.filter((n: Notification) => !n.read).length,
+      );
     } catch {
       // silent fail
     }

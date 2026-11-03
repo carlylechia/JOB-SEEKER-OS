@@ -114,6 +114,25 @@ describe('touchStreak', () => {
     expect(afterGap.changed).toBe(true);
   });
 
+  it('does not duplicate the milestone notification when activity arrives concurrently', async () => {
+    const user = await makeUser();
+    await touchStreak(user.id, { at: new Date('2026-03-01T12:00:00.000Z') });
+    await touchStreak(user.id, { at: new Date('2026-03-02T12:00:00.000Z') });
+    await prisma.notification.deleteMany({ where: { userId: user.id, type: 'streak' } });
+
+    const thirdDay = new Date('2026-03-03T12:00:00.000Z');
+    await Promise.all([
+      touchStreak(user.id, { at: thirdDay }),
+      touchStreak(user.id, { at: thirdDay }),
+    ]);
+
+    expect(
+      await prisma.notification.count({ where: { userId: user.id, type: 'streak' } }),
+    ).toBe(1);
+    const stored = await prisma.user.findUnique({ where: { id: user.id } });
+    expect(stored?.streakCount).toBe(3);
+  });
+
   it('creates a milestone notification when a milestone is reached', async () => {
     const user = await makeUser();
 

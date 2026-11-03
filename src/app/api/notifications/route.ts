@@ -1,6 +1,6 @@
 import { auth } from '@/auth';
 import { jsonOk, jsonError } from '@/lib/api';
-import { getUserNotifications } from '@/lib/notifications';
+import { getUnreadCount, getUserNotifications } from '@/lib/notifications';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 
 export async function GET(request: Request) {
@@ -10,6 +10,9 @@ export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.id) return jsonError('Unauthorized', 401);
 
-  const notifications = await getUserNotifications(session.user.id);
-  return jsonOk({ notifications });
+  const [notifications, unreadCount] = await Promise.all([
+    getUserNotifications(session.user.id),
+    getUnreadCount(session.user.id),
+  ]);
+  return jsonOk({ notifications, unreadCount });
 }
