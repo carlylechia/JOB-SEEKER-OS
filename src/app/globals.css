@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Grid and flex items default to their intrinsic minimum width, which is how
+   long job titles, URLs and date inputs push a parent wider than the viewport.
+   Allowing arbitrary shrink is the missing piece for responsive layouts. */
+@layer base {
+  .grid > *,
+  .flex > * {
+    min-width: 0;
+  }
+
+  .whitespace-pre-wrap {
+    overflow-wrap: anywhere;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    DESIGN TOKENS
    Light — teChia gold/silver identity (default)

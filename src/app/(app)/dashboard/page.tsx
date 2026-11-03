@@ -269,7 +269,7 @@ export default function DashboardPage() {
           <DailyQueue />
 
           {/* ── Top priorities + upcoming columns ───────────────────── */}
-          <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
             <TopPriorityList jobs={dashboard.topPriority} />
 
             <div className="space-y-4">

@@ -561,7 +561,7 @@ export default function ApplicationKitWorkspace({ initialWorkspace }: Props) {
         </ol>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         <div className="space-y-6">
           {/* Material type picker */}
           <section className="card-pad" aria-labelledby="material-types-heading">

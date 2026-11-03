@@ -99,7 +99,7 @@ export default function TemplatesPage() {
         </p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[0.35fr_0.65fr]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.35fr)_minmax(0,0.65fr)]">
         {/* Category + list */}
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">

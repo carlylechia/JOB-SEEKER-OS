@@ -117,7 +117,7 @@ export function LandingHowItWorks() {
 
   return (
     <section id="how-it-works" className="py-24">
-      <div className="grid gap-16 lg:grid-cols-[1fr_1fr] lg:gap-24 lg:items-start">
+      <div className="grid gap-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-24 lg:items-start">
 
         {/* Left: sticky header */}
         <div

@@ -135,7 +135,7 @@ export function JobForm({
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <div className="space-y-6">
           <div className="card-pad">
             <h3 className="text-lg font-semibold">Role basics</h3>

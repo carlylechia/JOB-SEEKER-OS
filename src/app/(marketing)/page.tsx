@@ -15,7 +15,7 @@ import { QuickJumpNav } from '@/components/marketing/quick-jump-nav';
 function PlatformJobsPreviewFallback() {
   return (
     <section id="public-jobs" className="py-20">
-      <div className="grid gap-8 rounded-3xl border border-line bg-surface-sunken p-5 lg:grid-cols-[0.88fr_1.12fr] lg:p-7">
+      <div className="grid gap-8 rounded-3xl border border-line bg-surface-sunken p-5 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:p-7">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-text">Platform Jobs</p>
           <h2 className="mt-4 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">

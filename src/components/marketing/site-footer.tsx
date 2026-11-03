@@ -22,7 +22,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-line bg-background pb-[max(2rem,env(safe-area-inset-bottom))]">
       <div className="shell py-12 sm:py-14">
-        <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr_0.8fr]">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,0.8fr)]">
           <div>
             <p className="text-sm font-semibold tracking-[0.06em] text-accent-text">teChia Jobs</p>
             <h2 className="mt-3 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">The AI-powered operating system for your job search.</h2>

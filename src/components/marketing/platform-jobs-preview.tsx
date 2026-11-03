@@ -26,7 +26,7 @@ export async function PlatformJobsPreview() {
 
   return (
     <section id="public-jobs" className="py-20 section-fade-up">
-      <div className="grid gap-8 rounded-[2rem] border border-line bg-surface-sunken p-5 shadow-soft lg:grid-cols-[0.88fr_1.12fr] lg:p-7">
+      <div className="grid gap-8 rounded-[2rem] border border-line bg-surface-sunken p-5 shadow-soft lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:p-7">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-text">Platform Jobs</p>
           <h2 className="mt-4 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">

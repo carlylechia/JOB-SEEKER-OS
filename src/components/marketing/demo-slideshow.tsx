@@ -201,7 +201,7 @@ function SlideGraphic({ slide }: { slide: Slide }) {
             </div>
           ) : slide.id === 'onboarding' ? (
             <div className="grid gap-4">
-              <div className="grid gap-3 sm:grid-cols-[1.1fr_0.9fr]">
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                 <div className="rounded-3xl border border-line bg-surface-sunken p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
                   <p className="text-xs text-muted">Guided setup</p>
                   <div className="mt-3 space-y-2.5">

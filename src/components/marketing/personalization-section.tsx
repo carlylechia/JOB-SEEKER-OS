@@ -11,7 +11,7 @@ export function PersonalizationSection() {
   return (
     <section className="py-24" id="personalization">
       <div className="card-pad overflow-hidden">
-        <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] lg:items-center">
           <div>
             <span className="badge bg-surface-sunken text-accent-text">Personalized by design</span>
             <h2 className="mt-4 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">

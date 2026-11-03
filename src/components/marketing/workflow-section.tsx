@@ -24,7 +24,7 @@ const steps = [
 export function WorkflowSection() {
   return (
     <section className="py-24" id="workflow">
-      <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-start">
         <div>
           <span className="badge bg-surface-sunken text-accent-text">A calmer workflow</span>
           <h2 className="mt-4 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">

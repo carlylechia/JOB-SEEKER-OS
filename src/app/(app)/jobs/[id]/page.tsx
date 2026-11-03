@@ -267,7 +267,7 @@ export default function JobDetailsPage() {
           onCreateTitle={createTitle}
         />
       ) : (
-        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
           <div className="space-y-6">
             {/* Quick Actions */}
             <div className="card-pad">
@@ -290,14 +290,14 @@ export default function JobDetailsPage() {
                 {/* Follow-up date */}
                 <form onSubmit={handleSetFollowUp} className="flex flex-col gap-1">
                   <div className="muted text-sm">Set follow-up date</div>
-                  <div className="flex gap-2">
+                  <div className="flex min-w-0 gap-2">
                     <input
-                      className="input flex-1"
+                      className="input min-w-0 flex-1"
                       type="date"
                       value={followUpDate}
                       onChange={(e) => setFollowUpDate(e.target.value)}
                     />
-                    <button className="btn-secondary" type="submit" disabled={!followUpDate || savingFollowUp}>
+                    <button className="btn-secondary shrink-0" type="submit" disabled={!followUpDate || savingFollowUp}>
                       {savingFollowUp ? '…' : 'Set'}
                     </button>
                   </div>
