@@ -85,7 +85,7 @@ export async function PlatformJobsPreview() {
 
                 <div className="mt-5 space-y-2 text-sm text-muted">
                   <p>{formatPublicJobLocation(job.remoteType, job.location)}</p>
-                  <p>{formatPublicJobAge(job.createdAt)}</p>
+                  <p>{formatPublicJobAge(job.postedAt)}</p>
                 </div>
               </div>
             ))

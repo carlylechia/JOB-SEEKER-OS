@@ -2,10 +2,21 @@ import { handleOptions } from '@/lib/cors';
 import { jsonError, jsonOk } from '@/lib/api';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 import { logImportantError } from '@/lib/observability';
-import { getPublicJobs } from '@/lib/public-jobs';
+import {
+  clampPublicJobsTake,
+  getPublicJobs,
+  normalizePublicJobsSearchQuery,
+  normalizePublicJobsSort,
+} from '@/lib/public-jobs';
 
 export async function OPTIONS(request: Request) {
   return handleOptions(request);
+}
+
+function readNumber(value: string | null): number | undefined {
+  if (value == null || value.trim() === '') return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 export async function GET(request: Request) {
@@ -14,13 +25,25 @@ export async function GET(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const q = searchParams.get('q')?.trim() ?? '';
-    const title = searchParams.get('title')?.trim() ?? '';
-    const days = Number(searchParams.get('days') ?? '30');
-    const take = Number(searchParams.get('take') ?? '20');
-    const page = Number(searchParams.get('page') ?? '1');
+    const days = readNumber(searchParams.get('days'));
+    const take = readNumber(searchParams.get('take'));
+    const page = readNumber(searchParams.get('page'));
 
-    const result = await getPublicJobs({ q, title, days, take, page });
+    const result = await getPublicJobs({
+      q: normalizePublicJobsSearchQuery(searchParams.get('q')),
+      title: searchParams.get('title')?.trim() ?? '',
+      days: days ?? 30,
+      take: clampPublicJobsTake(take),
+      page: page && page > 0 ? Math.floor(page) : 1,
+      category: searchParams.get('category')?.trim() ?? '',
+      remoteType: searchParams.get('remoteType')?.trim() ?? '',
+      seniority: searchParams.get('seniority')?.trim() ?? '',
+      employmentType: searchParams.get('employmentType')?.trim() ?? '',
+      source: searchParams.get('source')?.trim() ?? '',
+      minSalary: readNumber(searchParams.get('minSalary')),
+      sort: normalizePublicJobsSort(searchParams.get('sort')),
+      includeFacets: searchParams.get('facets') !== '0',
+    });
 
     return jsonOk(result, request);
   } catch (error) {

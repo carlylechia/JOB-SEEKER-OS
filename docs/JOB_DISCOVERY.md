@@ -32,6 +32,10 @@ The catalog ingests exclusively from primary ATS endpoints, official government 
 - **Jobicy API** (`jobicy.ts`): Free remote job feed with opaque cursor pagination (100 records/page, capped at three pages per run).
   - *Compliance & Attribution*: Jobicy must be visibly credited and links must point to the supplied listing URL. The free feed intentionally returns Jobicy listing URLs rather than direct employer ATS URLs, so the listing page is both the canonical and application URL. Direct ATS URLs require Jobicy's commercial API.
   - *Structured data*: Disabled, consistent with the other aggregator feeds.
+- **Remotive API** (`remotive.ts`): Free remote job API. Listings link to the supplied Remotive URL and visibly credit Remotive.
+- **Working Nomads API** (`workingnomads.ts`): Free remote job API for distributed roles.
+- **We Work Remotely RSS** (`weworkremotely.ts`): Public RSS categories (programming, design, product and customer support). Items are attributed to WWR and link to the supplied feed URL.
+- **Jobspresso RSS** (`jobspresso.ts`): Free remote-work job feed. The employer and location are read from the feed creator field when present.
 
 ### English-Only Listing Policy
 
@@ -60,7 +64,7 @@ The product is English-only. Listings that are clearly written in another langua
 flowchart TD
     subgraph Ingestion ["Phase 1: Catalog Sync (Background Cron / Admin)"]
         Cron["Vercel Cron (06:00 UTC)"] --> Sync["runCatalogSync()"]
-        Sync --> Providers["10 Provider Adapters\n(Ashby, Greenhouse, Lever, Himalayas, Jobicy, etc.)"]
+        Sync --> Providers["14 Provider Adapters\n(Ashby, Greenhouse, Lever, Himalayas, Jobicy, Remotive, etc.)"]
         Providers --> Dedupe["Catalog Persistence & Deduplication"]
         Dedupe --> DB[(PostgreSQL ExternalJob)]
         Sync --> Health["JobSourceHealth Record"]
@@ -79,10 +83,15 @@ flowchart TD
 
 ### 1. Ingestion Correctness & Board Closure Safety
 - Providers fetch job listings with pagination and budget tracking.
+- Feed sources and board sources are scheduled in one bounded pool (concurrency 3), so many small feeds run alongside slower board crawls instead of behind them.
 - If a provider run is truncated due to time budget or page limits, the adapter explicitly flags `complete: false`.
 - **Closure Safety (`closeMissingFromBoard`)**: Missing board jobs are marked as closed in `ExternalJob` **only** if the adapter achieved a complete board crawl (`complete === true`). Partial syncs never falsely close valid opportunities.
 - **Link Repair**: Persistence always stores `applicationUrl`, `canonicalUrl` and `employerUrl`. When a stored row matches by fingerprint but is missing a link the provider now supplies, the row is updated on the next sync. This repairs catalogue rows written before URL persistence was added.
 - **Language Filter**: Non-English listings are discarded before deduplication/persistence and counted in sync metrics.
+
+### Public jobs page
+
+The public jobs page (`/jobs-public`) and the in-app public browser draw from two inventories in one SQL view: roles added by the community (`JobLead`, excluding notes and other private fields) and the automatically fetched catalog (`ExternalJob`). Results are deduplicated on trimmed company + title, support category/source/seniority/remote/employment/salary filters and sorting, and expose facet counts. Saving a public listing clones only the public fields into the user’s workspace; it never copies private notes or intelligence.
 
 ### 2. Hard Eligibility Filtering (`eligibility.ts`)
 Before computing relevance, candidates undergo strict deterministic gating:
@@ -128,7 +137,7 @@ Scoring separates user fit from data quality and source reliability:
   - Next, processes active Pro/Premium users whose local calendar day needs a fresh snapshot.
 
 ### Admin Operations & Observability
-- **Dashboard**: `/admin/system` displays real-time health status, success rates, listing counts, and recent sync runs for all 10 providers.
+- **Dashboard**: `/admin/system` displays real-time health status, success rates, listing counts, and recent sync runs for all configured providers.
 - **API**: `GET /api/admin/job-sources` (health summary) and `POST /api/admin/job-sources` (trigger on-demand catalog sync or toggle provider availability).
 
 ---
@@ -148,6 +157,10 @@ Scoring separates user fit from data quality and source reliability:
 | `FOURDAYWEEK_ENABLED` | No | `true` | Enable/disable 4dayweek feed ingestion |
 | `FOURDAYWEEK_START_PAGE` | No | `24` | Starting page for 4dayweek public feed |
 | `JOBICY_ENABLED` | No | `true` | Enable/disable Jobicy feed ingestion |
+| `REMOTIVE_ENABLED` | No | `true` | Enable/disable Remotive feed ingestion |
+| `WORKINGNOMADS_ENABLED` | No | `true` | Enable/disable Working Nomads feed ingestion |
+| `WEWORKREMOTELY_ENABLED` | No | `true` | Enable/disable We Work Remotely RSS ingestion |
+| `JOBSPRESSO_ENABLED` | No | `true` | Enable/disable Jobspresso RSS ingestion |
 | `USAJOBS_ENABLED` | No | `true` | Enable/disable USAJOBS provider |
 | `USAJOBS_API_KEY` | No | `""` | Required for USAJOBS; fails closed if empty |
 | `USAJOBS_USER_AGENT` | No | `""` | Contact email header required by USAJOBS API |
