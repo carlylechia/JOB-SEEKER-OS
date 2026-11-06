@@ -139,7 +139,7 @@ export function InstallHighlight() {
           <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-muted">
             <li>Download or clone the <code className="text-ink">/extension</code> folder from the teChia Jobs repository.</li>
             <li>Open <code className="text-ink">chrome://extensions</code> (or Edge equivalent) and enable Developer mode.</li>
-            <li>Click "Load unpacked" and select the <code className="text-ink">/extension</code> folder.</li>
+            <li>Click &quot;Load unpacked&quot; and select the <code className="text-ink">/extension</code> folder.</li>
             <li>Pin the teChia Jobs icon to your toolbar and sign in from the popup.</li>
           </ol>
           <a
