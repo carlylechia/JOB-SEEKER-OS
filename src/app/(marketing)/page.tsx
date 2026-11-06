@@ -52,13 +52,15 @@ export default function LandingPage() {
       {/* Nav is a sibling of the content, not a child of the hero, so it stays
           pinned for the whole document instead of unpinning with the hero. */}
       <LandingNav />
-      {/* `overflow-x: clip` rather than `hidden`: hidden computes the vertical
-          axis to `auto`, which turns this wrapper into a scroll container. */}
-      <div className="relative overflow-x-clip">
+      {/* The landing document owns its horizontal overflow. `overflow-x-clip`
+          (rather than `hidden`) prevents a wide card track from widening the
+          mobile viewport without turning this wrapper into a scroll container,
+          which would break the sticky section headers inside it. */}
+      <div className="relative w-full overflow-x-clip">
         {/* Full-viewport hero with its own nav */}
         <LandingHero />
 
-      {/* Remaining sections inside centered shell */}
+        {/* Remaining sections inside centered shell */}
         <div className="shell">
           <LandingFeatures />
           <LandingHowItWorks />

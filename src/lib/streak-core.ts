@@ -14,7 +14,7 @@
  */
 
 import { addDaysToDateKey, dateKeyInTimeZone } from './calendar';
-import { nextStreakMilestone, previousStreakMilestone } from './streak-milestones';
+import { getStreakMilestoneProgress } from './streak-milestones';
 
 export type StreakSnapshot = {
   /** Effective streak count right now (0 when the run has already been broken). */
@@ -49,15 +49,15 @@ export function deriveStreak(
 
   const alive = activeToday || isAtRisk;
   const effectiveCount = alive ? Math.max(1, Math.floor(streakCount)) : 0;
-  const nextMilestone = nextStreakMilestone(effectiveCount);
+  const milestone = getStreakMilestoneProgress(effectiveCount);
 
   return {
     streakCount: effectiveCount,
     activeToday,
     isAtRisk,
-    nextMilestone,
-    previousMilestone: previousStreakMilestone(effectiveCount),
-    daysToNextMilestone: Math.max(1, nextMilestone - effectiveCount),
+    nextMilestone: milestone.next,
+    previousMilestone: milestone.previous,
+    daysToNextMilestone: Math.max(1, milestone.remaining),
     timeZone: zone,
     todayKey,
     lastActiveKey,

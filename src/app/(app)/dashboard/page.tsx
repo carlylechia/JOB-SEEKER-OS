@@ -8,6 +8,7 @@ import {
   Mail, BookOpenCheck,
 } from 'lucide-react';
 import { DailyQueue } from '@/components/dashboard/daily-queue';
+import { DashboardStats } from '@/components/dashboard/dashboard-stats';
 import { KpiCard } from '@/components/dashboard/kpi-card';
 import { StreakWidget } from '@/components/dashboard/streak-widget';
 import { TopPriorityList } from '@/components/dashboard/top-priority-list';
@@ -30,7 +31,7 @@ function getFormattedDate(): string {
 }
 
 export default function DashboardPage() {
-  const { dashboard, jobs, interviews, preferences, onboardingCompleted, onboardingSkipped, profile, streakCount, streakActiveToday, streakAtRisk, isLoading } = useJobs();
+  const { dashboard, jobs, interviews, preferences, onboardingCompleted, onboardingSkipped, profile, streakCount, streakActiveToday, streakAtRisk, stats, isLoading } = useJobs();
 
   if (isLoading) {
     return (
@@ -191,6 +192,9 @@ export default function DashboardPage() {
           isAtRisk={streakAtRisk}
         />
       )}
+
+      {/* ── High-impact workspace metrics ───────────────────────────── */}
+      <DashboardStats stats={stats} jobs={jobs} currentStreak={streakCount} />
 
       <section className="rounded-2xl border border-line bg-gradient-to-r from-surface-sunken via-background to-card p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

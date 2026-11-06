@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { mutate } from 'swr';
-import { ApiError, BootstrapPayload, Contact, EnrichedContact, JobFormValues, JobLead, PrepPack, QueueTask, Template, UserPreferences, UserProfileDetails } from '@/types';
+import { ApiError, BootstrapPayload, Contact, EnrichedContact, JobFormValues, JobLead, PrepPack, QueueTask, Template, UserPreferences, UserProfileDetails, WorkspaceStats } from '@/types';
 import { checklistCompletion, hydrateJob } from '@/lib/scoring';
 import { isActiveJobStatus } from '@/lib/job-status';
 
@@ -42,6 +42,7 @@ export function useJobs() {
   const [streakCount, setStreakCount] = useState(0);
   const [streakActiveToday, setStreakActiveToday] = useState(false);
   const [streakAtRisk, setStreakAtRisk] = useState(false);
+  const [stats, setStats] = useState<WorkspaceStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -61,6 +62,7 @@ export function useJobs() {
         setStreakCount(data.streakCount ?? 0);
         setStreakActiveToday(Boolean(data.streakActiveToday));
         setStreakAtRisk(Boolean(data.streakAtRisk));
+        setStats(data.stats ?? null);
       } catch (error) {
         console.error(error);
       } finally {
@@ -406,6 +408,7 @@ export function useJobs() {
     streakCount,
     streakActiveToday,
     streakAtRisk,
+    stats,
     getJob,
     updateTemplate,
     updatePreferences,

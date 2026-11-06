@@ -1,175 +1,29 @@
-'use client';
+import { ArrowRight, Zap } from 'lucide-react';
+import { FEATURE_SHOWCASE } from './feature-showcase-data';
 
-import { useEffect, useRef, useState } from 'react';
-import {
-  LayoutDashboard, Star, ListChecks, Users, BookOpen,
-  GitBranch, BellRing, BarChart2, Zap, FileText, Brain,
-  Target, Calendar, Sparkles, TrendingUp, Search,
-} from 'lucide-react';
-
-const features = [
-  {
-    icon: Search,
-    title: 'Daily Top 5 Job Discovery',
-    description:
-      'Receive a focused, personalized shortlist of relevant opportunities with fit signals and links to official application pages.',
-    accent: 'text-accent-text',
-    glow: 'shadow-accent/10',
-    border: 'hover:border-accent/30',
-  },
-  {
-    icon: Star,
-    title: 'AI Fit Scoring',
-    description:
-      'Every job receives a fit score based on your preferences — stack, seniority, location, and remote priorities — so you know exactly what to focus on.',
-    accent: 'text-warn-text',
-    glow: 'shadow-warn/10',
-    border: 'hover:border-warn/30',
-  },
-  {
-    icon: Brain,
-    title: 'AI Job Intelligence',
-    description:
-      'Understand why a job fits, which requirements need attention, and what to do next, with evidence-backed explanations that never override hard eligibility rules.',
-    accent: 'text-accent-text',
-    glow: 'shadow-accent/10',
-    border: 'hover:border-accent/30',
-  },
-  {
-    icon: FileText,
-    title: 'Resume Intelligence',
-    description:
-      'Upload a resume and build a structured, reviewable career profile that powers matching, tailoring, and application materials.',
-    accent: 'text-muted',
-    glow: 'shadow-black/10',
-    border: 'hover:border-line-strong',
-  },
-  {
-    icon: FileText,
-    title: 'Resume Builder & Optimization',
-    description:
-      'Build structured resumes, create role-specific variants, and apply evidence-backed suggestions without inventing experience.',
-    accent: 'text-success-text',
-    glow: 'shadow-success/10',
-    border: 'hover:border-success/30',
-  },
-  {
-    icon: FileText,
-    title: 'AI Application Materials',
-    description:
-      'Draft cover letters, recruiter outreach, and follow-ups from your real profile and job details, then review and edit before use.',
-    accent: 'text-danger-text',
-    glow: 'shadow-danger/10',
-    border: 'hover:border-danger/30',
-  },
-  {
-    icon: Calendar,
-    title: 'Interview Preparation',
-    description:
-      'Generate role-specific preparation packs, structure answers, and practise with feedback linked to the correct job.',
-    accent: 'text-muted',
-    glow: 'shadow-black/10',
-    border: 'hover:border-line-strong',
-  },
-  {
-    icon: ListChecks,
-    title: 'Daily Smart Queue',
-    description:
-      'A curated, ranked list of jobs and actions that need your attention today, including follow-ups and stale leads.',
-    accent: 'text-accent-text',
-    glow: 'shadow-accent/10',
-    border: 'hover:border-accent/30',
-  },
-  {
-    icon: GitBranch,
-    title: 'Application Pipeline',
-    description:
-      'A visual Kanban board that moves your leads through every stage — from Saved to Offer — with drag-and-drop simplicity.',
-    accent: 'text-muted',
-    glow: 'shadow-black/10',
-    border: 'hover:border-line-strong',
-  },
-  {
-    icon: Users,
-    title: 'Recruiter CRM',
-    description:
-      'Track every contact associated with a lead, log outreach, set follow-up reminders, and never let a warm connection go cold.',
-    accent: 'text-success-text',
-    glow: 'shadow-success/10',
-    border: 'hover:border-success/30',
-  },
-  {
-    icon: BookOpen,
-    title: 'Weekly Review & Progress',
-    description:
-      'Review real activity, completed tasks, and next actions to keep your search consistent and informed.',
-    accent: 'text-muted',
-    glow: 'shadow-black/10',
-    border: 'hover:border-line-strong',
-  },
-  {
-    icon: LayoutDashboard,
-    title: 'Unified Dashboard',
-    description:
-      'One view for your streak, daily queue, top priorities, and upcoming milestones. Your search at a glance — nothing hidden.',
-    accent: 'text-accent-text',
-    glow: 'shadow-accent/10',
-    border: 'hover:border-accent/30',
-  },
-];
-
-function useReveal() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          obs.disconnect();
-        }
-      },
-      { threshold: 0.08, rootMargin: '0px 0px -40px 0px' },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
-  return { ref, visible };
-}
-
-function FeatureCard({ feature, index }: { feature: typeof features[number]; index: number }) {
-  const { ref, visible } = useReveal();
+function FeatureCard({ feature }: { feature: (typeof FEATURE_SHOWCASE)[number] }) {
   const Icon = feature.icon;
 
   return (
-    <div
-      ref={ref}
-      className={`reveal-hidden group rounded-2xl border border-line bg-surface-sunken p-6 backdrop-blur-sm transition-all duration-300 ${feature.border} hover:bg-surface-sunken hover:shadow-lg ${feature.glow} ${visible ? 'reveal-visible' : ''}`}
-      style={{ transitionDelay: visible ? `${(index % 4) * 80}ms` : '0ms' }}
+    <article
+      role="listitem"
+      className={`group flex w-[78vw] max-w-[20rem] shrink-0 snap-start flex-col rounded-2xl border border-line bg-card p-5 shadow-soft transition duration-300 hover:-translate-y-0.5 hover:shadow-lift ${feature.border} sm:w-[19rem] lg:w-[21rem]`}
     >
-      <div className={`mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl border border-line bg-surface-sunken ${feature.accent}`}>
+      <div
+        className={`mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-surface-sunken ${feature.accent}`}
+      >
         <Icon className="h-5 w-5" />
       </div>
       <h3 className="text-base font-semibold text-ink">{feature.title}</h3>
-      <p className="mt-2.5 text-sm leading-6 text-muted">{feature.description}</p>
-    </div>
+      <p className="mt-2 text-sm leading-6 text-muted">{feature.description}</p>
+    </article>
   );
 }
 
 export function LandingFeatures() {
-  const { ref: headRef, visible: headVisible } = useReveal();
-
   return (
-    <section id="features" className="py-24">
-      {/* Section header */}
-      <div
-        ref={headRef}
-        className={`reveal-hidden text-center ${headVisible ? 'reveal-visible' : ''}`}
-      >
+    <section id="features" className="w-full min-w-0 py-20 sm:py-24">
+      <div className="text-center">
         <span className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/[0.08] px-3 py-1.5 text-xs font-semibold text-accent-text">
           <Zap className="h-3 w-3" /> Everything you need
         </span>
@@ -177,15 +31,24 @@ export function LandingFeatures() {
           One platform. Every layer of the search.
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-muted">
-          Purpose-built tools that work together — from the first job capture to the final offer. No external spreadsheets, no forgotten follow-ups.
+          Purpose-built tools that work together — from the first job capture to the final offer. No
+          external spreadsheets, no forgotten follow-ups.
         </p>
       </div>
 
-      {/* Feature grid */}
-      <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {features.map((feature, i) => (
-          <FeatureCard key={feature.title} feature={feature} index={i} />
-        ))}
+      <div className="relative mt-10 w-full min-w-0">
+        <div
+          className="flex w-full overflow-x-auto snap-x snap-mandatory no-scrollbar gap-4 overscroll-x-contain scroll-px-4 pb-4"
+          role="list"
+          aria-label="All teChia Jobs features"
+        >
+          {FEATURE_SHOWCASE.map((feature) => (
+            <FeatureCard key={feature.title} feature={feature} />
+          ))}
+        </div>
+        <div className="mt-2 flex items-center justify-center gap-1.5 text-xs text-muted sm:hidden">
+          Swipe to see every feature <ArrowRight className="h-3.5 w-3.5" />
+        </div>
       </div>
     </section>
   );

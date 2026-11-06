@@ -164,6 +164,24 @@ describe('touchStreak', () => {
     const stored = await prisma.user.findUnique({ where: { id: user.id } });
     expect(stored?.streakCount).toBe(0);
   });
+
+  it('keeps the all-time record when a run resets', async () => {
+    const user = await makeUser();
+    await touchStreak(user.id, { at: new Date('2026-03-01T12:00:00.000Z') });
+    await touchStreak(user.id, { at: new Date('2026-03-02T12:00:00.000Z') });
+    await touchStreak(user.id, { at: new Date('2026-03-03T12:00:00.000Z') });
+
+    let stored = await prisma.user.findUnique({ where: { id: user.id } });
+    expect(stored?.streakCount).toBe(3);
+    expect(stored?.longestStreak).toBe(3);
+
+    // A missed day resets the live run but must not erase the personal best.
+    await touchStreak(user.id, { at: new Date('2026-03-06T12:00:00.000Z') });
+
+    stored = await prisma.user.findUnique({ where: { id: user.id } });
+    expect(stored?.streakCount).toBe(1);
+    expect(stored?.longestStreak).toBe(3);
+  });
 });
 
 describe('streak risk notifications', () => {

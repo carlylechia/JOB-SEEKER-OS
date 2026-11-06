@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { HeroFeatureTrack } from '@/components/marketing/hero-feature-track';
 import { SpinnerHeroClient } from '@/components/marketing/spinner-hero.client';
 
 /**
@@ -70,14 +71,6 @@ export function LandingHero() {
                 </Link>
               </div>
 
-              <div className="hero-l5 mt-8 grid gap-3 sm:grid-cols-2">
-                {['AI fit scoring', 'Daily Top 5 discovery', 'Resume intelligence', 'AI job intelligence', 'Resume builder', 'Application materials', 'Interview prep', 'Pipeline tracking'].map((feat) => (
-                  <div key={feat} className="flex items-center gap-2 text-sm text-ink-2">
-                    <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-accent-text" />
-                    {feat}
-                  </div>
-                ))}
-              </div>
             </div>
 
             {/* Right column (client-only spinner, no separate background panel) */}
@@ -88,6 +81,12 @@ export function LandingHero() {
               <p className="mt-5 text-center text-xs leading-5 text-muted">
                 Relax and trust the process.
               </p>
+            </div>
+
+            {/* On mobile this lands immediately after the spinner; on desktop
+                it spans the full hero width as a horizontal card track. */}
+            <div className="hero-l5 min-w-0 lg:col-span-2">
+              <HeroFeatureTrack />
             </div>
           </div>
         </div>

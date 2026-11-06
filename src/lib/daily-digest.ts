@@ -76,10 +76,15 @@ export function buildDailyDigest(input: {
   const count = tasks.length;
   const moveWord = count === 1 ? 'move' : 'moves';
 
+  // Keep the streak day and the queue size conceptually separate. The old copy
+  // read as if the streak itself had been capped ("Day 8 — 5 moves"), because
+  // the queue count was displayed directly beside the streak day.
   const title =
     streak.streakCount >= 2
-      ? `🔥 Day ${streak.streakCount} — ${count} ${moveWord} to keep the fire alive`
-      : `🎯 ${count} ${moveWord} to make today count`;
+      ? `🔥 Day ${streak.streakCount} — keep the fire alive`
+      : streak.streakCount === 1
+        ? '🌱 Day 1 — make today count'
+        : `🎯 ${count} ${moveWord} to make today count`;
 
   const lines: string[] = [];
   const shownLabel =

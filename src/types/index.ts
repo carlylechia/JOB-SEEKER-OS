@@ -281,6 +281,23 @@ export type EnrichedContact = Contact & {
   jobCompany: string;
 };
 
+export type WorkspaceStats = {
+  /** Roles still being actively pursued (offer, rejected and archived excluded). */
+  activeApplications: number;
+  /** Active roles added to the workspace in the last seven days. */
+  activeApplicationsThisWeek: number;
+  /** Bespoke resume variants generated from the career profile or a target job. */
+  tailoredResumes: number;
+  /** Tailored resume variants created in the last seven days. */
+  tailoredResumesThisWeek: number;
+  /** Recorded interviews divided by applications that have been submitted. */
+  interviewSuccessRate: number;
+  applicationsTracked: number;
+  interviewsRecorded: number;
+  /** Highest continuous daily engagement streak the user has ever reached. */
+  streakRecord: number;
+};
+
 export type BootstrapPayload = {
   jobs: JobLead[];
   templates: Template[];
@@ -292,4 +309,5 @@ export type BootstrapPayload = {
   streakCount: number;
   streakActiveToday?: boolean;
   streakAtRisk?: boolean;
+  stats?: WorkspaceStats;
 };

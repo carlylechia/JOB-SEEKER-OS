@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic';
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   await requireAdmin();
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen w-full overflow-x-clip bg-background">
       <header className="sticky top-0 z-30 border-b border-line bg-[color:var(--nav-scrim)] backdrop-blur-xl supports-[backdrop-filter]:bg-[color:var(--nav-scrim)]">
         <div className="shell flex min-h-16 items-center justify-between gap-3 py-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -37,8 +37,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         </div>
       </header>
 
-      <main className="shell py-6 lg:py-8">
-        <div className="min-w-0">{children}</div>
+      <main className="shell w-full py-6 lg:py-8">
+        <div className="w-full min-w-0 overflow-x-clip">{children}</div>
       </main>
 
       <BackToSiteButton />

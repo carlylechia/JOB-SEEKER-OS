@@ -3,6 +3,7 @@ import { demoTemplates } from './demo-data';
 import { defaultPreferences, defaultTitleOptions } from './preferences';
 import { JobLead, JobFormValues, Template, UserPreferences, UserProfileDetails } from '@/types';
 import { calculateFitScore, calculateFitTier, calculatePriority } from './scoring';
+import { isActiveJobStatus } from './job-status';
 import { deriveStreak } from './streak-core';
 import {
   sanitizeCompanyProfile,
@@ -172,12 +173,36 @@ export async function seedUserWorkspace(userId: string) {
 
 export async function getUserWorkspace(userId: string) {
   await ensureDefaultJobTitles();
-  const [user, profile, jobs, templates, titleOptions] = await Promise.all([
+
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const tailoredResumeWhere = {
+    userId,
+    OR: [
+      { targetJobId: { not: null } },
+      { sourceResumeId: { not: null } },
+      { origin: { in: ['DUPLICATE', 'OPTIMIZATION'] } },
+      { revision: { gt: 1 } },
+    ],
+  };
+
+  const [
+    user,
+    profile,
+    jobs,
+    templates,
+    titleOptions,
+    tailoredResumes,
+    tailoredResumesThisWeek,
+  ] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
     prisma.userProfile.findUnique({ where: { userId } }),
     prisma.jobLead.findMany({ where: { userId, deletedAt: null }, orderBy: [{ updatedAt: 'desc' }, { dateFound: 'desc' }] }),
     prisma.followUpTemplate.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
     prisma.jobTitle.findMany({ orderBy: { name: 'asc' } }),
+    prisma.structuredResume.count({ where: tailoredResumeWhere }),
+    prisma.structuredResume.count({
+      where: { ...tailoredResumeWhere, createdAt: { gte: weekAgo } },
+    }),
   ]);
 
   const streak = deriveStreak(
@@ -186,6 +211,19 @@ export async function getUserWorkspace(userId: string) {
     new Date(),
     profile?.timezone,
   );
+
+  // Dashboard metrics. Keep the definitions here rather than in the client so
+  // every screen reports the same numbers, and every query is scoped to the
+  // authenticated user.
+  const appliedStatuses = new Set(['APPLIED', 'INTERVIEWING', 'OFFER', 'REJECTED']);
+  const activeApplications = jobs.filter((job) => isActiveJobStatus(job.status));
+  const applications = jobs.filter(
+    (job) => job.dateApplied !== null || appliedStatuses.has(job.status),
+  );
+  const interviewsRecorded = applications.filter((job) => {
+    const interviews = Array.isArray(job.interviews) ? job.interviews : [];
+    return interviews.length > 0 || job.status === 'INTERVIEWING' || job.status === 'OFFER';
+  }).length;
 
   return {
     preferences: mapDbPreferences(profile),
@@ -204,6 +242,20 @@ export async function getUserWorkspace(userId: string) {
     streakCount: streak.streakCount,
     streakActiveToday: streak.activeToday,
     streakAtRisk: streak.isAtRisk,
+    stats: {
+      activeApplications: activeApplications.length,
+      activeApplicationsThisWeek: activeApplications.filter((job) => job.dateFound >= weekAgo)
+        .length,
+      tailoredResumes,
+      tailoredResumesThisWeek,
+      interviewSuccessRate:
+        applications.length === 0
+          ? 0
+          : Math.round((interviewsRecorded / applications.length) * 100),
+      applicationsTracked: applications.length,
+      interviewsRecorded,
+      streakRecord: Math.max(user?.longestStreak ?? 0, streak.streakCount),
+    },
   };
 }
 

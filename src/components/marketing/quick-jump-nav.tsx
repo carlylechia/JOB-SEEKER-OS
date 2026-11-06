@@ -44,9 +44,11 @@ export function QuickJumpNav() {
         </div>
       </div>
 
-      {/* Mobile: horizontal scrollable strip, bottom-center */}
-      <div className="fixed bottom-4 left-0 right-0 z-30 flex justify-center px-4 md:hidden">
-        <div className="flex max-w-full gap-2 overflow-x-auto rounded-2xl border border-line bg-background/90 px-3 py-2 shadow-soft backdrop-blur scrollbar-none">
+      {/* Mobile: horizontal scrollable strip, bottom-center. The safe-area
+          offset keeps it above the home indicator without adding dead space to
+          the footer itself. */}
+      <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-0 right-0 z-30 flex max-w-full justify-center px-4 md:hidden">
+        <div className="flex max-w-full gap-2 overflow-x-auto overscroll-x-contain rounded-2xl border border-line bg-background/90 px-3 py-2 shadow-soft backdrop-blur no-scrollbar">
           {items.map((item) => (
             <Link
               key={item.href}

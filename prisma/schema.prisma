@@ -25,6 +25,9 @@ model User {
   passwordResetToken       String?            @unique
   passwordResetExpires     DateTime?
   streakCount              Int                @default(0)
+  /// Highest streak ever reached. Kept separately because `streakCount`
+  /// resets when a day is missed, while the personal record should not.
+  longestStreak            Int                @default(0)
   lastActiveDate           DateTime?
   linkedinId               String?            @unique
   role                     UserRole           @default(USER)

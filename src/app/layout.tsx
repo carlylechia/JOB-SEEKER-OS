@@ -48,13 +48,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    // `overflow-x-clip` contains stray horizontal content without turning the
+    // document into a scroll container, which would break sticky descendants.
+    <html lang="en" suppressHydrationWarning className="w-full overflow-x-clip">
       <head>
         {/* Applies the stored/system theme before first paint so there is no
             flash of the wrong palette. */}
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body suppressHydrationWarning>
+      <body suppressHydrationWarning className="w-full overflow-x-clip">
         <ThemeProvider>{children}</ThemeProvider>
         <Analytics />
       </body>

@@ -123,7 +123,7 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
   }
 
   return (
-    <div className="min-h-screen bg-background text-ink">
+    <div className="min-h-screen w-full overflow-x-clip bg-background text-ink">
       <div className="sticky top-0 z-20 border-b border-line bg-[color:var(--nav-scrim)] backdrop-blur-xl supports-[backdrop-filter]:bg-[color:var(--nav-scrim)]">
         <div className="shell py-3">
           <div className="flex items-center justify-between gap-4">
@@ -422,8 +422,8 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
         )}
       </div>
 
-      <footer className="border-t border-line bg-card">
-        <div className="shell py-10">
+      <footer className="w-full overflow-hidden border-t border-line bg-card pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        <div className="shell w-full py-10">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm text-ink-2">© 2026 teChia Digital Solutions. teChia Jobs. All rights reserved.</p>

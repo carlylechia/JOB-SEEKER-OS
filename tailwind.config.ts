@@ -84,6 +84,14 @@ export default {
           'scrollbar-width': 'none',
           '&::-webkit-scrollbar': { display: 'none' },
         },
+        // Alias used by the marketing feature and footer tracks. Keeping both
+        // names avoids a visual regression in older components that already
+        // opted into `scrollbar-none`.
+        '.no-scrollbar': {
+          '-ms-overflow-style': 'none',
+          'scrollbar-width': 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+        },
       });
     }),
   ],

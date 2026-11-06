@@ -20,12 +20,13 @@ import { now } from '@/lib/billing/clock';
 import { createNotification, notificationExistsOnLocalDay } from '@/lib/notifications';
 import { logImportantInfo } from '@/lib/observability';
 import { deriveStreak, type StreakSnapshot } from './streak-core';
-import { STREAK_MILESTONES } from './streak-milestones';
+import { getStreakMilestoneProgress, isStreakMilestone } from './streak-milestones';
 
 export type TouchStreakResult = StreakSnapshot & { changed: boolean };
 
 type StreakUser = {
   streakCount: number;
+  longestStreak: number;
   lastActiveDate: Date | null;
   profile: { timezone: string } | null;
 };
@@ -35,6 +36,7 @@ async function loadStreakUser(userId: string): Promise<StreakUser | null> {
     where: { id: userId },
     select: {
       streakCount: true,
+      longestStreak: true,
       lastActiveDate: true,
       profile: { select: { timezone: true } },
     },
@@ -63,15 +65,26 @@ export async function touchStreak(
   // Already counted today. Repair an inconsistent stored count (for example a
   // row left at 0 by the old UTC-only implementation) without incrementing.
   if (snapshot.activeToday) {
-    if (snapshot.streakCount !== user.streakCount) {
+    const repairedRecord = Math.max(user.longestStreak, snapshot.streakCount);
+    if (
+      snapshot.streakCount !== user.streakCount ||
+      repairedRecord !== user.longestStreak
+    ) {
       await prisma.user
-        .update({ where: { id: userId }, data: { streakCount: snapshot.streakCount } })
+        .update({
+          where: { id: userId },
+          data: {
+            streakCount: snapshot.streakCount,
+            longestStreak: repairedRecord,
+          },
+        })
         .catch(() => null);
     }
     return { ...snapshot, changed: false };
   }
 
   const newStreak = snapshot.streakCount + 1;
+  const newRecord = Math.max(user.longestStreak, newStreak);
   const update = await prisma.user.updateMany({
     where: {
       id: userId,
@@ -80,7 +93,11 @@ export async function touchStreak(
       streakCount: user.streakCount,
       lastActiveDate: user.lastActiveDate,
     },
-    data: { streakCount: newStreak, lastActiveDate: at },
+    data: {
+      streakCount: newStreak,
+      longestStreak: newRecord,
+      lastActiveDate: at,
+    },
   });
 
   if (update.count === 0) {
@@ -110,7 +127,7 @@ export async function touchStreak(
     },
   });
 
-  if ((STREAK_MILESTONES as readonly number[]).includes(newStreak)) {
+  if (isStreakMilestone(newStreak)) {
     const alreadyNotified = await notificationExistsOnLocalDay(
       userId,
       'streak',
@@ -119,12 +136,16 @@ export async function touchStreak(
     ).catch(() => false);
 
     if (!alreadyNotified) {
+      const progress = getStreakMilestoneProgress(newStreak);
+      const milestoneWord = progress.remaining === 1 ? 'day' : 'days';
+
       await createNotification(userId, {
         type: 'streak',
         title: `🔥 ${newStreak}-day streak unlocked`,
         message:
           `You've shown up ${newStreak} days in a row. That is not luck — it is a promise you keep ` +
-          `to yourself. Next stop: ${updated.nextMilestone} days. Keep the fire alive.`,
+          `to yourself. Next stop: ${progress.next} days — only ${progress.remaining} ` +
+          `${milestoneWord} to go. Keep the fire alive.`,
         sendEmail: newStreak >= 7,
       }).catch(() => null);
     }
@@ -148,10 +169,20 @@ export async function getStreakStatus(
   if (!user) return deriveStreak(0, null, at, 'UTC');
 
   const snapshot = deriveStreak(user.streakCount, user.lastActiveDate, at, user.profile?.timezone);
+  const repairedRecord = Math.max(user.longestStreak, snapshot.streakCount);
 
-  if (snapshot.streakCount !== user.streakCount) {
+  if (
+    snapshot.streakCount !== user.streakCount ||
+    repairedRecord !== user.longestStreak
+  ) {
     await prisma.user
-      .update({ where: { id: userId }, data: { streakCount: snapshot.streakCount } })
+      .update({
+        where: { id: userId },
+        data: {
+          streakCount: snapshot.streakCount,
+          longestStreak: repairedRecord,
+        },
+      })
       .catch(() => null);
   }
 
