@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { LandingHero } from '@/components/marketing/landing-hero';
 import { LandingNav } from '@/components/marketing/landing-nav';
-import { LandingFeatures } from '@/components/marketing/landing-features';
+import { LandingFeatureMarquee } from '@/components/marketing/landing-feature-marquee';
+import { LandingStats } from '@/components/marketing/landing-stats';
 import { LandingHowItWorks } from '@/components/marketing/landing-how-it-works';
 import { LandingDashboardPreview } from '@/components/marketing/landing-dashboard-preview';
 import { LandingFaq } from '@/components/marketing/landing-faq';
@@ -11,6 +12,22 @@ import { LandingCta } from '@/components/marketing/landing-cta';
 import { SiteFooter } from '@/components/marketing/site-footer';
 import { PlatformJobsPreview } from '@/components/marketing/platform-jobs-preview';
 import { QuickJumpNav } from '@/components/marketing/quick-jump-nav';
+
+function LandingStatsFallback() {
+  return (
+    <section className="w-full min-w-0 py-12 sm:py-16">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-5">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-2xl border border-line bg-card p-5 shadow-soft sm:p-6">
+            <div className="h-9 w-24 rounded bg-surface-sunken animate-pulse" />
+            <div className="mt-3 h-4 w-28 rounded bg-surface-sunken animate-pulse" />
+            <div className="mt-2 h-3 w-32 rounded bg-surface-sunken animate-pulse" />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function PlatformJobsPreviewFallback() {
   return (
@@ -60,9 +77,18 @@ export default function LandingPage() {
         {/* Full-viewport hero with its own nav */}
         <LandingHero />
 
+        {/* Single feature marquee directly beneath the hero. */}
+        <LandingFeatureMarquee />
+
+        {/* Animated catalog metrics directly beneath the marquee. */}
+        <div className="shell">
+          <Suspense fallback={<LandingStatsFallback />}>
+            <LandingStats />
+          </Suspense>
+        </div>
+
         {/* Remaining sections inside centered shell */}
         <div className="shell">
-          <LandingFeatures />
           <LandingHowItWorks />
           <LandingDashboardPreview />
           <Suspense fallback={<PlatformJobsPreviewFallback />}>

@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { HeroFeatureTrack } from '@/components/marketing/hero-feature-track';
 import { SpinnerHeroClient } from '@/components/marketing/spinner-hero.client';
 
 /**
@@ -83,11 +82,6 @@ export function LandingHero() {
               </p>
             </div>
 
-            {/* On mobile this lands immediately after the spinner; on desktop
-                it spans the full hero width as a horizontal card track. */}
-            <div className="hero-l5 min-w-0 lg:col-span-2">
-              <HeroFeatureTrack />
-            </div>
           </div>
         </div>
       </div>

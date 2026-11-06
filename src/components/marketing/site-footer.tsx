@@ -58,29 +58,43 @@ export function SiteFooter() {
             </p>
           </div>
 
-          {/* Mobile: compact section cards in a snap-scrolling row.
-              Desktop: `contents` dissolves this wrapper so each section becomes
-              a normal grid column beside the brand copy. */}
-          <div className="-mx-4 flex w-[calc(100%+2rem)] min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 no-scrollbar sm:-mx-6 sm:w-[calc(100%+3rem)] sm:px-6 lg:contents lg:mx-0 lg:w-auto lg:overflow-visible lg:px-0 lg:pb-0">
-            {footerSections.map((section) => (
-              <section
-                key={section.title}
-                className="w-[68vw] max-w-[19rem] shrink-0 snap-start rounded-2xl border border-line bg-surface-sunken p-4 lg:w-auto lg:max-w-none lg:shrink lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0"
-              >
-                <h3 className="text-sm font-semibold text-ink">{section.title}</h3>
-                <div className="mt-3 grid gap-2.5 text-sm text-muted lg:mt-4 lg:gap-3">
-                  {section.links.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className="w-fit transition hover:text-ink"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            ))}
+          {/* Mobile: two centered columns (Product | Explore + Access stacked).
+              Desktop: `lg:contents` dissolves the wrappers so each section becomes
+              its own grid column beside the brand copy. */}
+          <div className="grid min-w-0 grid-cols-2 gap-x-6 gap-y-8 text-center lg:contents lg:text-left">
+            <section className="min-w-0">
+              <h3 className="text-sm font-semibold text-ink">Product</h3>
+              <div className="mt-3 grid gap-2.5 text-sm text-muted">
+                {footerSections[0].links.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="break-words transition hover:text-ink"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            </section>
+
+            <div className="min-w-0 grid gap-8 lg:contents">
+              {footerSections.slice(1).map((section) => (
+                <section key={section.title} className="min-w-0">
+                  <h3 className="text-sm font-semibold text-ink">{section.title}</h3>
+                  <div className="mt-3 grid gap-2.5 text-sm text-muted">
+                    {section.links.map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className="break-words transition hover:text-ink"
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
           </div>
         </div>
 
