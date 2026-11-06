@@ -61,8 +61,8 @@ export function SiteFooter() {
           {/* Mobile: two centered columns (Product | Explore + Access stacked).
               Desktop: `lg:contents` dissolves the wrappers so each section becomes
               its own grid column beside the brand copy. */}
-          <div className="grid min-w-0 grid-cols-2 gap-x-6 gap-y-8 text-center lg:contents lg:text-left">
-            <section className="min-w-0">
+          <div className="flex min-w-0 gap-6 overflow-x-auto snap-x snap-mandatory no-scrollbar text-center lg:grid lg:grid-cols-2 lg:overflow-visible lg:text-left">
+            <section className="min-w-0 shrink-0 snap-start lg:shrink">
               <h3 className="text-sm font-semibold text-ink">Product</h3>
               <div className="mt-3 grid gap-2.5 text-sm text-muted">
                 {footerSections[0].links.map((link) => (
@@ -77,9 +77,9 @@ export function SiteFooter() {
               </div>
             </section>
 
-            <div className="min-w-0 grid gap-8 lg:contents">
+            <div className="flex min-w-0 gap-8 lg:contents">
               {footerSections.slice(1).map((section) => (
-                <section key={section.title} className="min-w-0">
+                <section key={section.title} className="min-w-0 shrink-0 snap-start lg:shrink">
                   <h3 className="text-sm font-semibold text-ink">{section.title}</h3>
                   <div className="mt-3 grid gap-2.5 text-sm text-muted">
                     {section.links.map((link) => (

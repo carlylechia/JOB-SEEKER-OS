@@ -12,6 +12,7 @@ import { LandingCta } from '@/components/marketing/landing-cta';
 import { SiteFooter } from '@/components/marketing/site-footer';
 import { PlatformJobsPreview } from '@/components/marketing/platform-jobs-preview';
 import { QuickJumpNav } from '@/components/marketing/quick-jump-nav';
+import { InstallHighlight } from '@/components/shared/install-highlight';
 
 function LandingStatsFallback() {
   return (
@@ -99,6 +100,9 @@ export default function LandingPage() {
           <LandingCta />
         </div>
 
+        <div className="shell">
+          <InstallHighlight />
+        </div>
         <QuickJumpNav />
         <SiteFooter />
       </div>

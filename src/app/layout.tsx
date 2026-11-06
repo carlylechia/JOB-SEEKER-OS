@@ -50,13 +50,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     // `overflow-x-clip` contains stray horizontal content without turning the
     // document into a scroll container, which would break sticky descendants.
-    <html lang="en" suppressHydrationWarning className="w-full overflow-x-clip">
+    <html lang="en" suppressHydrationWarning className="w-full overflow-x-hidden">
       <head>
         {/* Applies the stored/system theme before first paint so there is no
             flash of the wrong palette. */}
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body suppressHydrationWarning className="w-full overflow-x-clip">
+      <body suppressHydrationWarning className="w-full overflow-x-hidden">
         <ThemeProvider>{children}</ThemeProvider>
         <Analytics />
       </body>

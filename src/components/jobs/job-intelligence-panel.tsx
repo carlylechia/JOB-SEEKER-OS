@@ -40,6 +40,7 @@ import {
 } from '@/lib/job-intelligence/categories';
 import { DIMENSION_LABELS, type DimensionMap, type DimensionOutcome } from '@/lib/job-intelligence/schema';
 import type { JobIntelligenceResult, OverallCategory } from '@/lib/job-intelligence/schema';
+import { AddSkillButton } from '@/components/shared/add-skill-button';
 
 // ─── Presentation vocabulary ───────────────────────────────────────────────
 
@@ -491,6 +492,9 @@ function AnalysisBody({
                     {IMPORTANCE_LABELS[requirement.importance] ?? requirement.importance}
                   </span>
                   <span className="text-sm font-medium text-ink">{requirement.requirement}</span>
+                  {(requirement.outcome === 'MISMATCH' || requirement.outcome === 'PARTIAL_MATCH') && (
+                    <AddSkillButton skill={requirement.requirement} />
+                  )}
                 </div>
                 <p className="mt-2 text-sm leading-relaxed text-muted">
                   {requirement.explanation}

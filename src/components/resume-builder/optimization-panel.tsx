@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 
 import { optimizationResultSchema, type OptimizationResult, type ReviewOperation } from '@/lib/resume-builder/optimization/schema';
+import { AddSkillButton } from '@/components/shared/add-skill-button';
 import { resumeContentSchema, type ResumeContent, type ResumeSectionKey } from '@/lib/resume-builder/schema';
 import type { LayoutDocument } from '@/lib/resume-builder/layout';
 
@@ -764,6 +765,11 @@ export function ResumeOptimizationPanel({
                         {gap.question}
                       </label>
                       <p className="mt-1 text-xs leading-relaxed text-muted">{gap.why}</p>
+                      {gap.section === 'SKILLS' && (
+                        <div className="mt-2">
+                          <AddSkillButton skill={gap.question} resumeId={resumeId} label="Confirm & add this skill" />
+                        </div>
+                      )}
                       <textarea
                         id={`gap-answer-${index}`}
                         className="input mt-3 resize-y"

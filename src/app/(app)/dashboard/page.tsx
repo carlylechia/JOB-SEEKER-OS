@@ -15,6 +15,7 @@ import { TopPriorityList } from '@/components/dashboard/top-priority-list';
 import { UpcomingList } from '@/components/dashboard/upcoming-list';
 import { WeeklyTrendChart } from '@/components/dashboard/weekly-trend-chart';
 import { useJobs } from '@/hooks/use-job-data';
+import { InstallHighlight } from '@/components/shared/install-highlight';
 import { isActiveJobStatus } from '@/lib/job-status';
 
 function getGreeting(name?: string): string {
@@ -318,6 +319,7 @@ export default function DashboardPage() {
           )}
         </>
       )}
+      <InstallHighlight />
     </div>
   );
 }
