@@ -54,6 +54,14 @@ $('save-settings').addEventListener('click', () => {
   });
 });
 
+$('connect-account').addEventListener('click', () => {
+  chrome.storage.sync.get(['techia_app_url'], (res) => {
+    const url = (res.techia_app_url || 'https://techiadigital.com').replace(/\/$/, '');
+    chrome.tabs.create({ url: url + '/login' });
+    status('Sign in to teChia Jobs in the opened tab. The extension will use your session automatically.');
+  });
+});
+
 loadSettings();
 refreshStats();
 chrome.runtime.onMessage.addListener((msg) => {

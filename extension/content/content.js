@@ -140,6 +140,19 @@
     return true;
   }
 
+  function findLabelRaw(el) {
+    return (typeof findLabel === 'function') ? findLabel(el) : (el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.name || '');
+  }
+
+  async function askAI(question, profile) {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        { type: 'AI_SCREENING_ANSWER', payload: { question, jobDescription: (document.body?.innerText || '').slice(0, 4000), profile } },
+        (res) => resolve(res?.ok ? (res.answer || '') : '')
+      );
+    });
+  }
+
   async function runAutoFill(profileOverride) {
     let profile = profileOverride;
     if (!profile) {
@@ -147,12 +160,15 @@
       profile = stored || {};
     }
     const fields = Array.from(document.querySelectorAll('input, textarea, select'));
-    fields.forEach((el) => {
+    for (const el of fields) {
       const type = (el.getAttribute('type') || '').toLowerCase();
-      if (type === 'hidden' || type === 'submit' || type === 'button' || type === 'file') return;
-      const label = normalizeLabel(findLabel(el) + ' ' + (el.name || '') + ' ' + (el.id || ''));
+      if (type === 'hidden' || type === 'submit' || type === 'button' || type === 'file') continue;
+      const rawLabel = findLabelRaw(el);
+      const label = normalizeLabel(rawLabel + ' ' + (el.name || '') + ' ' + (el.id || ''));
+      let matched = false;
       for (const entry of FIELD_MAP) {
         if (entry.keys.some((k) => label.includes(k))) {
+          matched = true;
           const val = entry.value(profile);
           if (val != null && val !== '') {
             setValue(el, val);
@@ -161,8 +177,18 @@
           break;
         }
       }
-    });
-    // Highlight remaining empty textareas/inputs for review
+      if (!matched && (el.tagName === 'TEXTAREA' || type === 'text') && !el.value) {
+        // Ask AI for custom screening questions
+        const answer = await askAI(rawLabel || 'this field', profile);
+        if (answer) {
+          setValue(el, answer);
+          el.classList.remove('techia-highlight');
+        } else {
+          el.classList.add('techia-highlight');
+        }
+      }
+    }
+    // Highlight remaining empty text fields for review
     fields.forEach((el) => {
       const type = (el.getAttribute('type') || '').toLowerCase();
       if (type === 'hidden' || type === 'submit' || type === 'button' || type === 'file') return;
@@ -172,3 +198,4 @@
     });
   }
 })();
+

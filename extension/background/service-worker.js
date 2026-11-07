@@ -67,6 +67,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({ ok: true });
           break;
         }
+        case 'AI_SCREENING_ANSWER': {
+          const appUrl = await getAppUrl();
+          try {
+            const res = await fetch(`${appUrl}/api/extension/screening-answer`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify(message.payload || {}),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data?.error?.message || `API ${res.status}`);
+            sendResponse({ ok: true, answer: data?.data?.answer || data?.answer });
+          } catch (err) {
+            sendResponse({ ok: false, error: String(err?.message || err) });
+          }
+          break;
+        }
         default:
           sendResponse({ ok: false, error: 'Unknown message type' });
       }
