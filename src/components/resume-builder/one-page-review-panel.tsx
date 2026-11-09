@@ -265,7 +265,7 @@ export function OnePageReviewPanel({
 
       {targetJobId && canOptimize ? (
         <label className="flex items-start gap-2 rounded-xl border border-line bg-surface p-3 text-sm">
-          <input type="checkbox" className="mt-1 accent-[#D4AF37]" checked={useAi} onChange={(event) => { setUseAi(event.target.checked); setStale(Boolean(proposal)); }} />
+          <input type="checkbox" className="mt-1 accent-[rgb(var(--accent))]" checked={useAi} onChange={(event) => { setUseAi(event.target.checked); setStale(Boolean(proposal)); }} />
           <span>
             <span className="block font-medium text-ink">Include optional AI wording suggestions</span>
             <span className="block text-xs text-muted">Uses the existing Resume Optimization feature and may use one AI credit. Each suggestion is evidence-checked and remains optional.</span>
@@ -312,7 +312,7 @@ export function OnePageReviewPanel({
                 return (
                   <label key={rewrite.id} className="block rounded-xl border border-line bg-surface p-3">
                     <span className="flex items-center gap-2 text-sm font-medium text-ink">
-                      <input type="checkbox" className="accent-[#D4AF37]" checked={checked} onChange={() => toggleRewrite(rewrite)} />
+                      <input type="checkbox" className="accent-[rgb(var(--accent))]" checked={checked} onChange={() => toggleRewrite(rewrite)} />
                       Use this {rewrite.section.toLowerCase()} rewrite
                     </span>
                     <span className="mt-3 grid gap-3 md:grid-cols-2">
@@ -346,7 +346,7 @@ export function OnePageReviewPanel({
                         return (
                           <li key={item.key}>
                             <label className="flex items-start gap-2 rounded-lg bg-surface p-2.5 text-sm">
-                              <input type="checkbox" className="mt-1 shrink-0 accent-[#D4AF37]" checked={checked} onChange={() => toggleItem(item.key)} />
+                              <input type="checkbox" className="mt-1 shrink-0 accent-[rgb(var(--accent))]" checked={checked} onChange={() => toggleItem(item.key)} />
                               <span className="min-w-0 flex-1 break-words">
                                 <span className="block font-medium text-ink">{item.label}</span>
                                 {item.text ? <span className="mt-0.5 block whitespace-pre-wrap text-xs text-ink-2">{item.text}</span> : null}

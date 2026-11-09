@@ -63,7 +63,7 @@ function applyTheme(theme: Theme) {
   root.setAttribute('data-theme', theme);
   // Keeps the mobile browser chrome in step with the page.
   const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-  if (meta) meta.content = theme === 'dark' ? '#08111f' : '#FAFAF7';
+  if (meta) meta.content = theme === 'dark' ? '#191D1B' : '#F7F8F3';
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

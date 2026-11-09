@@ -831,7 +831,7 @@ export function ResumeEditor({
                     <label className="flex h-8 shrink-0 items-center border-l border-line/70 px-2">
                       <input
                         type="checkbox"
-                        className="h-3.5 w-3.5 accent-[#D4AF37]"
+                        className="h-3.5 w-3.5 accent-[rgb(var(--accent))]"
                         checked={!hiddenSections.includes(section)}
                         aria-label={`Include ${SECTION_LABELS[section]} in resume`}
                         onChange={() => toggleSectionVisibility(section)}

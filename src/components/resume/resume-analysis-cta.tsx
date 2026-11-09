@@ -136,7 +136,7 @@ export function ResumeAnalysisCta({ hasResume }: { hasResume: boolean }) {
             id="resume-intelligence-heading"
             className="flex items-center gap-2 text-sm font-medium text-ink"
           >
-            <Sparkles className="h-4 w-4 shrink-0 text-[#8A6D1F]" aria-hidden="true" />
+            <Sparkles className="h-4 w-4 shrink-0 text-accent-text" aria-hidden="true" />
             Career profile
           </h2>
           <p className="muted mt-1">
@@ -243,7 +243,7 @@ export function ResumeAnalysisCta({ hasResume }: { hasResume: boolean }) {
             {retryable && (
               <button
                 type="button"
-                className="mt-2 text-xs font-medium text-[#8A6D1F] underline underline-offset-2"
+                className="mt-2 text-xs font-medium text-accent-text underline underline-offset-2"
                 onClick={() => void analyse(false)}
               >
                 Try again

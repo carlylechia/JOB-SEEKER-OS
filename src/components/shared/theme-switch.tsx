@@ -17,15 +17,15 @@ const OPTIONS: Option[] = [
     value: 'light',
     label: 'Light',
     Icon: Sun,
-    // warm canvas on the left, gold accent on the right
-    swatch: 'linear-gradient(105deg,#FAFAF7 0 52%,#D4AF37 52% 100%)',
+    // warm canvas on the left, acid-lime accent on the right
+    swatch: 'linear-gradient(105deg,#F7F8F3 0 52%,#B7F34A 52% 100%)',
   },
   {
     value: 'dark',
     label: 'Dark',
     Icon: Moon,
-    // navy canvas on the left, blue accent on the right
-    swatch: 'linear-gradient(105deg,#08111f 0 52%,#4F8CFF 52% 100%)',
+    // charcoal canvas on the left, rich acid-lime accent on the right
+    swatch: 'linear-gradient(105deg,#191D1B 0 52%,#A6E635 52% 100%)',
   },
 ];
 

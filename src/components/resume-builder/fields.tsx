@@ -179,7 +179,7 @@ export function CheckboxField({
       <input
         id={id}
         type="checkbox"
-        className="mt-0.5 h-4 w-4 shrink-0 accent-[#D4AF37]"
+        className="mt-0.5 h-4 w-4 shrink-0 accent-[rgb(var(--accent))]"
         checked={checked}
         aria-describedby={hint ? `${id}-hint` : undefined}
         onChange={(event) => onChange(event.target.checked)}

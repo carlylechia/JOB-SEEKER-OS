@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'The AI-powered operating system for your job search.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#FAFAF7',
-    theme_color: '#111318',
+    background_color: '#F7F8F3',
+    theme_color: '#151715',
     icons: [
       { src: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],

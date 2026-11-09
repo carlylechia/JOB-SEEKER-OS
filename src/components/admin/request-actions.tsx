@@ -139,7 +139,7 @@ export function RequestActions({
               type="checkbox"
               checked={activatePlan}
               onChange={(e) => setActivatePlan(e.target.checked)}
-              className="mt-0.5 accent-[#D4AF37]"
+              className="mt-0.5 accent-[rgb(var(--accent))]"
             />
             <span>
               Activate the {requestedPlan.charAt(0) + requestedPlan.slice(1).toLowerCase()} plan when

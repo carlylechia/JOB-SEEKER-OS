@@ -291,7 +291,7 @@ export function ResumeListClient({ initialResumes, careerProfile, access, initia
               <input
                 type="radio"
                 name="start-from"
-                className="mt-1 h-4 w-4 accent-[#D4AF37]"
+                className="mt-1 h-4 w-4 accent-[rgb(var(--accent))]"
                 checked={startFrom === 'PROFILE'}
                 disabled={!careerProfile?.confirmed}
                 onChange={() => setStartFrom('PROFILE')}
@@ -326,7 +326,7 @@ export function ResumeListClient({ initialResumes, careerProfile, access, initia
               <input
                 type="radio"
                 name="start-from"
-                className="mt-1 h-4 w-4 accent-[#D4AF37]"
+                className="mt-1 h-4 w-4 accent-[rgb(var(--accent))]"
                 checked={startFrom === 'BLANK'}
                 onChange={() => setStartFrom('BLANK')}
               />
@@ -347,7 +347,7 @@ export function ResumeListClient({ initialResumes, careerProfile, access, initia
               <input
                 type="radio"
                 name="start-from"
-                className="mt-1 h-4 w-4 accent-[#D4AF37]"
+                className="mt-1 h-4 w-4 accent-[rgb(var(--accent))]"
                 checked={startFrom === 'DUPLICATE'}
                 disabled={resumes.length === 0}
                 onChange={() => setStartFrom('DUPLICATE')}

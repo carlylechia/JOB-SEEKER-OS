@@ -792,7 +792,7 @@ function EntryRow({
             <span
               aria-hidden="true"
               className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
-                checked ? 'border-accent bg-accent text-[#17191E]' : 'border-line bg-card'
+                checked ? 'border-accent bg-accent text-accent-ink' : 'border-line bg-card'
               }`}
             >
               {checked && <Check className="h-3.5 w-3.5" />}
