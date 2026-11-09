@@ -188,6 +188,12 @@ Full behaviour and configuration:
 - public job discovery with authenticated import into private workspaces
 - request validation, sanitization, and lightweight rate limiting on important endpoints
 - observability hooks for important route failures and product events
+- self-hosted Fraunces + Inter typography and a lime/charcoal/sand token system
+  (see [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md))
+- sticky topbar with an independently scrolling sidebar and pinned account footer
+- admin individual/bulk user deletion with protected accounts, durable audit rows
+  and retryable file cleanup (see
+  [`docs/ADMIN_USER_MANAGEMENT.md`](docs/ADMIN_USER_MANAGEMENT.md))
 
 ## Scoring Model
 
@@ -446,10 +452,13 @@ development data.
 Covered: trial semantics and idempotency, entitlement gating, upgrade requests
 and their state machine, plan-change transactions and audit, cross-user
 isolation, cron authorization, email failure isolation, usage limits
-(including concurrency), and Resume Intelligence (format detection, archive-bomb
-protection, evidence verification, prompt-injection containment, merge
-behaviour, and the security regressions around cross-user access and privilege
-escalation).
+(including concurrency), admin user deletion (validation, protected accounts,
+relation detaching, audit rows, storage cleanup retries and partial bulk
+outcomes), the self-hosted font/palette/contrast contract, sticky-shell layout
+guards, the branded loader/404 and reduced-motion coverage, and Resume
+Intelligence (format detection, archive-bomb protection, evidence verification,
+prompt-injection containment, merge behaviour, and the security regressions
+around cross-user access and privilege escalation).
 
 **No test needs an API key or makes a network call.** AI extraction is served
 by an injected fake provider, and every resume fixture is generated in code — no
