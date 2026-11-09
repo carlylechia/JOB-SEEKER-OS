@@ -13,7 +13,7 @@ import { getEffectiveSubscription } from '@/lib/billing/subscriptions';
 import { getUserUsageBreakdown } from '@/lib/billing/usage';
 import { logImportantInfo } from '@/lib/observability';
 import { applyRateLimit } from '@/lib/rate-limit';
-import { deleteStoredAsset } from '@/lib/durable-upload';
+import { deleteAdminUsers } from '@/lib/admin/user-deletion';
 import { AdminUserDeleteError } from '@/lib/admin/user-delete-error';
 
 export const dynamic = 'force-dynamic';
@@ -96,16 +96,10 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 /**
  * DELETE /api/admin/users/[id]
  *
- * Admin-only, destructive user deletion. Safety properties:
- *   - actor must be an ADMIN
- *   - rate limited per admin
- *   - never allows self-deletion
- *   - never allows deleting the last remaining admin
- *   - user-owned relations cascade in the DB transaction
- *   - stored resume/avatar blobs belonging to the user are removed best effort
- *   - every deletion is audit-logged server-side
+ * Admin-only, destructive individual user deletion. All authorization, safety
+ * rules, relation handling, storage cleanup and audit writes live in the shared
+ * `deleteAdminUsers` service so the bulk route cannot drift from this one.
  */
-
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   const admin = await getCurrentAdmin();
 
@@ -129,75 +123,69 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
   return handleRoute(
     async () => {
       try {
-        const target = await prisma.user.findUnique({
-          where: { id },
-          select: {
-            id: true,
-            email: true,
-            role: true,
-            profile: { select: { resumeUrl: true, profilePictureUrl: true } },
-            resumeDocuments: { select: { url: true } },
-          },
+        const result = await deleteAdminUsers({
+          actorId: admin.id,
+          userIds: [id],
+          mode: 'individual',
         });
+        const outcome = result.outcomes[0];
 
-        if (!target) return apiError('NOT_FOUND', 'User not found.', { request });
-
-        if (target.id === admin.id) {
-          return apiError('CONFLICT', 'You cannot delete your own administrator account.', { request });
+        if (outcome?.status === 'deleted') {
+          return privateNoStore(
+            jsonOk(
+              {
+                ok: true,
+                id,
+                auditEventId: result.auditEventId,
+                fileCleanup: result.fileCleanup,
+              },
+              request,
+            ),
+          );
         }
 
-        if (target.role === 'ADMIN') {
-          const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
-          if (adminCount <= 1) {
-            return apiError('CONFLICT', 'Cannot delete the last administrator account.', { request });
-          }
+        if (outcome?.status === 'skipped') {
+          return privateNoStore(
+            apiError('CONFLICT', outcome.message ?? 'This account is protected.', {
+              request,
+              meta: { code: outcome.code, auditEventId: result.auditEventId },
+            }),
+          );
         }
 
-        const deleted = await prisma.$transaction(async (tx) => {
-          const current = await tx.user.findUnique({
-            where: { id },
-            select: { id: true, role: true },
-          });
-          if (!current) throw new AdminUserDeleteError('NOT_FOUND', 'User not found.');
-          if (current.id === admin.id) {
-            throw new AdminUserDeleteError('CONFLICT', 'You cannot delete your own administrator account.');
-          }
-          if (current.role === 'ADMIN') {
-            const adminCount = await tx.user.count({ where: { role: 'ADMIN' } });
-            if (adminCount <= 1) {
-              throw new AdminUserDeleteError('CONFLICT', 'Cannot delete the last administrator account.');
-            }
-          }
-          await tx.user.delete({ where: { id } });
-          return true;
-        });
-
-        // Best-effort storage cleanup; never fail the response if a blob is gone.
-        const deletes: Array<Promise<void>> = [];
-        if (target.profile?.resumeUrl) {
-          deletes.push(deleteStoredAsset(target.profile.resumeUrl, { kind: 'resume', userId: id }));
+        if (outcome?.code === 'NOT_FOUND') {
+          return privateNoStore(
+            apiError('NOT_FOUND', 'User not found.', {
+              request,
+              meta: { auditEventId: result.auditEventId },
+            }),
+          );
         }
-        if (target.profile?.profilePictureUrl) {
-          deletes.push(deleteStoredAsset(target.profile.profilePictureUrl, { kind: 'avatar', userId: id }));
-        }
-        for (const doc of target.resumeDocuments ?? []) {
-          deletes.push(deleteStoredAsset(doc.url, { kind: 'resume', userId: id }));
-        }
-        await Promise.allSettled(deletes);
 
-        await logImportantInfo({
-          event: 'admin_user_deleted',
-          userId: admin.id,
-          context: { targetUserId: id, targetEmail: target.email, targetRole: target.role },
-        });
-
-        if (!deleted) return apiError('INTERNAL_ERROR', 'Something went wrong. Please try again.', { request });
-
-        return privateNoStore(jsonOk({ ok: true, id }, request));
+        return privateNoStore(
+          apiError('INTERNAL_ERROR', 'This account could not be deleted.', {
+            request,
+            meta: { auditEventId: result.auditEventId },
+          }),
+        );
       } catch (error) {
         if (error instanceof AdminUserDeleteError) {
-          const code = error.code === 'NOT_FOUND' ? 'NOT_FOUND' : 'CONFLICT';
-          return apiError(code, error.message, { request });
+          if (error.code === 'VALIDATION_FAILED') {
+            return apiError('VALIDATION_FAILED', error.message, { request });
+          }
+          if (error.code === 'FORBIDDEN') {
+            return apiError('FORBIDDEN', error.message, { request });
+          }
+          if (error.code === 'NOT_FOUND') {
+            return apiError('NOT_FOUND', error.message, { request });
+          }
+          if (error.code === 'CONFLICT') {
+            return apiError('CONFLICT', error.message, { request });
+          }
+          return apiError('INTERNAL_ERROR', error.message, {
+            request,
+            meta: error.code === 'AUDIT_FAILED' ? { auditFailed: true } : undefined,
+          });
         }
         throw error;
       }

@@ -101,6 +101,15 @@ export function isPrivateResumeUrl(url: string): boolean {
  * storage: a URL stored in a user-controlled column must never be able to
  * delete another tenant's object or fetch it with the store token.
  */
+export type StoredAssetDeletion =
+  | { status: 'deleted' }
+  | { status: 'skipped'; reason: 'missing_url' | 'not_owned' }
+  | { status: 'failed'; error: string };
+
+export function isAssetKind(value: string): value is AssetKind {
+  return value === 'resume' || value === 'avatar';
+}
+
 export function isOwnedStoredAssetUrl(
   url: string | null | undefined,
   owner: { kind: AssetKind; userId: string },
@@ -130,27 +139,67 @@ export function isOwnedStoredAssetUrl(
   return fileName.startsWith(`${userId}-`);
 }
 
-export async function deleteStoredAsset(
+/**
+ * Delete a stored asset and report whether cleanup actually happened.
+ *
+ * This is the variant destructive workflows should use: an external store can
+ * fail independently of the database transaction, and callers must be able to
+ * record an explicit retryable state instead of claiming complete deletion.
+ *
+ * Only server-stored URLs that belong to the owner's namespace are touched;
+ * client-supplied URLs and shared assets are skipped.
+ */
+export async function deleteStoredAssetWithResult(
   url: string | null | undefined,
   owner: { kind: AssetKind; userId: string },
-): Promise<void> {
-  if (!url || !isOwnedStoredAssetUrl(url, owner)) return;
+): Promise<StoredAssetDeletion> {
+  if (!url) return { status: 'skipped', reason: 'missing_url' };
+  if (!isOwnedStoredAssetUrl(url, owner)) return { status: 'skipped', reason: 'not_owned' };
 
   if (isVercelBlobUrl(url)) {
-    if (!hasBlobToken()) return;
-    await del(url).catch(() => undefined);
-    return;
+    if (!hasBlobToken()) {
+      return { status: 'failed', error: 'blob_token_missing' };
+    }
+    try {
+      await del(url);
+      return { status: 'deleted' };
+    } catch (error) {
+      // A blob that is already gone is a successful cleanup. Keep the error
+      // classification stable and free of URLs, headers or provider payloads.
+      const name = error instanceof Error ? error.name : 'UnknownError';
+      const message = error instanceof Error ? error.message : '';
+      if (/not found|404/i.test(message)) return { status: 'deleted' };
+      return { status: 'failed', error: `blob_delete_failed:${name}` };
+    }
   }
 
-  if (!isLocalUploadUrl(url)) return;
+  if (!isLocalUploadUrl(url)) return { status: 'skipped', reason: 'not_owned' };
 
   // Defence in depth: even after the ownership check, resolve the path and
   // verify it is still inside public/uploads before unlinking.
   const uploadsRoot = path.resolve(process.cwd(), 'public', 'uploads');
   const clean = url.split(/[?#]/)[0];
   const resolved = path.resolve(process.cwd(), 'public', clean.replace(/^\//, ''));
-  if (resolved === uploadsRoot || !resolved.startsWith(uploadsRoot + path.sep)) return;
-  await fs.unlink(resolved).catch(() => undefined);
+  if (resolved === uploadsRoot || !resolved.startsWith(uploadsRoot + path.sep)) {
+    return { status: 'skipped', reason: 'not_owned' };
+  }
+
+  try {
+    await fs.unlink(resolved);
+    return { status: 'deleted' };
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException)?.code;
+    if (code === 'ENOENT') return { status: 'deleted' };
+    return { status: 'failed', error: `local_unlink_failed:${code ?? 'unknown'}` };
+  }
+}
+
+/** Best-effort compatibility wrapper for non-critical cleanup paths. */
+export async function deleteStoredAsset(
+  url: string | null | undefined,
+  owner: { kind: AssetKind; userId: string },
+): Promise<void> {
+  await deleteStoredAssetWithResult(url, owner);
 }
 
 export async function uploadUserAsset(params: {

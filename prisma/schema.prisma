@@ -1590,3 +1590,53 @@ model ProductEvent {
   @@index([userId, createdAt])
   @@index([createdAt])
 }
+
+/// Administrative audit trail for irreversible actions.
+///
+/// Deliberately has NO foreign key to User: the record must survive deletion of
+/// both the acting administrator and the target account. Emails are snapshots,
+/// not live joins, and only the minimum identifiers needed to understand an
+/// operation are stored. Never put passwords, tokens, resumes or interview
+/// content in `outcomes`.
+model AdminAuditEvent {
+  id                 String   @id @default(cuid())
+  actorAdminId       String
+  actorEmail         String
+  action             String
+  mode               String
+  status             String   @default("STARTED")
+  requestedCount     Int      @default(0)
+  deletedCount       Int      @default(0)
+  failedCount        Int      @default(0)
+  skippedCount       Int      @default(0)
+  targetUserIds      String[] @default([])
+  outcomes           Json?
+  fileCleanupStatus  String   @default("NONE")
+  fileCleanupPending Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([actorAdminId, createdAt])
+  @@index([action, createdAt])
+  @@index([createdAt])
+}
+
+/// Durable retry queue for external file cleanup that could not finish after a
+/// database deletion committed. The URL is the server-stored, ownership-checked
+/// value captured before the user row disappeared; it is never client input.
+model StorageCleanupTask {
+  id            String    @id @default(cuid())
+  kind          String
+  url           String
+  userId        String
+  reason        String?
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  lastError     String?
+  nextAttemptAt DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([userId])
+}
