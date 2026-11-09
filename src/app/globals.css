@@ -17,42 +17,47 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   DESIGN TOKENS
-   Light — teChia gold/silver identity (default)
-   Dark  — the original pre-redesign palette, restored verbatim
+   DESIGN TOKENS — teChia Jobs "lime / charcoal / sand" system
+   Light — warm acid-lime canvas with jet-black type
+   Dark  — charcoal canvas, sand type and rich acid-lime accent
+
    Tokens are raw "R G B" channel triplets so Tailwind's <alpha-value>
    syntax (bg-card/60, border-line/20) keeps working in both themes.
+   The 60:30:10 rule is encoded here:
+     60%  --bg / --page-bg            dominant canvas
+     30%  --card / --sidebar / surface secondary panels
+     10%  --accent                     CTAs, active states, focus
    ═══════════════════════════════════════════════════════════════════ */
 
 :root,
 [data-theme='light'] {
   color-scheme: light;
 
-  --bg: 250 250 247;            /* #FAFAF7 warm-white canvas */
-  --card: 255 255 255;
-  --sidebar: 255 255 255;
-  --line: 217 221 227;          /* #D9DDE3 */
-  --line-strong: 201 206 214;   /* #C9CED6 */
-  --ink: 23 25 30;              /* #17191E */
-  --ink-2: 74 80 90;            /* #4A505A */
-  --muted: 104 111 123;         /* #686F7B */
+  --bg: 247 248 243;            /* #F7F8F3 light surface */
+  --card: 255 255 255;          /* raised panels */
+  --sidebar: 238 240 233;       /* #EEF0E9 secondary surface */
+  --line: 220 224 213;          /* #DCE0D5 */
+  --line-strong: 198 204 191;   /* #C6CCBF */
+  --ink: 21 23 21;              /* #151715 jet black */
+  --ink-2: 52 58 53;            /* #343A35 dark grey */
+  --muted: 100 108 97;          /* #646C61 — 5.1:1 on the light canvas */
 
-  --accent: 212 175 55;         /* #D4AF37 gold */
-  --accent-hover: 232 200 92;   /* #E8C85C */
-  --accent-ink: 23 25 30;       /* label colour sitting on the accent */
-  --accent-text: 138 109 31;    /* #8A6D1F gold rendered as text (WCAG on light) */
+  --accent: 183 243 74;         /* #B7F34A acid lime */
+  --accent-hover: 166 230 53;   /* #A6E635 */
+  --accent-ink: 21 23 21;       /* 13.7:1 on acid lime */
+  --accent-text: 79 107 20;     /* #4F6B14 — lime rendered as readable text */
 
-  --success: 31 157 104;        /* #1F9D68 */
-  --success-text: 19 107 69;    /* #136B45 */
-  --success-solid: 31 157 104;
-  --success-ink: 7 20 11;
-  --warn: 217 142 4;            /* #D98E04 */
-  --warn-text: 107 84 16;       /* #6B5410 */
-  --danger: 214 69 69;          /* #D64545 */
+  --success: 23 122 68;         /* #177A44 — 5.0:1 on the light canvas */
+  --success-text: 18 107 61;    /* #126B3D */
+  --success-solid: 27 122 67;
+  --success-ink: 5 32 19;
+  --warn: 138 90 0;             /* #8A5A00 — 5.5:1 on the light canvas */
+  --warn-text: 122 84 0;        /* #7A5400 */
+  --danger: 199 68 68;          /* #C74444 */
   --danger-text: 155 44 44;     /* #9B2C2C */
-  --danger-solid: 185 28 28;    /* #B91C1C — solid fills only; keeps white labels at 6.5:1 */
-  --info: 91 100 114;           /* #5B6472 */
-  --info-text: 10 92 138;       /* #0A5C8A */
+  --danger-solid: 185 28 28;    /* #B91C1C — solid fills only; white labels stay legible */
+  --info: 63 98 115;            /* #3F6273 */
+  --info-text: 11 92 122;       /* #0B5C7A */
 
   --sky-text: 7 89 133;
   --indigo-text: 55 48 163;
@@ -60,61 +65,66 @@
   --magenta-text: 162 28 175;
   --orange-text: 154 52 18;
 
-  /* Translucent surfaces */
+  /* Opaque supporting surfaces keep the 60:30:10 hierarchy intact. */
   --surface: rgb(255 255 255);
-  --surface-hover: rgb(232 235 240);        /* #E8EBF0 */
-  --surface-sunken: rgb(17 19 24 / 0.035);
-  --surface-sunken-hover: rgb(17 19 24 / 0.065);
+  --surface-hover: rgb(238 240 233);        /* #EEF0E9 */
+  --surface-sunken: rgb(52 58 53 / 0.035);
+  --surface-sunken-hover: rgb(52 58 53 / 0.07);
   --field: rgb(255 255 255);
-  --field-select: rgb(244 245 247);         /* #F4F5F7 */
+  --field-select: rgb(241 243 236);         /* #F1F3EC */
 
-  --page-bg: #FAFAF7;
-  --shadow-soft: 0 12px 30px rgba(17, 19, 24, 0.08);
-  --shadow-lift: 0 18px 44px rgba(17, 19, 24, 0.12);
-  --shadow-nav: 0 10px 34px rgba(17, 19, 24, 0.1);
-  --focus-ring: #8A6D1F;
-  --nav-scrim: rgba(250, 250, 247, 0.82);
+  /* Layered ambient canvas: warm sand + a restrained lime wash. */
+  --page-bg:
+    radial-gradient(58rem 40rem at 88% -10%, rgba(183, 243, 74, 0.16), transparent 62%),
+    radial-gradient(46rem 34rem at 2% 4%, rgba(216, 205, 182, 0.28), transparent 60%),
+    linear-gradient(180deg, #F7F8F3 0%, #F3F5ED 100%);
+  --shadow-soft: 0 12px 30px rgba(21, 23, 21, 0.07);
+  --shadow-lift: 0 18px 44px rgba(21, 23, 21, 0.12);
+  --shadow-nav: 0 10px 34px rgba(21, 23, 21, 0.08);
+  --focus-ring: #4F6B14;
+  --nav-scrim: rgba(247, 248, 243, 0.84);
+  --grid-line: rgba(52, 58, 53, 0.055);
+  --loader-glow: rgba(183, 243, 74, 0.36);
 
-  --shimmer-from: #b8962e;
-  --shimmer-via: #f1d78a;
+  --shimmer-from: #6f8f27;
+  --shimmer-via: #a9d94a;
 
-  /* Ambient hero field */
-  --hero-orb-1: rgba(201, 206, 214, 0.14);
-  --hero-orb-2: rgba(212, 175, 55, 0.1);
-  --hero-beam: rgba(212, 175, 55, 0.12);
-  --hero-vignette: rgba(17, 19, 24, 0.1);
-  --hero-shadow: 0 18px 60px rgba(17, 19, 24, 0.12);
-  --hero-card-shadow: 0 32px 80px rgba(17, 19, 24, 0.1);
-  --dot-grid: rgba(99, 179, 237, 0.08);
+  /* Ambient hero / auth field */
+  --hero-orb-1: rgba(216, 205, 182, 0.24);
+  --hero-orb-2: rgba(183, 243, 74, 0.16);
+  --hero-beam: rgba(183, 243, 74, 0.16);
+  --hero-vignette: rgba(21, 23, 21, 0.08);
+  --hero-shadow: 0 18px 60px rgba(21, 23, 21, 0.12);
+  --hero-card-shadow: 0 32px 80px rgba(21, 23, 21, 0.1);
+  --dot-grid: rgba(79, 107, 20, 0.1);
 }
 
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --bg: 8 17 31;               /* #08111f */
-  --card: 15 26 46;            /* #0f1a2e */
-  --sidebar: 9 17 31;          /* #09111f */
-  --line: 34 49 77;            /* #22314d */
-  --line-strong: 46 63 96;
-  --ink: 231 237 247;          /* #e7edf7 */
-  --ink-2: 180 191 212;
-  --muted: 152 167 196;        /* #98a7c4 */
+  --bg: 25 29 27;               /* #191D1B charcoal */
+  --card: 32 37 34;             /* #202522 dark surface */
+  --sidebar: 28 33 30;          /* #1C211E */
+  --line: 58 67 60;             /* #3A433C */
+  --line-strong: 74 85 76;      /* #4A554C */
+  --ink: 236 239 234;           /* #ECEFEA */
+  --ink-2: 216 205 182;         /* #D8CDB6 sand */
+  --muted: 165 174 165;         /* #A5AEA5 */
 
-  --accent: 79 140 255;        /* #4f8cff */
-  --accent-hover: 107 160 255;
-  /* Dark label on the restored blue: 5.9:1. White on #4f8cff is only 3.2:1. */
-  --accent-ink: 8 17 31;
-  --accent-text: 125 176 255;
+  --accent: 166 230 53;         /* #A6E635 rich acid lime */
+  --accent-hover: 183 243 74;   /* #B7F34A */
+  --accent-ink: 21 23 21;
+  --accent-text: 199 247 122;   /* #C7F77A — 12.6:1 on dark surface */
 
-  --success: 34 197 94;        /* #22c55e */
-  --success-text: 110 231 183; /* emerald-300 */
+  --success: 74 222 128;        /* #4ADE80 */
+  --success-text: 134 239 172;  /* #86EFAC */
   --success-solid: 34 197 94;
-  --success-ink: 8 17 31;
-  --warn: 245 158 11;          /* #f59e0b */
-  --warn-text: 252 211 77;     /* amber-300 */
-  --danger: 239 68 68;         /* #ef4444 */
-  --danger-text: 252 165 165;  /* red-300 */
-  --danger-solid: 220 38 38;   /* #dc2626 — solid fills only */
+  --success-ink: 5 32 19;
+  --warn: 251 191 36;           /* #FBBF24 */
+  --warn-text: 252 211 77;      /* #FCD34D */
+  --danger: 248 113 113;        /* #F87171 */
+  --danger-text: 252 165 165;   /* #FCA5A5 */
+  --danger-solid: 220 38 38;
   --info: 148 163 184;
   --info-text: 147 197 253;
 
@@ -124,31 +134,36 @@
   --magenta-text: 240 171 252;
   --orange-text: 253 186 116;
 
-  --surface: rgb(255 255 255 / 0.05);
-  --surface-hover: rgb(255 255 255 / 0.1);
-  --surface-sunken: rgb(255 255 255 / 0.05);
-  --surface-sunken-hover: rgb(255 255 255 / 0.1);
-  --field: rgb(255 255 255 / 0.05);
-  --field-select: #0d1628;
+  --surface: rgb(36 42 38);                 /* #242A26 */
+  --surface-hover: rgb(42 49 44);           /* #2A312C */
+  --surface-sunken: rgb(255 255 255 / 0.04);
+  --surface-sunken-hover: rgb(255 255 255 / 0.08);
+  --field: rgb(32 37 34);                   /* #202522 */
+  --field-select: rgb(36 42 38);
 
-  --page-bg: linear-gradient(180deg, #08111f 0%, #0b1528 100%);
-  --shadow-soft: 0 12px 30px rgba(2, 10, 27, 0.25);
-  --shadow-lift: 0 18px 44px rgba(1, 8, 20, 0.42);
-  --shadow-nav: 0 10px 34px rgba(1, 8, 20, 0.36);
-  --focus-ring: #7db0ff;
-  --nav-scrim: rgba(8, 17, 31, 0.82);
+  --page-bg:
+    radial-gradient(58rem 42rem at 90% -12%, rgba(166, 230, 53, 0.1), transparent 62%),
+    radial-gradient(48rem 34rem at 0% 4%, rgba(216, 205, 182, 0.07), transparent 60%),
+    linear-gradient(180deg, #191D1B 0%, #171B19 100%);
+  --shadow-soft: 0 12px 30px rgba(0, 0, 0, 0.28);
+  --shadow-lift: 0 18px 44px rgba(0, 0, 0, 0.42);
+  --shadow-nav: 0 10px 34px rgba(0, 0, 0, 0.34);
+  --focus-ring: #C7F77A;
+  --nav-scrim: rgba(25, 29, 27, 0.84);
+  --grid-line: rgba(216, 205, 182, 0.05);
+  --loader-glow: rgba(166, 230, 53, 0.28);
 
-  --shimmer-from: #22d3ee;
-  --shimmer-via: #a5f3fc;
+  --shimmer-from: #8fbc3a;
+  --shimmer-via: #c7f77a;
 
-  /* Ambient hero field */
-  --hero-orb-1: rgba(99, 102, 241, 0.14);
-  --hero-orb-2: rgba(34, 211, 238, 0.1);
-  --hero-beam: rgba(34, 211, 238, 0.12);
-  --hero-vignette: rgba(0, 0, 0, 0.78);
-  --hero-shadow: 0 18px 60px rgba(1, 8, 20, 0.34);
-  --hero-card-shadow: 0 32px 80px rgba(1, 8, 20, 0.4);
-  --dot-grid: rgba(125, 211, 252, 0.1);
+  /* Ambient hero / auth field */
+  --hero-orb-1: rgba(216, 205, 182, 0.08);
+  --hero-orb-2: rgba(166, 230, 53, 0.1);
+  --hero-beam: rgba(166, 230, 53, 0.12);
+  --hero-vignette: rgba(0, 0, 0, 0.72);
+  --hero-shadow: 0 18px 60px rgba(0, 0, 0, 0.36);
+  --hero-card-shadow: 0 32px 80px rgba(0, 0, 0, 0.44);
+  --dot-grid: rgba(199, 247, 122, 0.12);
 }
 
 * { box-sizing: border-box; }
@@ -166,14 +181,72 @@ html, body {
 html { scroll-behavior: smooth; scroll-padding-top: 104px; }
 body {
   min-height: 100vh;
-  background: var(--page-bg);
+  background-color: rgb(var(--bg));
+  background-image: var(--page-bg);
   color: rgb(var(--ink));
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: var(--font-body), system-ui, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
+/* Display typography is deliberately scoped: large statements and brand
+   moments only. Tables, forms, navigation and dense UI stay on Inter. */
+h1,
+h2,
+.font-display,
+.title {
+  font-family: var(--font-display), Georgia, 'Times New Roman', serif;
+  font-variation-settings: 'SOFT' 55, 'WONK' 0;
+  letter-spacing: -0.02em;
+}
+h1 { line-height: 1.08; }
+h2 { line-height: 1.18; }
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-body), system-ui, 'Segoe UI', sans-serif;
+}
+button,
+input,
+select,
+textarea,
+table,
+nav {
+  font-family: inherit;
+}
+
 a { color: inherit; text-decoration: none; }
+
+/* ── Ambient canvases ─────────────────────────────────────────────────
+   A restrained graph-paper texture sits under the layered radial washes.
+   It is painted on the container, never above content, so it cannot block
+   clicks or reduce text contrast. */
+.ambient-canvas {
+  background-color: rgb(var(--bg));
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    var(--page-bg);
+  background-size: 72px 72px, 72px 72px, auto;
+  background-position: center top;
+}
+
+/* Soft decorative field for auth screens, the loader and the 404 page. */
+.ambient-orb {
+  pointer-events: none;
+  border-radius: 9999px;
+  filter: blur(56px);
+  opacity: 0.7;
+  background: var(--hero-orb-2);
+}
+.ambient-orb--sand { background: var(--hero-orb-1); }
+
+/* Very low contrast dot field, used sparingly behind empty states. */
+.dot-field {
+  background-image: radial-gradient(var(--dot-grid) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
 
 /* Theme-aware native surfaces: scrollbars, form controls, date pickers. */
 * {
@@ -307,6 +380,40 @@ a { color: inherit; text-decoration: none; }
 .spinner-spin-wobble { animation: spinner-wobble 3.8s cubic-bezier(0.22,1,0.36,1) infinite; }
 .spinner-sheen { animation: spinner-sheen-sweep 5.4s ease-in-out infinite; }
 
+/* ── Brand loader ──────────────────────────────────────────────────────
+   The mark is the anchor; the orbiting lime arc and progress rail are
+   deliberately quiet. Only transform/opacity animate. */
+@keyframes brand-loader-orbit {
+  to { transform: rotate(360deg); }
+}
+@keyframes brand-loader-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.62; }
+  50% { transform: scale(1.06); opacity: 0.96; }
+}
+@keyframes brand-loader-rail {
+  0% { transform: translateX(-105%); }
+  55% { transform: translateX(25%); }
+  100% { transform: translateX(230%); }
+}
+@keyframes brand-loader-dot {
+  0%, 100% { transform: scale(0.75); opacity: 0.55; }
+  50% { transform: scale(1); opacity: 1; }
+}
+
+.brand-loader-orbit { animation: brand-loader-orbit 2.8s linear infinite; }
+.brand-loader-glow { animation: brand-loader-breathe 3.2s ease-in-out infinite; }
+.brand-loader-rail::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 44%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, transparent, rgb(var(--accent)), transparent);
+  animation: brand-loader-rail 1.7s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+.brand-loader-dot { animation: brand-loader-dot 1.6s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   .spinner-spin-glide,
   .spinner-spin-reverse,
@@ -321,9 +428,17 @@ a { color: inherit; text-decoration: none; }
   .float-soft,
   .float-soft-delayed,
   .glow-pulse,
-  .shimmer-text {
+  .shimmer-text,
+  .brand-loader-orbit,
+  .brand-loader-glow,
+  .brand-loader-rail::after,
+  .brand-loader-dot {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
+  }
+  .brand-loader-rail::after {
+    width: 100%;
+    background: rgb(var(--accent) / 0.65);
   }
   html { scroll-behavior: auto; }
 

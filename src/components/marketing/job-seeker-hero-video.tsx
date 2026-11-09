@@ -54,7 +54,7 @@ export function JobSeekerHeroVideo() {
               y1="0"
               x2={120 + index * 100}
               y2="900"
-              stroke="#F1D78A"
+              stroke="#B7F34A"
               strokeWidth="1"
             />
           ))}
@@ -65,7 +65,7 @@ export function JobSeekerHeroVideo() {
               y1={120 + index * 90}
               x2="1600"
               y2={120 + index * 90}
-              stroke="#F1D78A"
+              stroke="#B7F34A"
               strokeWidth="1"
             />
           ))}

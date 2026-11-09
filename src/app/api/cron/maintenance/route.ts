@@ -21,6 +21,7 @@ import {
 } from '@/lib/billing/email-outbox';
 import { reconcileExpiredSubscriptions } from '@/lib/billing/subscriptions';
 import { sendTrialEndingReminders } from '@/lib/billing/trial-reminders';
+import { processStorageCleanupBatch } from '@/lib/admin/storage-cleanup';
 import { logImportantError, logImportantInfo } from '@/lib/observability';
 import { isCronAuthorized } from '@/lib/cron-auth';
 
@@ -40,6 +41,7 @@ export async function GET(request: Request) {
     outbox: { claimed: 0, sent: 0, failed: 0 },
     subscriptions: { checked: 0, expired: 0, failed: 0 },
     reminders: { queued: 0, skipped: 0, failed: 0 },
+    storageCleanup: { worked: 0, completed: 0, retried: 0, failed: 0 },
   };
 
   try {
@@ -54,6 +56,9 @@ export async function GET(request: Request) {
 
     // 4. Trial-ending reminders (deduped by idempotency key).
     summary.reminders = await sendTrialEndingReminders();
+
+    // 5. Retry external file cleanup left pending by admin user deletion.
+    summary.storageCleanup = await processStorageCleanupBatch(25);
 
     await logImportantInfo({
       event: 'maintenance_run_completed',

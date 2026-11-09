@@ -150,7 +150,7 @@ export function PlanChangePanel({
                     setAction(option.value);
                     setConfirming(false);
                   }}
-                  className="accent-[#D4AF37]"
+                  className="accent-[rgb(var(--accent))]"
                 />
                 {option.label}
               </label>

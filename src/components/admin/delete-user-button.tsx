@@ -43,7 +43,11 @@ export function DeleteUserButton({
       }
 
       setSuccess(true);
-      router.push('/admin/users');
+      // The account is gone; carry the cleanup outcome to the directory so the
+      // administrator sees an explicit "files queued for retry" notice instead
+      // of a silent disappearance.
+      const pending = Number(payload?.fileCleanup?.pending ?? 0);
+      router.push(`/admin/users?deleted=1&filesPending=${Number.isFinite(pending) ? pending : 0}`);
       router.refresh();
     } catch {
       setError('We could not reach the server. Check your connection and try again.');

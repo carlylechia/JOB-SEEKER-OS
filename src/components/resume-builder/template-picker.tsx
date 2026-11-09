@@ -91,7 +91,7 @@ export function TemplatePicker({
                 <input
                   type="radio"
                   name="resume-template"
-                  className="mt-1 h-4 w-4 shrink-0 accent-[#D4AF37]"
+                  className="mt-1 h-4 w-4 shrink-0 accent-[rgb(var(--accent))]"
                   checked={selected}
                   onChange={() => onTemplateChange(template.key)}
                 />
@@ -185,7 +185,7 @@ export function TemplatePicker({
               >
                 <input
                   type="checkbox"
-                  className="h-3.5 w-3.5 accent-[#D4AF37]"
+                  className="h-3.5 w-3.5 accent-[rgb(var(--accent))]"
                   checked={!hidden}
                   onChange={() => {
                     const next = hidden

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sparkles, RefreshCw, Save, ExternalLink, XCircle } from 'lucide-react';
+import { BrandLoader } from '@/components/shared/brand-loader';
 
 type RecJob = {
   id: string;
@@ -125,7 +126,7 @@ export default function DailyJobsPage() {
   }
 
   if (loading) {
-    return <div className="p-8 text-muted">Loading your daily recommendations…</div>;
+    return <BrandLoader message="Ranking today’s opportunities" />;
   }
 
   if (error) {
@@ -146,7 +147,7 @@ export default function DailyJobsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-semibold text-ink">
-            <Sparkles className="h-6 w-6 text-accent" />
+            <Sparkles className="h-6 w-6 text-accent-text" />
             Daily Top 5
           </h1>
           <p className="text-sm text-muted">
@@ -206,7 +207,7 @@ export default function DailyJobsPage() {
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">#{rec.rank}</span>
+                  <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent-text">#{rec.rank}</span>
                   <h2 className="text-lg font-semibold text-ink">{rec.job.title}</h2>
                 </div>
                 <p className="text-sm text-muted">{rec.job.company}{rec.job.location ? ` · ${rec.job.location}` : ''}</p>

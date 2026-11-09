@@ -122,7 +122,7 @@ export function UpgradeRequestForm({
                 value={plan}
                 checked={requestedPlan === plan}
                 onChange={() => setRequestedPlan(plan)}
-                className="accent-[#D4AF37]"
+                className="accent-[rgb(var(--accent))]"
               />
               {plan.charAt(0) + plan.slice(1).toLowerCase()}
             </label>
@@ -153,7 +153,7 @@ export function UpgradeRequestForm({
                 value={option.value}
                 checked={contactMethod === option.value}
                 onChange={() => setContactMethod(option.value)}
-                className="accent-[#D4AF37]"
+                className="accent-[rgb(var(--accent))]"
               />
               {option.label}
             </label>

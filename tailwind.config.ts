@@ -6,17 +6,23 @@ export default {
   darkMode: ['class', '[data-theme="dark"]'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-body)', 'system-ui', 'Segoe UI', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        display: ['var(--font-display)', 'Georgia', 'Times New Roman', 'serif'],
+        body: ['var(--font-body)', 'system-ui', 'Segoe UI', 'Helvetica Neue', 'Arial', 'sans-serif'],
+      },
       colors: {
         // ── teChia Jobs brand palette (fixed, theme-independent) ─────────
-        obsidian: '#111318',
-        graphite: '#242831',
-        charcoal: '#17191E',
-        silver: '#C9CED6',
-        silverlight: '#E8EBF0',
-        gold: '#D4AF37',
-        champagne: '#F1D78A',
-        warmwhite: '#FAFAF7',
-        slate: '#686F7B',
+        obsidian: '#151715',
+        graphite: '#343A35',
+        charcoal: '#191D1B',
+        sand: '#D8CDB6',
+        silver: '#C9CEC3',
+        silverlight: '#EEF0E9',
+        lime: '#B7F34A',
+        acid: '#A6E635',
+        warmwhite: '#F7F8F3',
+        slate: '#646C61',
 
         // ── Themed semantic tokens ──────────────────────────────────────
         // Every value is a CSS custom property declared in globals.css and

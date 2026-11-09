@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { requireAdmin } from '@/lib/authz';
 import { prisma } from '@/lib/prisma';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
-import { PlanBadge, StatusBadge } from '@/components/billing/plan-badge';
+import { AdminUsersTable } from '@/components/admin/admin-users-table';
 import { Pagination } from '@/components/ui/pagination';
 import {
   ADMIN_USERS_PAGE_SIZE,
@@ -27,6 +26,9 @@ type AdminUsersSearchParams = {
   joinedFrom?: string;
   joinedTo?: string;
   page?: string;
+  /** Result handoff from the user-detail danger zone. */
+  deleted?: string;
+  filesPending?: string;
 };
 
 export default async function AdminUsersPage({
@@ -34,7 +36,7 @@ export default async function AdminUsersPage({
 }: {
   searchParams: Promise<AdminUsersSearchParams>;
 }) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const params = (await searchParams) as AdminUsersSearchParams;
   const filters = parseAdminUserFilters({
@@ -48,6 +50,8 @@ export default async function AdminUsersPage({
   });
 
   const page = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1);
+  const justDeleted = params.deleted === '1';
+  const filesPending = Math.max(0, Number.parseInt(params.filesPending ?? '0', 10) || 0);
   const where = buildAdminUserWhere(filters);
   const total = await prisma.user.count({ where });
   const totalPages = Math.max(1, Math.ceil(total / ADMIN_USERS_PAGE_SIZE));
@@ -98,6 +102,21 @@ export default async function AdminUsersPage({
           {total} {total === 1 ? 'user' : 'users'}
         </p>
       </div>
+
+      {justDeleted ? (
+        <div
+          role="status"
+          className={`rounded-xl border px-4 py-3 text-sm ${
+            filesPending > 0
+              ? 'border-warn/30 bg-warn/[0.06] text-warn-text'
+              : 'border-success/30 bg-success/[0.06] text-success-text'
+          }`}
+        >
+          {filesPending > 0
+            ? `User deleted. ${filesPending} stored file${filesPending === 1 ? '' : 's'} could not be removed yet and ${filesPending === 1 ? 'was' : 'were'} queued for automatic retry.`
+            : 'User deleted.'}
+        </div>
+      ) : null}
 
       {/* Filters */}
       <form method="get" action="/admin/users" className="card-pad flex flex-wrap items-end gap-3">
@@ -176,91 +195,25 @@ export default async function AdminUsersPage({
         </button>
       </form>
 
-      {/* Table — becomes cards on small screens */}
-      <div className="table-wrap hidden md:block">
-        <table className="table">
-          <caption className="sr-only">User directory</caption>
-          <thead>
-            <tr>
-              <th scope="col">User</th>
-              <th scope="col">Role</th>
-              <th scope="col">Plan</th>
-              <th scope="col">Status</th>
-              <th scope="col">Trial ends</th>
-              <th scope="col">Plan ends</th>
-              <th scope="col">Joined</th>
-              <th className="text-right" scope="col">
-                <span className="sr-only">Actions</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id}>
-                <td>
-                  <div className="font-medium text-ink">{user.name ?? '—'}</div>
-                  <div className="text-xs text-muted">{user.email}</div>
-                  {!user.emailVerified ? (
-                    <span className="mt-1 inline-block text-[11px] text-warn">Unverified email</span>
-                  ) : null}
-                </td>
-                <td>{user.role}</td>
-                <td>
-                  {user.subscription ? <PlanBadge plan={user.subscription.plan.code as never} /> : '—'}
-                </td>
-                <td>{user.subscription ? <StatusBadge status={user.subscription.status} /> : '—'}</td>
-                <td className="whitespace-nowrap text-xs">
-                  {user.subscription?.trialEndsAt
-                    ? new Date(user.subscription.trialEndsAt).toLocaleDateString()
-                    : '—'}
-                </td>
-                <td className="whitespace-nowrap text-xs">
-                  {user.subscription?.endsAt
-                    ? new Date(user.subscription.endsAt).toLocaleDateString()
-                    : '—'}
-                </td>
-                <td className="whitespace-nowrap text-xs">
-                  {new Date(user.createdAt).toLocaleDateString()}
-                </td>
-                <td className="text-right">
-                  <Link
-                    href={`/admin/users/${user.id}`}
-                    className="btn-secondary px-3 py-1 text-xs"
-                  >
-                    View
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile cards */}
-      <ul className="space-y-3 md:hidden">
-        {users.map((user) => (
-          <li key={user.id} className="card-pad">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-medium text-ink">{user.name ?? '—'}</p>
-                <p className="truncate text-xs text-muted">{user.email}</p>
-              </div>
-              {user.subscription ? <PlanBadge plan={user.subscription.plan.code as never} /> : null}
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {user.subscription ? <StatusBadge status={user.subscription.status} /> : null}
-              <span className="text-xs text-muted">{user.role}</span>
-            </div>
-            <Link href={`/admin/users/${user.id}`} className="btn-secondary mt-3 w-full text-xs">
-              View user
-            </Link>
-          </li>
-        ))}
-      </ul>
-
-      {users.length === 0 ? (
-        <p className="muted">No users match these filters.</p>
-      ) : null}
+      <AdminUsersTable
+        currentAdminId={admin.id}
+        users={users.map((user) => ({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          emailVerified: Boolean(user.emailVerified),
+          createdAt: user.createdAt.toISOString(),
+          subscription: user.subscription
+            ? {
+                status: user.subscription.status,
+                trialEndsAt: user.subscription.trialEndsAt?.toISOString() ?? null,
+                endsAt: user.subscription.endsAt?.toISOString() ?? null,
+                plan: { code: user.subscription.plan.code },
+              }
+            : null,
+        }))}
+      />
 
       {/* Pagination */}
       <Pagination page={currentPage} totalPages={totalPages} hrefForPage={buildUrl} label="Admin users pagination" />

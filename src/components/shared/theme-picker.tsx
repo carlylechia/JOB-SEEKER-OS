@@ -5,8 +5,8 @@ import { useTheme, type Theme } from './theme-provider';
 import { useRadioGroup } from './use-radio-group';
 
 const OPTIONS: { value: Theme; label: string; Icon: typeof Sun; hint: string }[] = [
-  { value: 'light', label: 'Light', Icon: Sun, hint: 'Warm white with gold accents' },
-  { value: 'dark', label: 'Dark', Icon: Moon, hint: 'Deep navy with blue accents' },
+  { value: 'light', label: 'Light', Icon: Sun, hint: 'Warm canvas with acid-lime accents' },
+  { value: 'dark', label: 'Dark', Icon: Moon, hint: 'Charcoal with sand and rich lime accents' },
 ];
 
 /**
@@ -47,17 +47,17 @@ export function ThemePicker() {
               <span
                 aria-hidden
                 className={`mt-0.5 flex h-11 w-11 shrink-0 flex-col gap-1 overflow-hidden rounded-xl border p-1.5 ${
-                  value === 'light' ? 'border-[#D9DDE3] bg-[#FAFAF7]' : 'border-[#22314d] bg-[#08111f]'
+                  value === 'light' ? 'border-[#DCE0D5] bg-[#F7F8F3]' : 'border-[#3A433C] bg-[#191D1B]'
                 }`}
               >
                 <span
                   className={`h-1.5 w-full rounded-full ${
-                    value === 'light' ? 'bg-[#D4AF37]' : 'bg-[#4f8cff]'
+                    value === 'light' ? 'bg-[#B7F34A]' : 'bg-[#A6E635]'
                   }`}
                 />
                 <span
                   className={`flex-1 w-full rounded ${
-                    value === 'light' ? 'bg-white' : 'bg-[#0f1a2e]'
+                    value === 'light' ? 'bg-white' : 'bg-[#202522]'
                   }`}
                 />
               </span>

@@ -43,7 +43,7 @@ export function Topbar({ user }: { user: TopbarUser }) {
   const isAdmin = user.role === 'ADMIN';
 
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-[color:var(--nav-scrim)] backdrop-blur-xl supports-[backdrop-filter]:bg-[color:var(--nav-scrim)]">
+    <header className="sticky top-0 z-40 border-b border-line bg-[color:var(--nav-scrim)] shadow-nav backdrop-blur-xl supports-[backdrop-filter]:bg-[color:var(--nav-scrim)]">
       <div className="flex min-h-16 items-center justify-between gap-2 px-4 py-3 lg:gap-3 lg:px-8">
         <div className="flex min-w-0 items-center">
           <div className="lg:hidden">

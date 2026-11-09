@@ -26,16 +26,16 @@ export async function sendVerificationEmail(email: string, token: string): Promi
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Verify your email — teChia Jobs</title>
   <style>
-    body { margin: 0; padding: 0; background: #FAFAF7; color: #17191E; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { margin: 0; padding: 0; background: #F7F8F3; color: #151715; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     .wrapper { max-width: 560px; margin: 40px auto; padding: 0 16px; }
-    .card { background: #FFFFFF; border: 1px solid #D9DDE3; border-radius: 16px; padding: 40px; }
-    .logo { font-size: 20px; font-weight: 700; color: #17191E; margin-bottom: 2px; }
+    .card { background: #FFFFFF; border: 1px solid #DCE0D5; border-radius: 16px; padding: 40px; }
+    .logo { font-size: 20px; font-weight: 700; color: #151715; margin-bottom: 2px; }
     .brand-sub { font-size: 12px; color: #8A919C; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 26px; }
     h1 { margin: 0 0 12px; font-size: 22px; font-weight: 600; }
     p { margin: 0 0 20px; font-size: 15px; line-height: 1.6; color: #686F7B; }
-    .btn { display: inline-block; background: #D4AF37; color: #17191E !important; text-decoration: none; font-weight: 600; font-size: 15px; padding: 14px 28px; border-radius: 10px; }
+    .btn { display: inline-block; background: #B7F34A; color: #151715 !important; text-decoration: none; font-weight: 600; font-size: 15px; padding: 14px 28px; border-radius: 10px; }
     .small { font-size: 13px; color: #686F7B; margin-top: 24px; }
-    .small a { color: #8A6D1F; word-break: break-all; }
+    .small a { color: #4F6B14; word-break: break-all; }
     .footer { margin-top: 24px; font-size: 12px; color: #8A919C; text-align: center; }
   </style>
 </head>
@@ -103,16 +103,16 @@ export async function sendPasswordResetEmail(email: string, token: string): Prom
   <meta charset="UTF-8" />
   <title>Reset your password — teChia Jobs</title>
   <style>
-    body { margin: 0; padding: 0; background: #FAFAF7; color: #17191E; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { margin: 0; padding: 0; background: #F7F8F3; color: #151715; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     .wrapper { max-width: 560px; margin: 40px auto; padding: 0 16px; }
-    .card { background: #FFFFFF; border: 1px solid #D9DDE3; border-radius: 16px; padding: 40px; }
-    .logo { font-size: 20px; font-weight: 700; color: #17191E; margin-bottom: 2px; }
+    .card { background: #FFFFFF; border: 1px solid #DCE0D5; border-radius: 16px; padding: 40px; }
+    .logo { font-size: 20px; font-weight: 700; color: #151715; margin-bottom: 2px; }
     .brand-sub { font-size: 12px; color: #8A919C; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 26px; }
     h1 { margin: 0 0 12px; font-size: 22px; font-weight: 600; }
     p { margin: 0 0 20px; font-size: 15px; line-height: 1.6; color: #686F7B; }
-    .btn { display: inline-block; background: #D4AF37; color: #17191E !important; text-decoration: none; font-weight: 600; font-size: 15px; padding: 14px 28px; border-radius: 10px; }
+    .btn { display: inline-block; background: #B7F34A; color: #151715 !important; text-decoration: none; font-weight: 600; font-size: 15px; padding: 14px 28px; border-radius: 10px; }
     .small { font-size: 13px; color: #686F7B; margin-top: 24px; }
-    .small a { color: #8A6D1F; word-break: break-all; }
+    .small a { color: #4F6B14; word-break: break-all; }
     .footer { margin-top: 24px; font-size: 12px; color: #8A919C; text-align: center; }
   </style>
 </head>
@@ -180,14 +180,14 @@ export async function sendNotificationEmail(
   <meta charset="UTF-8" />
   <title>${escaped(title)} — teChia Jobs</title>
   <style>
-    body { margin: 0; padding: 0; background: #FAFAF7; color: #17191E; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { margin: 0; padding: 0; background: #F7F8F3; color: #151715; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     .wrapper { max-width: 560px; margin: 40px auto; padding: 0 16px; }
-    .card { background: #FFFFFF; border: 1px solid #D9DDE3; border-radius: 16px; padding: 40px; }
-    .logo { font-size: 20px; font-weight: 700; color: #17191E; margin-bottom: 2px; }
+    .card { background: #FFFFFF; border: 1px solid #DCE0D5; border-radius: 16px; padding: 40px; }
+    .logo { font-size: 20px; font-weight: 700; color: #151715; margin-bottom: 2px; }
     .brand-sub { font-size: 12px; color: #8A919C; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 26px; }
     h1 { margin: 0 0 12px; font-size: 20px; font-weight: 600; }
     p { margin: 0 0 20px; font-size: 15px; line-height: 1.6; color: #686F7B; }
-    .btn { display: inline-block; background: #D4AF37; color: #17191E !important; text-decoration: none; font-weight: 600; font-size: 15px; padding: 14px 28px; border-radius: 10px; }
+    .btn { display: inline-block; background: #B7F34A; color: #151715 !important; text-decoration: none; font-weight: 600; font-size: 15px; padding: 14px 28px; border-radius: 10px; }
     .footer { margin-top: 24px; font-size: 12px; color: #8A919C; text-align: center; }
   </style>
 </head>

@@ -38,7 +38,7 @@ export function Logo({
         className={`inline-flex min-w-0 items-center gap-2 ${centered ? 'justify-center' : ''}`}
       >
         <BrandMark size={markSize} className="shrink-0" />
-        <span className={`text-base font-bold tracking-tight text-ink ${wordmark}`}>
+        <span className={`font-display text-base font-bold tracking-tight text-ink ${wordmark}`}>
           teChia <span className="text-accent-text">Jobs</span>
         </span>
       </Link>
@@ -53,7 +53,7 @@ export function Logo({
     >
       <span className="inline-flex min-w-0 items-center gap-2.5">
         <BrandMark size={markSize} className="shrink-0" />
-        <span className={`font-bold tracking-tight text-ink ${hideTextOnSmall ? 'text-lg sm:text-xl' : 'text-xl'} ${wordmark}`}>
+        <span className={`font-display font-bold tracking-tight text-ink ${hideTextOnSmall ? 'text-lg sm:text-xl' : 'text-xl'} ${wordmark}`}>
           teChia <span className="text-accent-text">Jobs</span>
         </span>
       </span>

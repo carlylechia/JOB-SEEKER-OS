@@ -144,7 +144,7 @@ export function NotificationBell() {
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             {selectedNotification ? (
               <button
-                className="inline-flex items-center gap-2 text-sm font-semibold text-foreground hover:text-accent-text"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-ink hover:text-accent-text"
                 onClick={() => setSelectedNotification(null)}
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -154,7 +154,7 @@ export function NotificationBell() {
               <span className="text-sm font-semibold">Notifications</span>
             )}
             {selectedNotification ? (
-              <button className="text-xs text-muted hover:text-foreground" onClick={closePanel}>
+              <button className="text-xs text-muted hover:text-ink" onClick={closePanel}>
                 Close
               </button>
             ) : unread > 0 ? (
@@ -173,14 +173,14 @@ export function NotificationBell() {
               <div className="rounded-xl border border-line bg-surface-sunken p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">{selectedNotification.title}</p>
+                    <p className="text-sm font-semibold text-ink">{selectedNotification.title}</p>
                     <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-muted/70">
                       {selectedNotification.type.replace(/_/g, ' ')}
                     </p>
                   </div>
                   <p className="text-[11px] text-muted/60">{timeAgo(selectedNotification.createdAt)}</p>
                 </div>
-                <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-foreground/90">
+                <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-ink/90">
                   {selectedNotification.message}
                 </p>
                 {notificationLink(selectedNotification.type) && (
@@ -208,7 +208,7 @@ export function NotificationBell() {
                     onClick={() => void openNotification(n)}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <span className={`text-sm font-medium ${!n.read ? 'text-foreground' : 'text-muted'}`}>
+                      <span className={`text-sm font-medium ${!n.read ? 'text-ink' : 'text-muted'}`}>
                         {n.title}
                       </span>
                       {!n.read && (

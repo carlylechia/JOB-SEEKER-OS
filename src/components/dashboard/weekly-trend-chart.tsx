@@ -11,15 +11,15 @@ function useChartColors() {
   const isDark = mounted && theme === 'dark';
 
   return {
-    grid: isDark ? '#22314d' : '#D9DDE3',
-    axis: isDark ? '#98a7c4' : '#686F7B',
-    leads: isDark ? '#4f8cff' : '#D4AF37',
-    applied: isDark ? '#22c55e' : '#1F9D68',
-    interviews: isDark ? '#f59e0b' : '#D98E04',
-    cursorBg: isDark ? '#0f1a2e' : '#FFFFFF',
-    cursorBorder: isDark ? '#22314d' : '#D9DDE3',
-    text: isDark ? '#e7edf7' : '#17191E',
-    muted: isDark ? '#98a7c4' : '#686F7B',
+    grid: isDark ? '#3A433C' : '#DCE0D5',
+    axis: isDark ? '#A5AEA5' : '#646C61',
+    leads: isDark ? '#A6E635' : '#4F6B14',
+    applied: isDark ? '#4ADE80' : '#1F8A4C',
+    interviews: isDark ? '#FBBF24' : '#B77900',
+    cursorBg: isDark ? '#202522' : '#FFFFFF',
+    cursorBorder: isDark ? '#3A433C' : '#DCE0D5',
+    text: isDark ? '#ECEFEA' : '#151715',
+    muted: isDark ? '#A5AEA5' : '#646C61',
   };
 }
 

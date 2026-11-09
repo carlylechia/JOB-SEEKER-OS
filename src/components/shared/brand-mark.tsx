@@ -1,7 +1,7 @@
 /**
  * teChia Jobs brand mark — a stylised "Jt" monogram.
  *
- * Silver "J" + gold "t" on an obsidian tile with a champagne→gold metallic
+ * Silver "J" + acid-lime "t" on an obsidian tile, with a soft lime metallic
  * gradient on the accent letter and a thin baseline rail. Static gradient ids
  * are intentional: every instance renders identical stops, so duplicate ids are
  * visually safe and keep the markup dependency-free.
@@ -35,10 +35,10 @@ export function BrandMark({
           <stop offset="0" stopColor="#FFFFFF" />
           <stop offset="1" stopColor="#B4BBC7" />
         </linearGradient>
-        <linearGradient id="tj-gold" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#F7E7B8" />
-          <stop offset="0.5" stopColor="#E3C463" />
-          <stop offset="1" stopColor="#C29E24" />
+        <linearGradient id="tj-lime" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#ECFFD0" />
+          <stop offset="0.5" stopColor="#B7F34A" />
+          <stop offset="1" stopColor="#7FA82B" />
         </linearGradient>
       </defs>
 
@@ -74,14 +74,14 @@ export function BrandMark({
       <path
         d="M42 20 V44 A6 6 0 0 0 48 50"
         fill="none"
-        stroke="url(#tj-gold)"
+        stroke="url(#tj-lime)"
         strokeWidth="7"
         strokeLinecap="round"
       />
       <path
         d="M35 29 H52"
         fill="none"
-        stroke="url(#tj-gold)"
+        stroke="url(#tj-lime)"
         strokeWidth="7"
         strokeLinecap="round"
       />

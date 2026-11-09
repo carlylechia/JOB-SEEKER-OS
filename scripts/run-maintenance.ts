@@ -16,6 +16,7 @@
  *   2. drain the email outbox (with retries)
  *   3. reconcile expired subscriptions/trials
  *   4. send trial-ending reminders (deduped by idempotency key)
+ *   5. retry external file cleanup queued by admin user deletion
  */
 
 import { prisma } from '../src/lib/prisma';
@@ -28,6 +29,7 @@ import {
 } from '../src/lib/billing/subscriptions';
 import { enqueueEmailBestEffort } from '../src/lib/billing/email-outbox';
 import { sendTrialEndingReminders } from '../src/lib/billing/trial-reminders';
+import { processStorageCleanupBatch } from '../src/lib/admin/storage-cleanup';
 import { logImportantError, logImportantInfo } from '../src/lib/observability';
 
 async function main() {
@@ -51,9 +53,14 @@ async function main() {
     `  Trial reminders queued      ${reminders.queued} sent, ${reminders.skipped} skipped, ${reconciled.failed} failed`,
   );
 
+  const storageCleanup = await processStorageCleanupBatch(50);
+  console.log(
+    `  Storage cleanup retried     ${storageCleanup.completed} completed, ${storageCleanup.retried} retrying, ${storageCleanup.failed} failed (of ${storageCleanup.worked} worked)`,
+  );
+
   await logImportantInfo({
     event: 'maintenance_run_completed',
-    context: { outbox, reconciled, reminders, releasedLocks: released },
+    context: { outbox, reconciled, reminders, storageCleanup, releasedLocks: released },
   });
 
   console.log('\n  Done.\n');

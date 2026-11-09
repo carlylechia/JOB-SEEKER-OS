@@ -57,7 +57,7 @@ export function FidgetSpinner({ size = 520, style, className }: FidgetSpinnerPro
         style={{
           overflow: 'visible',
           filter: hovered
-            ? 'drop-shadow(0 0 18px rgba(212,175,55,0.22)) drop-shadow(0 0 28px rgba(201,206,214,0.14))'
+            ? 'drop-shadow(0 0 18px rgba(183,243,74,0.26)) drop-shadow(0 0 28px rgba(201,206,214,0.14))'
             : undefined,
         }}
         role="img"
@@ -65,21 +65,21 @@ export function FidgetSpinner({ size = 520, style, className }: FidgetSpinnerPro
       >
         <defs>
           <linearGradient id="sp-metal" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#E8EBF0" stopOpacity="0.85" />
-            <stop offset="26%" stopColor="#C9CED6" stopOpacity="0.82" />
-            <stop offset="62%" stopColor="#242831" stopOpacity="0.94" />
-            <stop offset="100%" stopColor="#FAFAF7" stopOpacity="0.75" />
+            <stop offset="0%" stopColor="#EEF0E9" stopOpacity="0.85" />
+            <stop offset="26%" stopColor="#C9CEC3" stopOpacity="0.82" />
+            <stop offset="62%" stopColor="#343A35" stopOpacity="0.94" />
+            <stop offset="100%" stopColor="#F7F8F3" stopOpacity="0.75" />
           </linearGradient>
 
           <linearGradient id="sp-glow" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="rgba(212,175,55,0.9)" />
-            <stop offset="52%" stopColor="rgba(241,215,138,0.6)" />
+            <stop offset="0%" stopColor="rgba(183,243,74,0.9)" />
+            <stop offset="52%" stopColor="rgba(236,255,208,0.6)" />
             <stop offset="100%" stopColor="rgba(201,206,214,0.5)" />
           </linearGradient>
 
           <radialGradient id="sp-bear" cx="48%" cy="40%" r="70%">
             <stop offset="0%" stopColor="#3A4048" />
-            <stop offset="60%" stopColor="#242831" />
+            <stop offset="60%" stopColor="#343A35" />
             <stop offset="100%" stopColor="#111318" />
           </radialGradient>
 

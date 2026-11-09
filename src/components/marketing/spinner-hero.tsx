@@ -267,9 +267,9 @@ function SpinnerSvg() {
         </radialGradient>
 
         <radialGradient id="sp-hub" cx="45%" cy="35%" r="75%">
-          <stop offset="0%" stopColor="#F1D78A" />
-          <stop offset="58%" stopColor="#D4AF37" />
-          <stop offset="100%" stopColor="#B8962E" />
+          <stop offset="0%" stopColor="#ECFFD0" />
+          <stop offset="58%" stopColor="#B7F34A" />
+          <stop offset="100%" stopColor="#7FA82B" />
         </radialGradient>
 
         <filter id="sp-shadow" filterUnits="userSpaceOnUse" x="-40" y="-40" width="280" height="280">

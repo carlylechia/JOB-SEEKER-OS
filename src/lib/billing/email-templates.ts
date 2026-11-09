@@ -36,17 +36,17 @@ function layout(opts: { title: string; preheader: string; body: string; cta?: { 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${escapeHtml(opts.title)} — teChia Jobs</title>
 </head>
-<body style="margin:0;padding:0;background:#FAFAF7;color:#17191E;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background:#F7F8F3;color:#151715;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(opts.preheader)}</div>
   <div style="max-width:560px;margin:40px auto;padding:0 16px;">
-    <div style="background:#FFFFFF;border:1px solid #D9DDE3;border-radius:16px;padding:40px;">
-      <div style="font-size:20px;font-weight:700;color:#17191E;margin-bottom:2px;">teChia Jobs</div>
+    <div style="background:#FFFFFF;border:1px solid #DCE0D5;border-radius:16px;padding:40px;">
+      <div style="font-size:20px;font-weight:700;color:#151715;margin-bottom:2px;">teChia Jobs</div>
       <div style="font-size:12px;color:#6B7280;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:26px;">A teChia Digital Solutions product</div>
       <h1 style="margin:0 0 12px;font-size:22px;font-weight:600;line-height:1.3;">${escapeHtml(opts.title)}</h1>
       ${opts.body}
       ${
         opts.cta
-          ? `<div style="margin:28px 0;"><a href="${escapeHtml(opts.cta.url)}" style="display:inline-block;background:#C9A227;color:#17191E;text-decoration:none;font-weight:600;font-size:15px;padding:14px 28px;border-radius:10px;">${escapeHtml(opts.cta.label)}</a></div>`
+          ? `<div style="margin:28px 0;"><a href="${escapeHtml(opts.cta.url)}" style="display:inline-block;background:#C9A227;color:#151715;text-decoration:none;font-weight:600;font-size:15px;padding:14px 28px;border-radius:10px;">${escapeHtml(opts.cta.label)}</a></div>`
           : ''
       }
       <p style="margin:28px 0 0;font-size:13px;color:#4B5563;line-height:1.6;">Need help? Reply to this email and the team will get back to you.</p>
