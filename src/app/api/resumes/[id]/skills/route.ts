@@ -1,5 +1,5 @@
 import { auth } from '@/auth';
-import { apiError, handleRoute, jsonOk } from '@/lib/api';
+import { apiError, handleRoute, jsonOk, privateNoStore } from '@/lib/api';
 import { handleOptions } from '@/lib/cors';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 import { getResume, updateResume } from '@/lib/resume-builder/documents';
@@ -19,7 +19,9 @@ export async function POST(request: Request, { params }: Params) {
   return handleRoute(
     async () => {
       const session = await auth();
-      if (!session?.user?.id) return apiError('UNAUTHENTICATED', 'Please sign in.', { request });
+      if (!session?.user?.id) {
+        return privateNoStore(apiError('UNAUTHENTICATED', 'Please sign in.', { request }));
+      }
 
       const userId = session.user.id;
       const { id } = await params;
@@ -29,13 +31,15 @@ export async function POST(request: Request, { params }: Params) {
         30,
         60_000,
       );
-      if (!rate.ok) return apiError('RATE_LIMITED', 'Too many requests.', { request });
+      if (!rate.ok) {
+        return privateNoStore(apiError('RATE_LIMITED', 'Too many requests.', { request }));
+      }
 
       let parsed: z.infer<typeof bodySchema>;
       try {
         parsed = bodySchema.parse(await request.json());
       } catch {
-        return apiError('VALIDATION_FAILED', 'Invalid skill payload.', { request });
+        return privateNoStore(apiError('VALIDATION_FAILED', 'Invalid skill payload.', { request }));
       }
 
       const resume = await getResume({ userId, resumeId: id });
@@ -43,7 +47,7 @@ export async function POST(request: Request, { params }: Params) {
       const skills = content.skills ?? [];
       const normalized = parsed.skill.trim();
       if (skills.some((skill) => skill.name.toLowerCase() === normalized.toLowerCase())) {
-        return jsonOk({ ok: true, added: false }, request);
+        return privateNoStore(jsonOk({ ok: true, added: false }, request));
       }
 
       const nextSkills = [
@@ -60,7 +64,7 @@ export async function POST(request: Request, { params }: Params) {
         },
       });
 
-      return jsonOk({ ok: true, added: true }, request);
+      return privateNoStore(jsonOk({ ok: true, added: true }, request));
     },
     { event: 'resume_skill_add_failed', route: '/api/resumes/[id]/skills' },
   );

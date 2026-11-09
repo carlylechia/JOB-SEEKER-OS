@@ -539,6 +539,7 @@ describe('no route derives identity from the request', () => {
         '[id]/optimization/route.ts',
         '[id]/preview/route.ts',
         '[id]/route.ts',
+        '[id]/skills/route.ts',
         '[id]/summary-improve/route.ts',
       ].sort(),
     );
