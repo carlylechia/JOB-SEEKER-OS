@@ -9,7 +9,7 @@ import { SpinnerHeroClient } from '@/components/marketing/spinner-hero.client';
  */
 export function LandingHero() {
   return (
-    <section id="top" className="relative flex min-h-screen flex-col bg-background">
+    <section id="top" className="relative flex min-h-screen flex-col">
       {/* ── Uniform ominous background ── */}
       {/* The clip belongs on this layer, not on <section>: an `overflow` other
           than `visible` on any ancestor turns it into a scroll container. */}

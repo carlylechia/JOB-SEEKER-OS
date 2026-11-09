@@ -35,13 +35,13 @@ function PlatformJobsPreviewFallback() {
     <section id="public-jobs" className="py-20">
       <div className="grid gap-8 rounded-3xl border border-line bg-surface-sunken p-5 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:p-7">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-text">Platform Jobs</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-text">Public Jobs</p>
           <h2 className="mt-4 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
-            Explore jobs that platform users are actively capturing and working through.
+            Recent jobs from several top job boards, across industries and time zones.
           </h2>
           <p className="mt-4 max-w-xl text-sm leading-7 text-muted sm:text-base">
-            A few recent opportunities already being tracked across the platform. Browse more, save what fits, and move it
-            into your own workflow.
+            Browse roles posted recently and collected from several top job boards, spanning a range of industries,
+            locations, and time zones. Save any role to your workspace for personalised scoring, tracking, and follow-up.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link className="btn-primary gap-2" href="/jobs-public">

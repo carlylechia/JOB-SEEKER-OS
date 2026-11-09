@@ -28,20 +28,20 @@ export async function PlatformJobsPreview() {
     <section id="public-jobs" className="py-20 section-fade-up">
       <div className="grid gap-8 rounded-[2rem] border border-line bg-surface-sunken p-5 shadow-soft lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:p-7">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-text">Platform Jobs</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-text">Public Jobs</p>
           <h2 className="mt-4 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
-            Explore jobs that platform users are actively capturing and working through.
+            Recent jobs from several top job boards, across industries and time zones.
           </h2>
           <p className="mt-4 max-w-xl text-sm leading-7 text-muted sm:text-base">
-            A few recent opportunities already added on the platform. Browse what is active, save what fits, and move it into
-            your own workspace for scoring, prioritization, and execution.
+            Browse roles posted recently and collected from several top job boards, spanning a range of industries,
+            locations, and time zones. Save any role to your workspace for personalised scoring, tracking, and follow-up.
           </p>
 
           <div className="mt-6 grid gap-3">
             <div className="flex items-start gap-3 rounded-2xl border border-line bg-surface-sunken px-4 py-3">
               <Globe2 className="mt-0.5 h-5 w-5 text-accent-text" />
               <p className="text-sm leading-7 text-ink-2">
-                A few of the recent jobs being actively captured by users across the platform.
+                Jobs gathered from several top job boards and refreshed regularly.
               </p>
             </div>
             <div className="flex items-start gap-3 rounded-2xl border border-line bg-surface-sunken px-4 py-3">
@@ -53,7 +53,7 @@ export async function PlatformJobsPreview() {
             <div className="flex items-start gap-3 rounded-2xl border border-line bg-surface-sunken px-4 py-3">
               <Clock3 className="mt-0.5 h-5 w-5 text-accent-text" />
               <p className="text-sm leading-7 text-ink-2">
-                Stay close to what is active now, not just what you manually discover on your own.
+                Recent postings across industries, locations, and time zones, so there is always something current to review.
               </p>
             </div>
           </div>

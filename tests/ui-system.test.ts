@@ -186,6 +186,21 @@ describe('ambient photo', () => {
     expect(css).toContain('.ambient-canvas::before');
     expect(css).toContain('pointer-events: none');
   });
+
+  it('applies the same ambient canvas to the public marketing site', () => {
+    const layout = read('src/app/(marketing)/layout.tsx');
+    expect(layout).toContain('ambient-canvas');
+    expect(layout).toContain('min-h-dvh');
+
+    const jobsPublic = read('src/app/(marketing)/jobs-public/page.tsx');
+    expect(jobsPublic).not.toContain('overflow-x-clip bg-background');
+
+    const hero = read('src/components/marketing/landing-hero.tsx');
+    expect(hero).not.toContain('flex-col bg-background');
+
+    const demo = read('src/components/marketing/demo-slideshow.tsx');
+    expect(demo).not.toContain('absolute inset-0 bg-background');
+  });
 });
 
 describe('brand moments', () => {

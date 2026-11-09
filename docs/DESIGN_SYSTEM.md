@@ -75,7 +75,7 @@ The canvas is layered rather than flat:
 - two very low-opacity radial washes (lime + sand) on `--page-bg`
 - a faint 72px graph-paper grid from `--grid-line`
 - a fixed, 6.5% (light) / 4.5% (dark) workspace photograph behind the content
-- a reusable `.ambient-canvas` applied to the app, admin and auth shells
+- a reusable `.ambient-canvas` applied to the app, admin, auth and marketing shells
 - decorative `.ambient-orb` / `.dot-field` helpers for the loader and 404
 
 The workspace photo is a local, cropped WebP (`public/backgrounds/weekly-planning.webp`,
@@ -83,6 +83,10 @@ The workspace photo is a local, cropped WebP (`public/backgrounds/weekly-plannin
 `pointer-events: none` pseudo-element at `z-index: -1`, so it never intercepts
 clicks. Because the theme palette stays opaque and the photo sits at a whisper
 of opacity, text contrast is unchanged in both themes.
+
+Marketing pages (`(marketing)/layout.tsx`) share this canvas. Public pages must
+not paint an opaque page-level background over it; sections, cards and the
+footer keep their own surfaces so the photo only shows through the canvas.
 
 All decorative layers are painted with CSS backgrounds or `pointer-events:
 none` containers. They sit behind content, never intercept clicks and do not

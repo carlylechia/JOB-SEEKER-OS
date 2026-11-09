@@ -467,7 +467,6 @@ export function DemoSlideshow() {
     <div className="relative min-h-[100svh] overflow-x-hidden overscroll-none lg:h-screen lg:overflow-hidden">
       {/* background */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-        <div className="absolute inset-0 bg-background" />
         <div className="absolute -inset-[40%] hero-beam-pan bg-[conic-gradient(from_140deg,rgba(0,0,0,0),var(--hero-beam),var(--hero-beam),rgba(0,0,0,0),var(--hero-orb-1),rgba(0,0,0,0))] blur-[86px] opacity-[0.55]" />
         <div className="absolute left-[8%] top-[12%] h-64 w-64 rounded-full bg-accent/10 blur-[110px] animate-pulse" />
         <div className="absolute right-[10%] top-[18%] h-72 w-72 rounded-full bg-line-strong/25 blur-[120px] animate-pulse" />

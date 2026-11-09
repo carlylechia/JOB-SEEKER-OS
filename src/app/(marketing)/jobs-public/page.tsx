@@ -123,7 +123,7 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
   }
 
   return (
-    <div className="min-h-screen w-full overflow-x-clip bg-background text-ink">
+    <div className="min-h-screen w-full overflow-x-clip text-ink">
       <div className="sticky top-0 z-20 border-b border-line bg-[color:var(--nav-scrim)] backdrop-blur-xl supports-[backdrop-filter]:bg-[color:var(--nav-scrim)]">
         <div className="shell py-3">
           <div className="flex items-center justify-between gap-4">
