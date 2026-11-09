@@ -88,14 +88,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${bodyFont.variable} ${displayFont.variable} w-full overflow-x-hidden`}
+      className={`${bodyFont.variable} ${displayFont.variable} w-full overflow-x-clip`}
     >
       <head>
         {/* Applies the stored/system theme before first paint so there is no
             flash of the wrong palette. */}
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body suppressHydrationWarning className={`${bodyFont.className} w-full overflow-x-hidden`}>
+      <body suppressHydrationWarning className={`${bodyFont.className} w-full overflow-x-clip`}>
         <ThemeProvider>{children}</ThemeProvider>
         <Analytics />
       </body>

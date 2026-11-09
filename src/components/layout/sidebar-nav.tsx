@@ -42,7 +42,7 @@ export function SidebarNav({
   return (
     <aside
       aria-label="Application sidebar"
-      className="sticky top-0 z-20 hidden h-dvh max-h-dvh w-72 shrink-0 flex-col overflow-hidden border-r border-line bg-sidebar p-4 lg:flex"
+      className="fixed inset-y-0 left-0 z-30 hidden h-dvh w-72 shrink-0 flex-col overflow-hidden border-r border-line bg-sidebar p-4 lg:flex"
     >
       <div className="mb-4 shrink-0 rounded-2xl border border-line bg-surface p-4">
         <Logo href="/dashboard" />

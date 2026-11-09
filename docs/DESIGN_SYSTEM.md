@@ -74,12 +74,19 @@ The canvas is layered rather than flat:
 
 - two very low-opacity radial washes (lime + sand) on `--page-bg`
 - a faint 72px graph-paper grid from `--grid-line`
+- a fixed, 6.5% (light) / 4.5% (dark) workspace photograph behind the content
 - a reusable `.ambient-canvas` applied to the app, admin and auth shells
 - decorative `.ambient-orb` / `.dot-field` helpers for the loader and 404
 
+The workspace photo is a local, cropped WebP (`public/backgrounds/weekly-planning.webp`,
+54 KB) and is credited in `public/backgrounds/CREDITS.md`. It is painted by a
+`pointer-events: none` pseudo-element at `z-index: -1`, so it never intercepts
+clicks. Because the theme palette stays opaque and the photo sits at a whisper
+of opacity, text contrast is unchanged in both themes.
+
 All decorative layers are painted with CSS backgrounds or `pointer-events:
 none` containers. They sit behind content, never intercept clicks and do not
-reduce text contrast. No image assets or canvas/WebGL work is involved.
+reduce text contrast.
 
 ---
 
@@ -88,13 +95,13 @@ reduce text contrast. No image assets or canvas/WebGL work is involved.
 The frame is deliberately a normal document-scrolling container:
 
 ```
-<div class="ambient-canvas flex min-h-dvh">
-  <aside class="sticky top-0 h-dvh ...">   ← full-height column
+<div class="ambient-canvas flex min-h-dvh overflow-x-clip">
+  <aside class="fixed inset-y-0 left-0 h-dvh ...">   ← viewport-pinned column
     logo
     <div class="min-h-0 flex-1 overflow-y-auto">nav</div>
     <div class="shrink-0 border-t">account + sign out</div>
   </aside>
-  <div class="flex min-w-0 flex-1 flex-col">
+  <div class="flex min-w-0 flex-1 flex-col lg:pl-72">  ← matches the 18rem rail
     <header class="sticky top-0 z-40 ...">topbar</header>
     <main>page content</main>
   </div>
@@ -105,12 +112,17 @@ Key rules:
 
 - The topbar is `position: sticky`, so it remains in the viewport without taking
   the document out of normal scrolling.
+- The sidebar is `position: fixed` to the viewport with `inset-y-0`; the scroll
+  column is offset by `lg:pl-72`, exactly matching its `w-72` width, so the
+  sidebar can never drift or leave empty space on the left.
 - Only the sidebar navigation scrolls internally (`overflow-y-auto` with
   `min-h-0 flex-1`), so a short viewport can never push the account footer or
   sign-out button off screen.
-- No ancestor uses block-axis `overflow: hidden` or a fixed `h-screen`, which
-  would silently break sticky/fixed descendants.
-- Mobile navigation is unchanged; the sidebar is hidden below `lg`.
+- The app frame clips only the inline axis (`overflow-x-clip`). Block-axis
+  `overflow: hidden` or a fixed `h-screen` on an ancestor would create a
+  scrollport and silently break the sticky topbar.
+- Mobile navigation is unchanged; the sidebar is hidden below `lg` and the
+  offset resets.
 - Admin uses the same sticky header treatment on top of the ambient canvas.
 
 ---

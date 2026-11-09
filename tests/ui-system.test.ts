@@ -139,9 +139,9 @@ describe('sticky shell', () => {
     expect(topbar).toContain('backdrop-blur-xl');
   });
 
-  it('gives the sidebar its own scroller and a pinned account footer', () => {
+  it('pins the sidebar to the viewport with its own scroller and account footer', () => {
     const sidebar = read('src/components/layout/sidebar-nav.tsx');
-    expect(sidebar).toContain('sticky top-0');
+    expect(sidebar).toContain('fixed inset-y-0 left-0');
     expect(sidebar).toContain('h-dvh');
     expect(sidebar).toContain('overflow-hidden');
     expect(sidebar).toContain('overflow-y-auto');
@@ -149,12 +149,21 @@ describe('sticky shell', () => {
     expect(sidebar).toContain('shrink-0 border-t border-line pt-3');
   });
 
-  it('does not introduce a block-axis clipping ancestor in the app frame', () => {
+  it('offsets the scroll column by the sidebar and never clips the block axis', () => {
     const shell = read('src/components/layout/app-shell.tsx');
     expect(shell).toContain('min-h-dvh');
+    expect(shell).toContain('w-full overflow-x-clip');
+    expect(shell).toContain('lg:pl-72');
+    expect(shell).not.toContain('w-full overflow-x-hidden');
     expect(shell).not.toContain('overflow-y-hidden');
     expect(shell).not.toContain('h-screen');
     expect(shell).toContain('ambient-canvas');
+  });
+
+  it('keeps the root document out of a block-axis scrollport', () => {
+    const layout = read('src/app/layout.tsx');
+    expect(layout).toContain('w-full overflow-x-clip');
+    expect(layout).not.toContain('overflow-x-hidden');
   });
 
   it('uses the same sticky header treatment in admin', () => {
@@ -162,6 +171,20 @@ describe('sticky shell', () => {
     expect(adminLayout).toContain('sticky top-0 z-40');
     expect(adminLayout).toContain('shadow-nav');
     expect(adminLayout).toContain('ambient-canvas');
+  });
+});
+
+describe('ambient photo', () => {
+  it('ships a local workspace photo and paints it faintly below the content', () => {
+    expect(exists('public/backgrounds/weekly-planning.webp')).toBe(true);
+    expect(exists('public/backgrounds/CREDITS.md')).toBe(true);
+
+    const css = read('src/app/globals.css');
+    expect(css).toContain("url('/backgrounds/weekly-planning.webp')");
+    expect(css).toContain('--canvas-photo-opacity: 0.065');
+    expect(css).toContain('--canvas-photo-opacity: 0.045');
+    expect(css).toContain('.ambient-canvas::before');
+    expect(css).toContain('pointer-events: none');
   });
 });
 

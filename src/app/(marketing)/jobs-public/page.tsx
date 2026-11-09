@@ -24,7 +24,7 @@ const appUrl = getAppUrl();
 export const metadata: Metadata = {
   title: 'Public Jobs',
   description:
-    'Browse fresh remote and global job opportunities from across the web, then save the roles that fit into your private workspace for scoring, tracking, and follow-up.',
+    'Browse jobs posted recently from several top job boards, spanning industries, locations, and time zones. Save any role to your workspace for personalised scoring, tracking, and follow-up.',
   alternates: { canonical: `${appUrl}/jobs-public` },
 };
 
@@ -151,11 +151,11 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-text">Public Jobs</p>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-              Fresh roles, automatically collected and community-curated.
+              Fresh roles from several top job boards, in one place.
             </h1>
             <p className="mt-4 text-base leading-8 text-muted sm:text-lg">
-              Browse remote and global jobs from public feeds alongside roles shared by the community. Sign in to
-              import any role into your workspace for personalised scoring and tracking.
+              Browse jobs posted recently across industries, locations, and time zones. Sign in to save any role to
+              your workspace for personalised scoring, tracking, and follow-up.
             </p>
           </div>
         </section>

@@ -84,6 +84,7 @@
   --focus-ring: #4F6B14;
   --nav-scrim: rgba(247, 248, 243, 0.84);
   --grid-line: rgba(52, 58, 53, 0.055);
+  --canvas-photo-opacity: 0.065;
   --loader-glow: rgba(183, 243, 74, 0.36);
 
   --shimmer-from: #6f8f27;
@@ -151,6 +152,7 @@
   --focus-ring: #C7F77A;
   --nav-scrim: rgba(25, 29, 27, 0.84);
   --grid-line: rgba(216, 205, 182, 0.05);
+  --canvas-photo-opacity: 0.045;
   --loader-glow: rgba(166, 230, 53, 0.28);
 
   --shimmer-from: #8fbc3a;
@@ -175,7 +177,6 @@ html, body {
      which makes <body> a scrollport and silently breaks every `position:
      sticky` descendant (the navbar and sidebar). `clip` clips without
      scrolling, so stickiness is preserved. */
-  overflow-x: hidden;
   overflow-x: clip;
 }
 html { scroll-behavior: smooth; scroll-padding-top: 104px; }
@@ -221,8 +222,16 @@ a { color: inherit; text-decoration: none; }
 /* ── Ambient canvases ─────────────────────────────────────────────────
    A restrained graph-paper texture sits under the layered radial washes.
    It is painted on the container, never above content, so it cannot block
-   clicks or reduce text contrast. */
+   clicks or reduce text contrast.
+
+   A single photographic layer gives the canvas an organised-workspace
+   texture. It is fixed to the viewport, held at a whisper of opacity and
+   painted below the content, so the theme palette and text contrast stay
+   dominant in both light and dark mode. The local asset and its licence
+   are documented in public/backgrounds/CREDITS.md. */
 .ambient-canvas {
+  position: relative;
+  isolation: isolate;
   background-color: rgb(var(--bg));
   background-image:
     linear-gradient(var(--grid-line) 1px, transparent 1px),
@@ -230,6 +239,17 @@ a { color: inherit; text-decoration: none; }
     var(--page-bg);
   background-size: 72px 72px, 72px 72px, auto;
   background-position: center top;
+}
+
+.ambient-canvas::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: url('/backgrounds/weekly-planning.webp') center 62% / cover no-repeat;
+  filter: saturate(0.72) contrast(0.96);
+  opacity: var(--canvas-photo-opacity);
 }
 
 /* Soft decorative field for auth screens, the loader and the 404 page. */
