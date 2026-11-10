@@ -32,19 +32,19 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="w-full max-w-full overflow-x-clip border-t border-line bg-background pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+    <footer className="w-full max-w-full overflow-x-clip border-t border-line bg-background pb-24 md:pb-[max(1.25rem,env(safe-area-inset-bottom))]">
       <div className="shell w-full py-10 sm:py-12">
-        <div className="grid w-full gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.65fr)]">
-          <div className="min-w-0">
+        <div className="grid w-full gap-10 sm:grid-cols-3 sm:gap-x-10 sm:gap-y-12 lg:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))] lg:gap-14">
+          <div className="min-w-0 sm:col-span-3 lg:col-span-1">
             <p className="text-sm font-semibold tracking-[0.06em] text-accent-text">teChia Jobs</p>
-            <h2 className="mt-3 max-w-2xl text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
+            <h2 className="mt-3 max-w-xl text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
               The AI-powered operating system for your job search.
             </h2>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-muted sm:text-base">
+            <p className="mt-4 max-w-xl text-sm leading-7 text-muted sm:text-base">
               teChia Jobs brings scoring, prioritization, outreach, interview preparation, and
               follow-up workflows into one operating system for serious candidates.
             </p>
-            <p className="mt-4 text-xs font-medium tracking-[0.04em] text-muted">
+            <p className="mt-5 text-xs font-medium tracking-[0.04em] text-muted">
               A{' '}
               <a
                 href={PARENT_COMPANY_URL}
@@ -58,47 +58,27 @@ export function SiteFooter() {
             </p>
           </div>
 
-          {/* Mobile: two centered columns (Product | Explore + Access stacked).
-              Desktop: `lg:contents` dissolves the wrappers so each section becomes
-              its own grid column beside the brand copy. */}
-          <div className="flex min-w-0 gap-6 overflow-x-auto snap-x snap-mandatory no-scrollbar text-center lg:grid lg:grid-cols-2 lg:overflow-visible lg:text-left">
-            <section className="min-w-0 shrink-0 snap-start lg:shrink">
-              <h3 className="text-sm font-semibold text-ink">Product</h3>
-              <div className="mt-3 grid gap-2.5 text-sm text-muted">
-                {footerSections[0].links.map((link) => (
+          {footerSections.map((section) => (
+            <section key={section.title} className="min-w-0">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-ink">
+                {section.title}
+              </h3>
+              <div className="mt-4 grid w-fit gap-3 text-sm text-muted">
+                {section.links.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="break-words transition hover:text-ink"
+                    className="w-fit break-words transition hover:text-ink"
                   >
                     {link.label}
                   </Link>
                 ))}
               </div>
             </section>
-
-            <div className="flex min-w-0 gap-8 lg:contents">
-              {footerSections.slice(1).map((section) => (
-                <section key={section.title} className="min-w-0 shrink-0 snap-start lg:shrink">
-                  <h3 className="text-sm font-semibold text-ink">{section.title}</h3>
-                  <div className="mt-3 grid gap-2.5 text-sm text-muted">
-                    {section.links.map((link) => (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        className="break-words transition hover:text-ink"
-                      >
-                        {link.label}
-                      </Link>
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
 
-        <div className="mt-8 w-full border-t border-line pt-5 text-xs leading-6 text-muted">
+        <div className="mt-10 border-t border-line pt-6 text-xs leading-6 text-muted">
           <p className="[overflow-wrap:anywhere]">
             © {year}{' '}
             <a
