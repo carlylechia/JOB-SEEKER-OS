@@ -424,16 +424,16 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
 
       <footer className="w-full overflow-hidden border-t border-line bg-background pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <div className="shell w-full py-10 sm:py-12">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between md:gap-12">
-            <div className="min-w-0">
+          <div className="flex flex-col items-center gap-6 text-center">
+            <div className="min-w-0 max-w-2xl">
               <p className="text-sm text-ink-2">© 2026 teChia Digital Solutions. teChia Jobs. All rights reserved.</p>
-              <p className="mt-2 max-w-2xl text-sm leading-7 text-muted">
+              <p className="mx-auto mt-2 text-sm leading-7 text-muted">
                 teChia Jobs helps users organise and evaluate job opportunities. Listings are attributed to their
                 original sources. Users remain responsible for the accuracy of their applications and compliance with
                 third-party platform terms.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap justify-center gap-3">
               <Link className="btn-secondary" href="/">Landing Page</Link>
               {!session ? (
                 <>
