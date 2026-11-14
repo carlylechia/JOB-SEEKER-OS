@@ -11,6 +11,8 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { useJobs } from "@/hooks/use-job-data";
 import { isActiveJobStatus } from "@/lib/job-status";
 import { JobIntelligencePanel } from "@/components/jobs/job-intelligence-panel";
+import { PreparationPanel } from "@/components/application-preparation/preparation-panel";
+import { ApplicationRecordPanel } from "@/components/applications/application-record-panel";
 import { checklistCompletion } from "@/lib/scoring";
 import { Checklist, Contact, JobFormValues, JobStatus } from "@/types";
 import { CATEGORY_LABELS, SENIORITY_LABELS, type JobCategory, type SeniorityLevel } from "@/lib/job-discovery/categories";
@@ -256,6 +258,9 @@ export default function JobDetailsPage() {
         <PriorityBadge priority={job.priorityFlag} />
         <StatusBadge status={job.status} />
       </div>
+
+      {!isEditing ? <PreparationPanel jobId={job.id} /> : null}
+      {!isEditing ? <ApplicationRecordPanel jobId={job.id} pipelineStatus={job.status} /> : null}
 
       {isEditing ? (
         <JobForm
