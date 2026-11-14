@@ -1285,20 +1285,43 @@ export async function generatePrepPack(options: RunPrepGenerationOptions): Promi
     }
   }
 
+  // The user's job description is never dropped or silently truncated to
+  // nothing: it is the single most important input to an interview pack. Control
+  // characters are stripped because they can break the provider request, but the
+  // text itself is preserved up to the documented limit.
+  const safeJobDescription = (row.jobDescription ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, ' ');
+
   let verified: ReturnType<typeof verifyPack>;
   try {
-    const modelPack = await provider.generatePack({
-      packBlock,
-      candidateBlock: candidate.profileText,
-      sourceBlock: buildSourceBlock(research.sources),
-      jobText: (row.jobDescription ?? '').slice(0, 40_000),
-      context: row.context as InterviewContext,
-      track: interviewTrackForContext(row.context as InterviewContext),
-      horizon,
-      maxQuestions: INTERVIEW_PREP_MAX_QUESTIONS,
-      maxTasks: INTERVIEW_PREP_MAX_TASKS,
-      language: row.interviewLanguage,
-    });
+    // A single in-process retry covers a transient provider failure without
+    // consuming a second credit: the idempotency key is unchanged, and a
+    // non-retryable error (bad input, refusal) is re-thrown immediately.
+    let modelPack!: Awaited<ReturnType<typeof provider.generatePack>>;
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        modelPack = await provider.generatePack({
+          packBlock,
+          candidateBlock: candidate.profileText,
+          sourceBlock: buildSourceBlock(research.sources),
+          jobText: safeJobDescription.slice(0, 40_000),
+          context: row.context as InterviewContext,
+          track: interviewTrackForContext(row.context as InterviewContext),
+          horizon,
+          maxQuestions: INTERVIEW_PREP_MAX_QUESTIONS,
+          maxTasks: INTERVIEW_PREP_MAX_TASKS,
+          language: row.interviewLanguage,
+        });
+        lastError = null;
+        break;
+      } catch (error) {
+        lastError = error;
+        const retryable = error instanceof InterviewPrepAiError ? error.retryable : false;
+        if (!retryable || attempt === 1) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 1_000));
+      }
+    }
+    if (lastError) throw lastError;
 
     const profileEvidence: ProfileEvidence = {
       projectNames: candidate.projectNames,
@@ -1309,7 +1332,7 @@ export async function generatePrepPack(options: RunPrepGenerationOptions): Promi
     verified = verifyPack({
       pack: modelPack,
       sources: verificationSources,
-      jobText: row.jobDescription ?? '',
+      jobText: safeJobDescription,
       candidateText: candidate.evidenceText,
       profile: profileEvidence,
       maxQuestions: INTERVIEW_PREP_MAX_QUESTIONS,
