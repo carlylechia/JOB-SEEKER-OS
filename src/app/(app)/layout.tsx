@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { cache } from 'react';
 import { auth } from '@/auth';
 import { AppShell } from '@/components/layout/app-shell';
+import { Breadcrumbs } from '@/components/shared/breadcrumbs';
 import { TrialBanner } from '@/components/billing/trial-countdown';
 import { getEffectiveSubscription } from '@/lib/billing/subscriptions';
 import { prisma } from '@/lib/prisma';
@@ -80,6 +81,9 @@ export default async function ProtectedLayout({ children }: { children: React.Re
           trialExpired={billing.trialExpired}
         />
       ) : null}
+      <div className="mb-4">
+        <Breadcrumbs />
+      </div>
       {children}
     </AppShell>
   );

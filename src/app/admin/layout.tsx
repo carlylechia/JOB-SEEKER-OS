@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Shield } from 'lucide-react';
 import { requireAdmin } from '@/lib/authz';
 import { Logo } from '@/components/shared/logo';
+import { Breadcrumbs } from '@/components/shared/breadcrumbs';
 import { ThemeSwitch } from '@/components/shared/theme-switch';
 import { BackToSiteButton } from '@/components/layout/back-to-site-button';
 
@@ -38,6 +39,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       </header>
 
       <main className="shell w-full py-6 lg:py-8">
+        <div className="mb-4">
+          <Breadcrumbs />
+        </div>
         <div className="w-full min-w-0 overflow-x-clip">{children}</div>
       </main>
 
