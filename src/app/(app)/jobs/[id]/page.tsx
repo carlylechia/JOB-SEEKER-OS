@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { useJobs } from "@/hooks/use-job-data";
 import { isActiveJobStatus } from "@/lib/job-status";
 import { JobIntelligencePanel } from "@/components/jobs/job-intelligence-panel";
+import { BrandLoader } from '@/components/shared/brand-loader';
 import { PreparationPanel } from "@/components/application-preparation/preparation-panel";
 import { ApplicationRecordPanel } from "@/components/applications/application-record-panel";
 import { checklistCompletion } from "@/lib/scoring";
@@ -102,7 +103,7 @@ export default function JobDetailsPage() {
     };
   }, [jobId]);
 
-  if (isLoading) return <div className="card-pad">Loading job…</div>;
+  if (isLoading) return <BrandLoader message="Loading job" />;
   if (!job) return <div className="card-pad">Job not found.</div>;
 
   const jobIsActive = isActiveJobStatus(job.status);

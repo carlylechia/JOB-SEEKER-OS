@@ -26,6 +26,7 @@ import {
   Loader,
   ShieldCheck,
 } from 'lucide-react';
+import { BrandLoader } from '@/components/shared/brand-loader';
 import {
   APPLICATION_TRANSITIONS,
   ATTEMPT_CHANNELS,
@@ -234,6 +235,10 @@ export function ApplicationRecordPanel({
         <p className="flex items-start gap-2 text-sm text-danger-text">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> {error}
         </p>
+      ) : null}
+
+      {!loaded ? (
+        <BrandLoader variant="inline" message="Loading application record" className="card-pad" />
       ) : null}
 
       {loaded && !detail ? (

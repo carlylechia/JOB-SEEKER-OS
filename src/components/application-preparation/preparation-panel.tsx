@@ -27,6 +27,7 @@ import {
   RefreshCw,
   Sparkles,
 } from 'lucide-react';
+import { BrandLoader } from '@/components/shared/brand-loader';
 
 import type {
   PreparationPlan,
@@ -247,11 +248,7 @@ export function PreparationPanel({ jobId }: { jobId: string }) {
   }
 
   if (loading) {
-    return (
-      <div className="card-pad flex items-center gap-2 text-sm text-muted">
-        <Loader className="h-4 w-4 animate-spin" /> Loading preparation options…
-      </div>
-    );
+    return <BrandLoader variant="inline" message="Loading preparation options…" className="card-pad" />;
   }
 
   if (error && !plan) {

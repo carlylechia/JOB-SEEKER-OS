@@ -31,19 +31,13 @@ function getFormattedDate(): string {
   });
 }
 
+import { BrandLoader } from '@/components/shared/brand-loader';
+
 export default function DashboardPage() {
   const { dashboard, jobs, interviews, preferences, onboardingCompleted, onboardingSkipped, profile, streakCount, streakActiveToday, streakAtRisk, stats, isLoading } = useJobs();
 
   if (isLoading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-24 rounded-2xl bg-surface-sunken" />
-        <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-24 rounded-2xl bg-surface-sunken" />)}
-        </div>
-        <div className="h-64 rounded-2xl bg-surface-sunken" />
-      </div>
-    );
+    return <BrandLoader message="Preparing your dashboard" />;
   }
 
   // Derive follow-up and interview lists
