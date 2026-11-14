@@ -10,6 +10,10 @@ import {
   Brain,
   Calendar,
   Search,
+  Sparkles,
+  ShieldCheck,
+  Puzzle,
+  Rocket,
 } from 'lucide-react';
 
 export type FeatureShowcaseItem = {
@@ -123,5 +127,37 @@ export const FEATURE_SHOWCASE: FeatureShowcaseItem[] = [
     description:
       'One view for your streak, daily queue, top priorities, and upcoming milestones. Your search at a glance — nothing hidden.',
     accent: 'text-accent-text',
+  },
+  {
+    icon: Sparkles,
+    title: 'Application Studio',
+    shortTitle: 'App Studio',
+    description:
+      'One workspace for your evidence, resumes, writing, research and interview preparation — grouped so the underlying material is maintained once and reused everywhere.',
+    accent: 'text-accent-text',
+  },
+  {
+    icon: Rocket,
+    title: 'One-Action Preparation',
+    shortTitle: 'Auto-Prepare',
+    description:
+      'Press “Prepare my application” to build a tailored resume, cover letter, recruiter message and interview briefing as independent, retryable tasks that survive a refresh.',
+    accent: 'text-success-text',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Auditable Application Record',
+    shortTitle: 'App Record',
+    description:
+      'Track attempts and submission evidence per job. An application only reaches Applied with confirmed evidence — never a guess.',
+    accent: 'text-warn-text',
+  },
+  {
+    icon: Puzzle,
+    title: 'Browser Extension',
+    shortTitle: 'Extension',
+    description:
+      'Save jobs and auto-fill applications from LinkedIn, Greenhouse, Lever and Workday. Sensitive declarations are left for you to answer.',
+    accent: 'text-muted',
   },
 ];

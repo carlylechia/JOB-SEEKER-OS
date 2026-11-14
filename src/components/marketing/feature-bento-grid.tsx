@@ -36,6 +36,12 @@ const cards = [
     eyebrow: 'See what matters',
   },
   {
+    title: 'Application Studio',
+    text: 'Prepare an entire application with one action: tailored resume, cover letter, recruiter message and interview briefing — each running independently so a failure never discards finished work.',
+    icon: Sparkles,
+    eyebrow: 'Prepare once, reuse everywhere',
+  },
+  {
     title: 'Built for serious applicants',
     text: 'teChia Jobs is designed for people who want disciplined progress, clearer decisions, and less application chaos.',
     icon: BriefcaseBusiness,

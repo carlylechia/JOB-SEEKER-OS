@@ -2,76 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { Download, Puzzle, Smartphone, Monitor } from 'lucide-react';
-
-type Platform = 'ios' | 'android' | 'mac' | 'windows' | 'linux' | 'unknown';
-
-function detectPlatform(): Platform {
-  if (typeof navigator === 'undefined') return 'unknown';
-  const ua = navigator.userAgent.toLowerCase();
-  if (/iphone|ipad|ipod/.test(ua)) return 'ios';
-  if (/android/.test(ua)) return 'android';
-  if (/mac os x/.test(ua)) return 'mac';
-  if (/windows/.test(ua)) return 'windows';
-  if (/linux/.test(ua)) return 'linux';
-  return 'unknown';
-}
-
-const HOME_STEPS: Record<Platform, { title: string; steps: string[] }> = {
-  ios: {
-    title: 'Add teChia Jobs to your iPhone home screen',
-    steps: [
-      'Open this site in Safari.',
-      'Tap the Share button (the square with an arrow).',
-      'Choose "Add to Home Screen", then tap Add.',
-    ],
-  },
-  android: {
-    title: 'Add teChia Jobs to your Android home screen',
-    steps: [
-      'Open this site in Chrome.',
-      'Tap the three-dot menu.',
-      'Choose "Install app" or "Add to Home screen".',
-    ],
-  },
-  mac: {
-    title: 'Install teChia Jobs on your Mac',
-    steps: [
-      'Open this site in Chrome or Edge.',
-      'Click the install icon in the address bar (or use the browser menu).',
-      'Confirm "Install teChia Jobs" to add it to your Dock and Launchpad.',
-    ],
-  },
-  windows: {
-    title: 'Install teChia Jobs on Windows',
-    steps: [
-      'Open this site in Chrome or Edge.',
-      'Click the install icon in the address bar.',
-      'Confirm to add teChia Jobs to your Start menu and desktop.',
-    ],
-  },
-  linux: {
-    title: 'Install teChia Jobs on Linux',
-    steps: [
-      'Open this site in Chrome or Edge.',
-      'Use the browser menu and choose "Install teChia Jobs".',
-      'Confirm to add a launcher to your applications menu.',
-    ],
-  },
-  unknown: {
-    title: 'Add teChia Jobs to your home screen',
-    steps: [
-      'Open this site in your browser.',
-      'Use the browser menu and choose "Install" or "Add to Home Screen".',
-    ],
-  },
-};
+import {
+  detectPlatform,
+  HOME_SCREEN_STEPS,
+  HOME_SCREEN_TITLE,
+  type Platform,
+} from '@/lib/install/platform';
 
 export function InstallHighlight() {
   const [platform, setPlatform] = useState<Platform>('unknown');
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    setPlatform(detectPlatform());
+    setPlatform(detectPlatform(navigator.userAgent));
     try {
       if (window.localStorage.getItem('techia-install-dismissed') === '1') {
         setDismissed(true);
@@ -83,7 +26,8 @@ export function InstallHighlight() {
 
   if (dismissed) return null;
 
-  const home = HOME_STEPS[platform];
+  const homeTitle = HOME_SCREEN_TITLE[platform];
+  const homeSteps = HOME_SCREEN_STEPS[platform];
 
   function dismiss() {
     setDismissed(true);
@@ -119,10 +63,10 @@ export function InstallHighlight() {
         <div className="rounded-xl border border-line bg-surface-sunken p-4">
           <div className="flex items-center gap-2">
             <HomeIcon className="h-4 w-4 text-accent-text" aria-hidden="true" />
-            <p className="text-sm font-semibold text-ink">{home.title}</p>
+            <p className="text-sm font-semibold text-ink">{homeTitle}</p>
           </div>
           <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-muted">
-            {home.steps.map((step) => (
+            {homeSteps.map((step) => (
               <li key={step}>{step}</li>
             ))}
           </ol>

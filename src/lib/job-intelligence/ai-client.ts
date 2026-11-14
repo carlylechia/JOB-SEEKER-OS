@@ -24,6 +24,7 @@
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { logImportantError } from '@/lib/observability';
+import { AI_MODEL_DEFAULTS, getAiModel } from '@/lib/ai/model-registry';
 import {
   ANALYSIS_ERROR_MESSAGES,
   ANALYSIS_SCHEMA_NAME,
@@ -57,10 +58,10 @@ import {
  * default. Override with `JOB_INTELLIGENCE_MODEL`, read here and nowhere
  * else, so changing model never means hunting through the codebase.
  */
-export const DEFAULT_JOB_INTELLIGENCE_MODEL = 'gpt-4.1-mini';
+export const DEFAULT_JOB_INTELLIGENCE_MODEL = AI_MODEL_DEFAULTS.JOB_INTELLIGENCE;
 
 export function getJobIntelligenceModel(): string {
-  return process.env.JOB_INTELLIGENCE_MODEL?.trim() || DEFAULT_JOB_INTELLIGENCE_MODEL;
+  return getAiModel('JOB_INTELLIGENCE');
 }
 
 /** Name recorded on each analysis so a result can be traced to its model. */

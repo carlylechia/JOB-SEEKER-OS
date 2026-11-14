@@ -123,7 +123,7 @@ export function buildDailyDigest(input: {
 
   lines.push('');
   lines.push(`“${pickMotivation(userId, dayKey)}”`);
-  lines.push('Open your queue → /queue');
+  lines.push('Open your queue → /dashboard#daily-queue');
 
   return {
     title,

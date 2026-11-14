@@ -6,13 +6,11 @@ type SpinnerHeroClientProps = {
   className?: string;
 };
 
+import { BrandLoader } from '@/components/shared/brand-loader';
+
 const SpinnerHero = dynamic(() => import('@/components/marketing/spinner-hero').then((m) => m.default), {
   ssr: false,
-  loading: () => (
-    <div className="flex items-center justify-center min-h-[300px]" aria-hidden>
-      <div className="h-[300px] w-[300px] rounded-full border border-line bg-surface-sunken" />
-    </div>
-  ),
+  loading: () => <BrandLoader className="!min-h-[300px]" message="Loading 3D preview" />,
 });
 
 export function SpinnerHeroClient({ className }: SpinnerHeroClientProps) {

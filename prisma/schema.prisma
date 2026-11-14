@@ -60,6 +60,8 @@ model User {
   practiceSessions          InterviewPracticeSession[]
   applicationMaterials      ApplicationMaterial[]
   careerActions             CareerAction[]
+  preparationRuns           ApplicationPreparationRun[]
+  applications              Application[]
   jobDiscoveryRuns          JobDiscoveryRun[]
   dailyJobRecommendations   DailyJobRecommendation[]
   productEvents             ProductEvent[]
@@ -200,6 +202,8 @@ model JobLead {
   prepPacks            InterviewPrepPack[]
   applicationMaterials ApplicationMaterial[]
   careerActions        CareerAction[]
+  preparationRuns      ApplicationPreparationRun[]
+  applications         Application[]
 
   @@index([userId, status])
   @@index([userId, company])
@@ -1326,6 +1330,98 @@ model ApplicationMaterial {
   @@index([supersedesId])
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// APPLICATION PREPARATION AUTOPILOT
+//
+// One preparation run is one user's deliberate request to prepare a set of
+// materials for one job. Each material is an independent TASK with its own
+// state, attempts and result reference, so one slow or failing provider call
+// never invalidates the work that already succeeded.
+//
+// The run is durable: it lives in the database, survives a page refresh or a
+// serverless invocation ending, and is resumed by claiming one eligible task at
+// a time. `dedupeKey` is the idempotency key that stops a double-click (or two
+// tabs) from creating two runs — and therefore two provider bills — for the
+// same inputs.
+//
+// `requestedTasks` / `completedTasks` / `failedTasks` are deliberately arrays
+// of the enum rather than free strings: Postgres validates the type, and the
+// application never has to reason about an unknown task name.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum ApplicationPreparationTaskType {
+  RESUME_TAILORING
+  COVER_LETTER
+  RECRUITER_MESSAGE
+  SCREENING_ANSWERS
+  COMPANY_RESEARCH
+  INTERVIEW_BRIEFING
+}
+
+model ApplicationPreparationRun {
+  id               String   @id @default(cuid())
+  userId           String
+  jobId            String
+  /// QUEUED | RUNNING | COMPLETED | PARTIALLY_COMPLETED | FAILED | CANCELLED
+  status           String   @default("QUEUED")
+  requestedTasks   ApplicationPreparationTaskType[]
+  completedTasks   ApplicationPreparationTaskType[]
+  failedTasks      ApplicationPreparationTaskType[]
+  /// SHA-256 over the user-visible inputs and the selected task set. A changed
+  /// job, profile, source resume or selection produces a new run.
+  inputFingerprint String
+  /// Stable idempotency key: user + job + fingerprint + selection.
+  dedupeKey        String   @unique
+  /// The plan the user actually confirmed, stored so a reopened run explains
+  /// why each task exists without re-deriving it.
+  selectionJson    Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  completedAt      DateTime?
+
+  user  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job   JobLead @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  tasks ApplicationPreparationTask[]
+
+  @@index([userId, jobId, createdAt])
+  @@index([userId, status, updatedAt])
+}
+
+model ApplicationPreparationTask {
+  id             String                          @id @default(cuid())
+  runId          String
+  userId         String
+  jobId          String
+  type           ApplicationPreparationTaskType
+  /// PENDING | RUNNING | COMPLETED | FAILED | SKIPPED | CANCELLED
+  status         String                          @default("PENDING")
+  /// Stable within the run. `runId + type` is already unique; this names the
+  /// task in logs and in the UI without exposing a database id.
+  taskKey        String
+  attempts       Int                             @default(0)
+  maxAttempts    Int                             @default(3)
+  /// Machine-readable only. User-facing copy is mapped in the application.
+  errorCode      String?
+  /// The id of the produced artefact: StructuredResume, ApplicationMaterial or
+  /// InterviewPrepPack. Resolved against the user's own rows on read.
+  resultRef      String?
+  /// RESUME | MATERIAL | PREP_PACK
+  resultKind     String?
+  metadata       Json?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  nextAttemptAt  DateTime                        @default(now())
+  createdAt      DateTime                        @default(now())
+  updatedAt      DateTime                        @updatedAt
+
+  run ApplicationPreparationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, type])
+  @@index([runId, status, createdAt])
+  @@index([status, nextAttemptAt])
+  @@index([userId, jobId, type, status])
+}
+
 model CareerAction {
   id                String    @id @default(cuid())
   userId            String
@@ -1639,4 +1735,96 @@ model StorageCleanupTask {
 
   @@index([status, nextAttemptAt])
   @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// APPLICATION LIFECYCLE
+//
+// Additive to JobLead. `JobLead.status` stays the pipeline view the existing
+// product renders. `Application` is the auditable record of ONE application:
+// what was prepared, what was attempted, and what evidence proves submission.
+//
+// The invariant this section enforces is the release's most important one:
+// an application may only reach APPLIED through a CONFIRMED attempt that
+// carries evidence. A user assertion ("I applied") creates an ATTEMPTED record
+// and leaves the application IN_PROGRESS — never APPLIED, never fabricated.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Application {
+  id     String @id @default(cuid())
+  userId String
+  jobId  String
+
+  /// NOT_STARTED | IN_PROGRESS | READY_TO_SUBMIT | APPLIED | INTERVIEWING |
+  /// OFFER | REJECTED | WITHDRAWN
+  status      String   @default("NOT_STARTED")
+  targetDate  DateTime?
+  outcomeNote String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job      JobLead       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  attempts ApplicationAttempt[]
+  events   ApplicationEvent[]
+
+  @@unique([userId, jobId])
+  @@index([userId, status, updatedAt])
+  @@index([userId, createdAt])
+}
+
+model ApplicationAttempt {
+  id     String @id @default(cuid())
+  userId String
+  jobId  String
+
+  /// MANUAL | WEB_FORM | EMAIL | EXTENSION | REFERRAL | OTHER
+  channel String
+
+  /// ATTEMPTED | CONFIRMED | FAILED
+  status String
+
+  /// User's account of when they submitted. Never used to set APPLIED.
+  attemptedAt DateTime
+
+  /// Required for CONFIRMED. What kind of proof backs the submission.
+  /// CONFIRMATION_PAGE | EMAIL | SCREENSHOT | ATS_WEBHOOK | REFERRAL_CONFIRMATION
+  evidenceKind String?
+  /// A reference the user can later find again: message id, ticket id, filename.
+  /// No blob is stored here; the artefact lives where it was captured.
+  evidenceRef String?
+  /// Plain-language description. Free text, never a claim of success beyond it.
+  evidenceSummary String?
+  createdAt DateTime @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  applicationId String
+
+  @@index([applicationId, createdAt])
+  @@index([userId, jobId])
+}
+
+model ApplicationEvent {
+  id            String   @id @default(cuid())
+  applicationId String
+  userId        String
+  jobId         String
+
+  /// STATUS_CHANGED | ATTEMPT_RECORDED | EVIDENCE_ATTACHED | SUBMISSION_CONFIRMED | WITHDRAWN
+  type String
+
+  fromStatus String?
+  toStatus   String?
+
+  /// What caused the change: USER | SYSTEM | IMPORT | EXTENSION
+  actor String
+  reason String?
+  metadata Json?
+  createdAt DateTime @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, createdAt])
+  @@index([userId, jobId, createdAt])
 }

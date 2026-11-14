@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import useSWR from 'swr';
+import { BrandLoader } from '@/components/shared/brand-loader';
 import { CareerAction } from '@/types';
 
 const fetcher = (url: string) =>
@@ -13,7 +14,7 @@ const fetcher = (url: string) =>
 function actionHref(item: CareerAction): string {
   if (item.relatedPrepPackId) return `/interview-prep/${item.relatedPrepPackId}`;
   if (item.relatedJobId) return `/jobs/${item.relatedJobId}`;
-  return '/queue';
+  return '/dashboard#daily-queue';
 }
 
 export function DailyQueue() {
@@ -24,14 +25,7 @@ export function DailyQueue() {
   );
 
   if (isLoading) {
-    return (
-      <div className="card-pad space-y-3 animate-pulse">
-        <div className="h-4 w-40 rounded bg-surface-sunken" />
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-16 rounded-xl bg-surface-sunken" />
-        ))}
-      </div>
-    );
+    return <BrandLoader variant="inline" message="Loading your daily queue" className="card-pad" />;
   }
 
   if (error) {

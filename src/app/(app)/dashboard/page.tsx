@@ -31,19 +31,13 @@ function getFormattedDate(): string {
   });
 }
 
+import { BrandLoader } from '@/components/shared/brand-loader';
+
 export default function DashboardPage() {
   const { dashboard, jobs, interviews, preferences, onboardingCompleted, onboardingSkipped, profile, streakCount, streakActiveToday, streakAtRisk, stats, isLoading } = useJobs();
 
   if (isLoading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-24 rounded-2xl bg-surface-sunken" />
-        <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-24 rounded-2xl bg-surface-sunken" />)}
-        </div>
-        <div className="h-64 rounded-2xl bg-surface-sunken" />
-      </div>
-    );
+    return <BrandLoader message="Preparing your dashboard" />;
   }
 
   // Derive follow-up and interview lists
@@ -104,6 +98,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 pb-8">
+      <InstallHighlight />
 
       {/* ── Hero header ─────────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl border border-line bg-gradient-to-r from-surface-sunken via-background to-card px-6 py-6">
@@ -130,7 +125,7 @@ export default function DashboardPage() {
             <Link href="/jobs/new" className="btn-primary gap-1.5 text-sm">
               <Zap className="h-3.5 w-3.5" /> Add job
             </Link>
-            <Link href="/queue" className="btn-secondary gap-1.5 text-sm">
+            <Link href="#daily-queue" className="btn-secondary gap-1.5 text-sm">
               <ListChecks className="h-3.5 w-3.5" /> View queue
             </Link>
             <Link href="/interview-prep" className="btn-secondary gap-1.5 text-sm">
@@ -271,7 +266,9 @@ export default function DashboardPage() {
       ) : (
         <>
           {/* ── Daily Queue (hero action section) ───────────────────── */}
-          <DailyQueue />
+          <div id="daily-queue" className="scroll-mt-24">
+            <DailyQueue />
+          </div>
 
           {/* ── Top priorities + upcoming columns ───────────────────── */}
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -319,7 +316,6 @@ export default function DashboardPage() {
           )}
         </>
       )}
-      <InstallHighlight />
     </div>
   );
 }

@@ -4,6 +4,8 @@ import { withCors, handleOptions } from '@/lib/cors';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 import OpenAI from 'openai';
 import { z } from 'zod';
+import { getAiModel } from '@/lib/ai/model-registry';
+import { isSensitiveQuestion, SENSITIVE_QUESTION_MESSAGE } from '@/lib/ai/sensitive';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -35,11 +37,15 @@ export async function POST(request: Request) {
         return withCors(apiError('VALIDATION_FAILED', 'Invalid request.', { request }), request);
       }
 
+      if (isSensitiveQuestion(parsed.question)) {
+        return withCors(apiError('VALIDATION_FAILED', SENSITIVE_QUESTION_MESSAGE, { request }), request);
+      }
+
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) return withCors(apiError('AI_UNAVAILABLE', 'AI is not configured.', { request }), request);
 
       const client = new OpenAI({ apiKey, timeout: 30000 });
-      const model = process.env.AI_AUTOFILL_MODEL?.trim() || process.env.RESUME_OPTIMIZATION_MODEL?.trim() || 'gpt-4.1-mini';
+      const model = getAiModel('EXTENSION_AUTOFILL');
 
       const profileText = JSON.stringify(parsed.profile || {}).slice(0, 4000);
       const jobText = parsed.jobDescription.slice(0, 4000);

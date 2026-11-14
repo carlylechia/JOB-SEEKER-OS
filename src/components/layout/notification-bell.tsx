@@ -25,7 +25,7 @@ function timeAgo(dateStr: string): string {
 
 function notificationLink(type: string): { href: string; label: string } | null {
   if (['daily_digest', 'queue', 'queue_reminder', 'follow_up_due'].includes(type)) {
-    return { href: '/queue', label: 'Open your queue' };
+    return { href: '/dashboard#daily-queue', label: 'Open your queue' };
   }
   if (['streak', 'streak_risk'].includes(type)) {
     return { href: '/dashboard', label: 'Open your dashboard' };

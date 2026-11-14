@@ -26,7 +26,7 @@ const faqs = [
   },
   {
     q: 'What is available today?',
-    a: 'Job tracking, personalized scoring, daily queue, pipeline management, recruiter contacts, interview prep, resume intelligence, AI job intelligence, resume builder and optimization, and application materials are available. Collaboration features for career coaches are not yet available.',
+    a: 'Job tracking, personalized scoring, daily queue, pipeline management, recruiter contacts, interview prep, resume intelligence, AI job intelligence, resume builder and optimization, application materials, one-action application preparation, auditable application records, and the teChia Jobs browser extension are available. Collaboration features for career coaches are not yet available.',
   },
 ];
 

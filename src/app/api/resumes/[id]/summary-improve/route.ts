@@ -11,6 +11,7 @@ import { resumeContentSchema } from '@/lib/resume-builder/schema';
 import OpenAI from 'openai';
 import { z } from 'zod';
 import { zodTextFormat } from 'openai/helpers/zod';
+import { getAiModel } from '@/lib/ai/model-registry';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -59,7 +60,7 @@ export async function POST(request: Request, { params }: Params) {
       if (!apiKey) return apiError('AI_UNAVAILABLE', 'AI is not configured.', { request });
 
       const client = new OpenAI({ apiKey, timeout: 30000 });
-      const model = process.env.RESUME_OPTIMIZATION_MODEL?.trim() || 'gpt-4.1-mini';
+      const model = getAiModel('RESUME_OPTIMIZATION');
 
       const currentSummary = resume.content.summary || '';
       const jobText = [job.title, job.company, job.jobDescription || ''].join('\n').slice(0, 4000);
