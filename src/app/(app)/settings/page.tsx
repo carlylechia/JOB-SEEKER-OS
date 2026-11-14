@@ -27,10 +27,51 @@ export default function SettingsPage() {
   const { preferences, updatePreferences, titleOptions, createTitle } = useJobs();
   const [form, setForm] = useState<UserPreferences>(preferences ?? defaultPreferences);
   const [saved, setSaved] = useState(false);
+  const [resume, setResume] = useState<{ headline: string | null; location: string | null; skills: string[] } | null>(null);
 
   useEffect(() => {
     if (preferences) setForm(preferences);
   }, [preferences]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/resumes', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const first = Array.isArray(data?.resumes) ? data.resumes[0] : null;
+        const content = first?.content ?? {};
+        const basics = (content?.basics ?? {}) as { headline?: string | null; location?: string | null };
+        const skills = Array.isArray(content?.skills)
+          ? content.skills.map((skill: { name?: string }) => skill?.name).filter(Boolean)
+          : [];
+        if (!cancelled) {
+          setResume({
+            headline: basics.headline ?? first?.name ?? null,
+            location: basics.location ?? null,
+            skills,
+          });
+        }
+      } catch {
+        // Non-critical: settings still works without resume data.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function populateFromResume() {
+    if (!resume) return;
+    setSaved(false);
+    setForm((prev) => ({
+      ...prev,
+      targetRoles: prev.targetRoles.length ? prev.targetRoles : resume.headline ? [resume.headline] : prev.targetRoles,
+      preferredStack: prev.preferredStack.length ? prev.preferredStack : resume.skills.slice(0, 10),
+      mustHaveTech: prev.mustHaveTech.length ? prev.mustHaveTech : resume.skills.slice(0, 6),
+    }));
+  }
 
   function setField<K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) {
     setSaved(false);
@@ -49,6 +90,26 @@ export default function SettingsPage() {
         title="Settings"
         subtitle="Control what kinds of roles you want to pursue so scoring compares real preferences against the jobs you save."
       />
+
+      {resume ? (
+        <section className="card-pad" aria-labelledby="resume-source-heading">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h2 id="resume-source-heading" className="text-base font-semibold text-ink">
+                Populated from your resume
+              </h2>
+              <p className="muted mt-1">
+                {resume.headline ?? 'Resume on file'}
+                {resume.location ? ` · ${resume.location}` : ''}
+                {resume.skills.length ? ` · ${resume.skills.length} skills detected` : ''}
+              </p>
+            </div>
+            <button type="button" className="btn-secondary text-xs" onClick={populateFromResume}>
+              Apply resume data to settings
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       <section className="card-pad" aria-labelledby="appearance-heading">
         <div className="flex items-start gap-3">
