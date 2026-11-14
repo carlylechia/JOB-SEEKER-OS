@@ -4,6 +4,7 @@ import { handleOptions } from '@/lib/cors';
 import { logImportantError, logImportantInfo } from '@/lib/observability';
 import { prisma } from '@/lib/prisma';
 import { touchStreak } from '@/lib/streak';
+import { detectPlatform, installNudgeMessage } from '@/lib/install/platform';
 import { applyRateLimit, getRequestIp } from '@/lib/rate-limit';
 import { sanitizeArray, sanitizeText, sanitizeUrl } from '@/lib/sanitize';
 import { createNotification } from '@/lib/notifications';
@@ -104,10 +105,11 @@ export async function POST(request: Request) {
         select: { name: true },
       });
       const firstName = user?.name?.split(' ')[0] ?? 'there';
+      const platform = detectPlatform(request.headers.get('user-agent'));
       await createNotification(session.user.id, {
         type: 'system',
         title: '🎉 Welcome to teChia Jobs!',
-        message: `You're all set, ${firstName}! Your workspace is personalised and ready. Start by adding your first job lead or browsing public listings.`,
+        message: `You're all set, ${firstName}! Your workspace is personalised and ready. Start by adding your first job lead or browsing public listings. ${installNudgeMessage(platform)}`,
       });
     } catch {
       // Non-critical — don't fail the request

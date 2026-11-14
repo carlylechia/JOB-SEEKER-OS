@@ -98,6 +98,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 pb-8">
+      <InstallHighlight />
 
       {/* ── Hero header ─────────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl border border-line bg-gradient-to-r from-surface-sunken via-background to-card px-6 py-6">
@@ -315,7 +316,6 @@ export default function DashboardPage() {
           )}
         </>
       )}
-      <InstallHighlight />
     </div>
   );
 }

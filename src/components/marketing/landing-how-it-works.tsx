@@ -39,7 +39,7 @@ const steps = [
     icon: Rocket,
     title: 'Execute with discipline',
     description:
-      'Work your daily queue, move leads through the pipeline, track contacts, prep for interviews, and maintain your application streak — all in one system.',
+      'Work your daily queue, prepare materials with one action, record submission evidence, track contacts, practise interviews, and maintain your application streak — all in one system.',
     detail: 'Built for candidates who run their search like a professional.',
     accent: 'border-success/40 bg-success/10 text-success-text',
     connector: null,
@@ -142,7 +142,8 @@ export function LandingHowItWorks() {
             <ul className="space-y-2 text-sm text-muted">
               <li>Discover and import relevant jobs</li>
               <li>Understand fit and gaps</li>
-              <li>Prepare resumes and application materials</li>
+              <li>Prepare resumes and application materials with one action</li>
+              <li>Record submission evidence per application</li>
               <li>Practise interviews</li>
               <li>Track, follow up, and review progress</li>
             </ul>

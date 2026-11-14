@@ -54,8 +54,8 @@ export function LandingHero() {
               </h1>
 
               <p className="hero-l3 mt-5 text-base leading-7 text-ink-2 sm:text-lg">
-                Track opportunities, score fit, and work the right next step each day — without losing momentum across tabs,
-                notes, and reminders.
+                Track opportunities, score fit, prepare applications with one action, and work the right next step each day —
+                without losing momentum across tabs, notes, and reminders.
               </p>
 
               <div className="hero-l4 mt-8 flex flex-wrap gap-3">
