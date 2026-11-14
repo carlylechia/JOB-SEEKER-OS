@@ -461,6 +461,12 @@ export function PreparationPanel({ jobId }: { jobId: string }) {
             )}
           </button>
         </div>
+        {/* Always-visible hint for why the button may be disabled. */}
+        {(!plan.canPrepare || selected.length === 0) && !creating && !advancing && (
+          <span className="text-xs text-warn-text ml-2">
+            {plan.canPrepare && selected.length === 0 ? 'Select a material' : plan.blockers[0] ?? ''}
+          </span>
+        )}
       </div>
     </section>
   );
