@@ -5,7 +5,7 @@ import {
   Briefcase, CheckSquare, Calendar, TrendingUp,
   Star, BarChart2, ArrowRight, Zap, Bell,
   UserCircle, Settings, Clock, ListChecks,
-  Mail, BookOpenCheck,
+  Mail, BookOpenCheck, Sparkles,
 } from 'lucide-react';
 import { DailyQueue } from '@/components/dashboard/daily-queue';
 import { DashboardStats } from '@/components/dashboard/dashboard-stats';
@@ -133,6 +133,9 @@ export default function DashboardPage() {
             </Link>
             <Link href="/pipeline" className="btn-secondary gap-1.5 text-sm">
               <BarChart2 className="h-3.5 w-3.5" /> Pipeline
+            </Link>
+            <Link href="/daily-jobs" className="btn-secondary gap-1.5 text-sm">
+              <Sparkles className="h-3.5 w-3.5" /> Daily Top 5
             </Link>
           </div>
         </div>

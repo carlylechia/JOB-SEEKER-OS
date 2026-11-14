@@ -1000,6 +1000,11 @@ export default function MaterialEditor() {
                   Continue in editor
                 </Link>
               ) : null}
+              {selectedJob ? (
+                <Link href={`/jobs/${selectedJob.id}`} className="btn-primary text-xs">
+                  Open application workspace
+                </Link>
+              ) : null}
             </div>
           </div>
 

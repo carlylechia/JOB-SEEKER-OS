@@ -30,7 +30,7 @@ export default function JobsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Job Tracker" subtitle="Manage every lead, score the fit, and track what to do next." action={<Link className="btn-primary" href="/jobs/new">Add Job</Link>} />
+      <PageHeader title="Job Tracker" subtitle="Manage every lead, score the fit, and track what to do next." action={<div className="flex gap-2"><Link className="btn-secondary" href="/daily-jobs">Daily Top 5</Link><Link className="btn-primary" href="/jobs/new">Add Job</Link></div>} />
       <div className="card-pad flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex-1"><input className="input" placeholder="Search company, role, or notes..." value={query} onChange={(e) => setQuery(e.target.value)} /></div>
         <div className="flex gap-2">
