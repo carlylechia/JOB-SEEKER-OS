@@ -100,21 +100,23 @@ export function PreparationPanel({ jobId }: { jobId: string }) {
     setStatus(next);
     setRun(next.run);
     const defaults = next.plan.items
-      .filter(
-        (item) =>
-          item.available &&
-          item.selectedByDefault &&
-          // The server is the authority; this only mirrors its plan.
-          (item.type === 'RESUME_TAILORING' ||
-            item.type === 'COVER_LETTER' ||
-            item.type === 'RECRUITER_MESSAGE' ||
-            item.type === 'INTERVIEW_BRIEFING'),
-      )
+      .filter((item) => item.available && item.selectedByDefault)
       .map((item) => item.type);
+
+    // A plan can legitimately have no pre-selected items (for example, when
+    // every available item already exists). Leaving the selection empty would
+    // make the primary button permanently disabled, so fall back to the first
+    // available item so the user can still act with one click.
+    const fallback = next.plan.items
+      .filter((item) => item.available)
+      .map((item) => item.type)
+      .slice(0, 1);
+    const initial = defaults.length > 0 ? defaults : fallback;
+
     setSelected(
       next.run && !next.run.terminal
         ? (next.run.requestedTasks as PreparationTaskType[])
-        : defaults,
+        : initial,
     );
   }, []);
 
@@ -438,6 +440,13 @@ export function PreparationPanel({ jobId }: { jobId: string }) {
             type="button"
             className={run && runnable && !run.terminal ? 'btn-secondary gap-1.5 text-sm' : 'btn-primary gap-1.5 text-sm'}
             disabled={!canStart}
+            title={
+              !plan.canPrepare
+                ? plan.blockers[0] ?? 'This application is not ready for preparation yet.'
+                : selected.length === 0
+                  ? 'Select at least one material to prepare.'
+                  : ''
+            }
             onClick={() => void prepare()}
           >
             {creating || advancing ? (
