@@ -260,8 +260,18 @@ export default function JobDetailsPage() {
         <StatusBadge status={job.status} />
       </div>
 
-      {!isEditing ? <PreparationPanel jobId={job.id} /> : null}
-      {!isEditing ? <ApplicationRecordPanel jobId={job.id} pipelineStatus={job.status} /> : null}
+      {!isEditing ? (
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">Application workflow</h2>
+            <p className="mt-1 text-sm text-muted">
+              Prepare materials, record attempts and evidence, and track this application end to end.
+            </p>
+          </div>
+          <PreparationPanel jobId={job.id} />
+          <ApplicationRecordPanel jobId={job.id} pipelineStatus={job.status} />
+        </section>
+      ) : null}
 
       {isEditing ? (
         <JobForm
