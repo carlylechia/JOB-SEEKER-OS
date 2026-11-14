@@ -13,7 +13,7 @@ const fetcher = (url: string) =>
 function actionHref(item: CareerAction): string {
   if (item.relatedPrepPackId) return `/interview-prep/${item.relatedPrepPackId}`;
   if (item.relatedJobId) return `/jobs/${item.relatedJobId}`;
-  return '/queue';
+  return '/dashboard#daily-queue';
 }
 
 export function DailyQueue() {

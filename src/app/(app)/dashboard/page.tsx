@@ -130,7 +130,7 @@ export default function DashboardPage() {
             <Link href="/jobs/new" className="btn-primary gap-1.5 text-sm">
               <Zap className="h-3.5 w-3.5" /> Add job
             </Link>
-            <Link href="/queue" className="btn-secondary gap-1.5 text-sm">
+            <Link href="#daily-queue" className="btn-secondary gap-1.5 text-sm">
               <ListChecks className="h-3.5 w-3.5" /> View queue
             </Link>
             <Link href="/interview-prep" className="btn-secondary gap-1.5 text-sm">
@@ -271,7 +271,9 @@ export default function DashboardPage() {
       ) : (
         <>
           {/* ── Daily Queue (hero action section) ───────────────────── */}
-          <DailyQueue />
+          <div id="daily-queue" className="scroll-mt-24">
+            <DailyQueue />
+          </div>
 
           {/* ── Top priorities + upcoming columns ───────────────────── */}
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
