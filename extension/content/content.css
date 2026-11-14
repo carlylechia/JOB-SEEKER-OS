@@ -23,3 +23,5 @@
 .techia-widget button:hover { transform: translateY(-1px); background: #111827; }
 .techia-widget button.techia-primary { background: #d4af37; color: #111318; border-color: #d4af37; }
 .techia-highlight { outline: 2px solid #d4af37 !important; outline-offset: 2px; }
+.techia-ai { outline: 2px solid #2563eb !important; outline-offset: 2px; }
+.techia-skipped { outline: 2px solid #dc2626 !important; outline-offset: 2px; }
