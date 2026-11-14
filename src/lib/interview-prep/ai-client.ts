@@ -13,6 +13,7 @@
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { logImportantError } from '@/lib/observability';
+import { AI_MODEL_DEFAULTS, getAiModel } from '@/lib/ai/model-registry';
 import {
   INTERVIEW_PREP_ERROR_MESSAGES,
   INTERVIEW_PREP_SCHEMA_NAME,
@@ -27,10 +28,10 @@ import {
 import { INTERVIEW_PREP_AI_TIMEOUT_MS } from './limits';
 import { FEEDBACK_SYSTEM_PROMPT, INTERVIEW_PREP_SYSTEM_PROMPT, buildFeedbackPrompt, buildGenerationPrompt } from './prompt';
 
-export const DEFAULT_INTERVIEW_PREP_MODEL = 'gpt-4.1-mini';
+export const DEFAULT_INTERVIEW_PREP_MODEL = AI_MODEL_DEFAULTS.INTERVIEW_PREP;
 
 export function getInterviewPrepModel(): string {
-  return process.env.INTERVIEW_PREP_MODEL?.trim() || DEFAULT_INTERVIEW_PREP_MODEL;
+  return getAiModel('INTERVIEW_PREP');
 }
 
 /** Name recorded on each pack and feedback so results are traceable. */

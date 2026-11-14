@@ -23,6 +23,7 @@
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
+import { AI_MODEL_DEFAULTS, getAiModel } from '@/lib/ai/model-registry';
 import { logImportantError } from '@/lib/observability';
 import {
   modelProposalSchema,
@@ -45,10 +46,10 @@ import { OPTIMIZATION_SYSTEM_PROMPT, buildOptimizationPrompt } from './prompt';
  *
  * Override with `RESUME_OPTIMIZATION_MODEL`, read here and nowhere else.
  */
-export const DEFAULT_OPTIMIZATION_MODEL = 'gpt-4.1-mini';
+export const DEFAULT_OPTIMIZATION_MODEL = AI_MODEL_DEFAULTS.RESUME_OPTIMIZATION;
 
 export function getOptimizationModel(): string {
-  return process.env.RESUME_OPTIMIZATION_MODEL?.trim() || DEFAULT_OPTIMIZATION_MODEL;
+  return getAiModel('RESUME_OPTIMIZATION');
 }
 
 export const AI_PROVIDER_NAME = 'openai';

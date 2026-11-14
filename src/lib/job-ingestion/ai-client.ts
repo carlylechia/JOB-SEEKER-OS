@@ -10,6 +10,7 @@
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { logImportantError } from '@/lib/observability';
+import { AI_MODEL_DEFAULTS, getAiModel } from '@/lib/ai/model-registry';
 import { toDataUrl, type ValidatedImage } from './images';
 import {
   INGESTION_SCHEMA_NAME,
@@ -19,12 +20,12 @@ import {
   type ModelIngestion,
 } from './schema';
 
-export const DEFAULT_JOB_INGESTION_MODEL = 'gpt-4.1-mini';
+export const DEFAULT_JOB_INGESTION_MODEL = AI_MODEL_DEFAULTS.JOB_INGESTION;
 export const DEFAULT_JOB_INGESTION_TIMEOUT_MS = 30_000;
 export const JOB_INGESTION_PROVIDER_NAME = 'openai';
 
 export function getJobIngestionModel(): string {
-  return process.env.JOB_INGESTION_MODEL?.trim() || DEFAULT_JOB_INGESTION_MODEL;
+  return getAiModel('JOB_INGESTION');
 }
 
 export function getJobIngestionTimeoutMs(): number {

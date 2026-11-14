@@ -6,6 +6,7 @@ import { getUserPreferences } from '@/lib/db-helpers';
 import { requireEntitlement } from '@/lib/billing/subscriptions';
 import { consumeUsage } from '@/lib/billing/usage';
 import { logImportantInfo, logImportantError } from '@/lib/observability';
+import { AI_MODEL_DEFAULTS, getAiModel } from '@/lib/ai/model-registry';
 import { listCareerActions } from './service';
 
 export const AI_CAREER_COACH_FEATURE = 'AI_CAREER_COACH' as const;
@@ -29,12 +30,12 @@ type CoachProvider = {
   coach(params: { systemPrompt: string; userPrompt: string }): Promise<z.infer<typeof CoachSchema>>;
 };
 
-const DEFAULT_MODEL = process.env.CAREER_COACH_MODEL?.trim() || 'gpt-4.1-mini';
+const DEFAULT_MODEL = AI_MODEL_DEFAULTS.CAREER_COACH;
 
 function createOpenAiCoachProvider(options?: { apiKey?: string; model?: string; timeoutMs?: number }): CoachProvider {
   const apiKey = options?.apiKey ?? process.env.OPENAI_API_KEY;
   if (!apiKey || !apiKey.trim()) throw new Error('AI_NOT_CONFIGURED');
-  const model = options?.model ?? DEFAULT_MODEL;
+  const model = options?.model ?? getAiModel('CAREER_COACH');
   const timeoutMs = options?.timeoutMs ?? 30000;
   return {
     name: 'openai',

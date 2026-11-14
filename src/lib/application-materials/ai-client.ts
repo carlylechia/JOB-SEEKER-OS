@@ -25,6 +25,7 @@
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { logImportantError } from '@/lib/observability';
+import { AI_MODEL_DEFAULTS, getAiModel } from '@/lib/ai/model-registry';
 import {
   MATERIAL_ERROR_MESSAGES,
   MATERIAL_SCHEMA_NAME,
@@ -45,12 +46,10 @@ import { MATERIAL_SYSTEM_PROMPT, type PromptInputs } from './prompt';
  * than a fraction of a cent. Override with `APPLICATION_MATERIALS_MODEL`,
  * read here and nowhere else.
  */
-export const DEFAULT_APPLICATION_MATERIALS_MODEL = 'gpt-4.1-mini';
+export const DEFAULT_APPLICATION_MATERIALS_MODEL = AI_MODEL_DEFAULTS.APPLICATION_MATERIALS;
 
 export function getApplicationMaterialsModel(): string {
-  return (
-    process.env.APPLICATION_MATERIALS_MODEL?.trim() || DEFAULT_APPLICATION_MATERIALS_MODEL
-  );
+  return getAiModel('APPLICATION_MATERIALS');
 }
 
 /** Name recorded on each material so a draft can be traced to its model. */

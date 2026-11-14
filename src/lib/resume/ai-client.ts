@@ -21,6 +21,7 @@
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { logImportantError } from '@/lib/observability';
+import { AI_MODEL_DEFAULTS, getAiModel } from '@/lib/ai/model-registry';
 import {
   careerExtractionSchema,
   EXTRACTION_SCHEMA_NAME,
@@ -49,10 +50,10 @@ import { buildExtractionPrompt, EXTRACTION_SYSTEM_PROMPT } from './prompt';
  * Override with `RESUME_INTELLIGENCE_MODEL` — read here and nowhere else, so
  * changing model never means hunting through the codebase.
  */
-export const DEFAULT_RESUME_MODEL = 'gpt-4o-mini';
+export const DEFAULT_RESUME_MODEL = AI_MODEL_DEFAULTS.RESUME_EXTRACTION;
 
 export function getResumeModel(): string {
-  return process.env.RESUME_INTELLIGENCE_MODEL?.trim() || DEFAULT_RESUME_MODEL;
+  return getAiModel('RESUME_EXTRACTION');
 }
 
 /** Name recorded on each extraction so a result can be traced to its model. */
