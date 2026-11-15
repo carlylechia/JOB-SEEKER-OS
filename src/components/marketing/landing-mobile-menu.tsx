@@ -1,14 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 
 export function LandingMobileMenu() {
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointer(event: MouseEvent | TouchEvent) {
+      const target = event.target as Node | null;
+      if (target && containerRef.current && !containerRef.current.contains(target)) {
+        setOpen(false);
+      }
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('mousedown', handlePointer);
+    document.addEventListener('touchstart', handlePointer);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handlePointer);
+      document.removeEventListener('touchstart', handlePointer);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [open]);
 
   return (
-    <div className="relative md:hidden">
+    <div ref={containerRef} className="relative md:hidden">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}

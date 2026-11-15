@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { LogOut, Menu, X } from 'lucide-react';
 import { signOut } from 'next-auth/react';
@@ -8,14 +8,36 @@ import { appNavItems } from './nav-items';
 
 export function TopbarMobileMenu({ label, isAdmin = false }: { label: string; isAdmin?: boolean }) {
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const items = appNavItems(isAdmin);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointer(event: MouseEvent | TouchEvent) {
+      const target = event.target as Node | null;
+      if (target && containerRef.current && !containerRef.current.contains(target)) {
+        setOpen(false);
+      }
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('mousedown', handlePointer);
+    document.addEventListener('touchstart', handlePointer);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handlePointer);
+      document.removeEventListener('touchstart', handlePointer);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [open]);
 
   async function handleSignOut() {
     await signOut({ callbackUrl: '/login' });
   }
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
