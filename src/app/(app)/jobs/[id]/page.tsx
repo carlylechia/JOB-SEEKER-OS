@@ -272,7 +272,7 @@ export default function JobDetailsPage() {
               Prepare materials, record attempts and evidence, and track this application end to end.
             </p>
           </div>
-          <PreparationPanel jobId={job.id} />
+          <PreparationPanel jobId={job.id} jobUrl={job.jobUrl} />
           <ApplicationRecordPanel jobId={job.id} pipelineStatus={job.status} />
         </section>
       ) : null}

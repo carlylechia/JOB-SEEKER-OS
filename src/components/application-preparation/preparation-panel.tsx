@@ -81,7 +81,7 @@ function runStatusLabel(status: PreparationRunSnapshot['status']): string {
   }
 }
 
-export function PreparationPanel({ jobId }: { jobId: string }) {
+export function PreparationPanel({ jobId, jobUrl }: { jobId: string; jobUrl?: string | null }) {
   const [status, setStatus] = useState<PreparationStatus | null>(null);
   const [run, setRun] = useState<PreparationRunSnapshot | null>(null);
   const [selected, setSelected] = useState<PreparationTaskType[]>([]);
@@ -570,14 +570,26 @@ export function PreparationPanel({ jobId }: { jobId: string }) {
               <FileText className="h-3.5 w-3.5" aria-hidden="true" />
               Download all materials (ZIP)
             </a>
-            <Link href={`/jobs/${jobId}`} className="btn-secondary gap-1.5 text-sm">
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-              Go to job page to apply
-            </Link>
+            {jobUrl ? (
+              <a
+                href={jobUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="btn-secondary gap-1.5 text-sm"
+              >
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                Open application form
+              </a>
+            ) : (
+              <span className="text-xs text-muted">
+                Add the job posting URL to open the application form directly.
+              </span>
+            )}
           </div>
           <p className="text-xs leading-5 text-muted">
-            On the application form, open the teChia Jobs browser extension and click Auto-fill to
-            reuse your saved profile and these materials.
+            {jobUrl
+              ? 'The application form opens in a new tab. On that page, click the teChia Jobs browser extension’s Auto-fill button to reuse your saved profile and these materials.'
+              : 'On the application form, open the teChia Jobs browser extension and click Auto-fill to reuse your saved profile and these materials.'}
           </p>
         </div>
       ) : null}
