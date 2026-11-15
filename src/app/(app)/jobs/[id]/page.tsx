@@ -333,47 +333,47 @@ export default function JobDetailsPage() {
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div>
                   <div className="muted">Source</div>
-                  <div>{job.source || "—"}</div>
+                  <div className="break-words">{job.source || "—"}</div>
                 </div>
                 <div>
                   <div className="muted">Location</div>
-                  <div>{job.location || "—"}</div>
+                  <div className="break-words">{job.location || "—"}</div>
                 </div>
                 <div>
                   <div className="muted">Timezone</div>
-                  <div>{job.timezoneRequirement || "—"}</div>
+                  <div className="break-words">{job.timezoneRequirement || "—"}</div>
                 </div>
                 <div>
                   <div className="muted">Eligibility</div>
-                  <div>{job.eligibilityRegion || "—"}</div>
+                  <div className="break-words">{job.eligibilityRegion || "—"}</div>
                 </div>
                 <div>
                   <div className="muted">Category</div>
-                  <div>{job.category ? CATEGORY_LABELS[job.category as JobCategory] ?? job.category : "—"}</div>
+                  <div className="break-words">{job.category ? CATEGORY_LABELS[job.category as JobCategory] ?? job.category : "—"}</div>
                 </div>
                 <div>
                   <div className="muted">Seniority</div>
-                  <div>{job.seniority ? SENIORITY_LABELS[job.seniority as SeniorityLevel] ?? job.seniority : "—"}</div>
+                  <div className="break-words">{job.seniority ? SENIORITY_LABELS[job.seniority as SeniorityLevel] ?? job.seniority : "—"}</div>
                 </div>
                 <div>
                   <div className="muted">Employment type</div>
-                  <div>{job.employmentType ? job.employmentType.replace('_', ' ').toLowerCase() : "—"}</div>
+                  <div className="break-words">{job.employmentType ? job.employmentType.replace('_', ' ').toLowerCase() : "—"}</div>
                 </div>
                 <div>
                   <div className="muted">Industry</div>
-                  <div>{job.industry || "—"}</div>
+                  <div className="break-words">{job.industry || "—"}</div>
                 </div>
                 <div className="sm:col-span-2">
                   <div className="muted">Skills</div>
                   <div className="mt-1 flex flex-wrap gap-2">
                     {job.skills?.length ? job.skills.map((skill) => (
-                      <span key={skill} className="rounded-full border border-line bg-surface-sunken px-2.5 py-1 text-xs text-muted">{skill}</span>
+                      <span key={skill} className="max-w-full break-words rounded-full border border-line bg-surface-sunken px-2.5 py-1 text-xs text-muted">{skill}</span>
                     )) : <span>—</span>}
                   </div>
                 </div>
                 <div>
                   <div className="muted">Compensation</div>
-                  <div>
+                  <div className="break-words">
                     {job.salaryMin || "—"}
                     {job.salaryMax ? ` - ${job.salaryMax}` : ""} {job.currency}
                   </div>
@@ -414,7 +414,7 @@ export default function JobDetailsPage() {
                     <div key={label as string} className="rounded-xl border border-line bg-surface-sunken p-3">
                       <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{label as string}</div>
                       <ul className="mt-2 space-y-1 text-sm text-ink-2">
-                        {(items as string[]).map((item) => <li key={item}>• {item}</li>)}
+                        {(items as string[]).map((item) => <li key={item} className="break-words">• {item}</li>)}
                       </ul>
                     </div>
                   ))}
@@ -431,8 +431,8 @@ export default function JobDetailsPage() {
                   ) : null}
                   {job.companyProfile.description ? <p className="whitespace-pre-wrap">{job.companyProfile.description}</p> : null}
                   <div className="flex flex-wrap gap-3">
-                    {job.companyProfile.website ? <a className="text-accent-text underline" href={job.companyProfile.website} target="_blank" rel="noreferrer">Website</a> : null}
-                    {job.companyProfile.linkedinUrl ? <a className="text-accent-text underline" href={job.companyProfile.linkedinUrl} target="_blank" rel="noreferrer">LinkedIn</a> : null}
+                    {job.companyProfile.website ? <a className="break-all text-accent-text underline" href={job.companyProfile.website} target="_blank" rel="noreferrer">Website</a> : null}
+                    {job.companyProfile.linkedinUrl ? <a className="break-all text-accent-text underline" href={job.companyProfile.linkedinUrl} target="_blank" rel="noreferrer">LinkedIn</a> : null}
                   </div>
                 </div>
               </div>
@@ -495,20 +495,20 @@ export default function JobDetailsPage() {
                   job.contacts.map((contact) => (
                     <div key={contact.id} className="rounded-xl border border-line p-3">
                       <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="font-medium">{contact.name}</div>
-                          <div className="muted text-sm">
+                        <div className="min-w-0">
+                          <div className="break-words font-medium">{contact.name}</div>
+                          <div className="muted break-words text-sm">
                             {contact.title} · {contact.relationshipType.replace('_', ' ')}
                           </div>
                           {contact.email || contact.phone || contact.linkedinUrl ? (
                             <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted">
-                              {contact.email ? <a className="underline" href={`mailto:${contact.email}`}>{contact.email}</a> : null}
-                              {contact.phone ? <a className="underline" href={`tel:${contact.phone}`}>{contact.phone}</a> : null}
-                              {contact.linkedinUrl ? <a className="underline" href={contact.linkedinUrl} target="_blank" rel="noreferrer">LinkedIn</a> : null}
+                              {contact.email ? <a className="break-all underline" href={`mailto:${contact.email}`}>{contact.email}</a> : null}
+                              {contact.phone ? <a className="break-all underline" href={`tel:${contact.phone}`}>{contact.phone}</a> : null}
+                              {contact.linkedinUrl ? <a className="break-all underline" href={contact.linkedinUrl} target="_blank" rel="noreferrer">LinkedIn</a> : null}
                             </div>
                           ) : null}
                           {contact.notes ? (
-                            <div className="mt-2 text-sm text-muted">{contact.notes}</div>
+                            <div className="mt-2 break-words text-sm text-muted">{contact.notes}</div>
                           ) : null}
                         </div>
                         <button
@@ -673,8 +673,8 @@ export default function JobDetailsPage() {
                       className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line p-3 text-sm hover:bg-surface-sunken"
                     >
                       <span className="min-w-0">
-                        <span className="block truncate font-medium">{pack.title}</span>
-                        <span className="text-xs text-muted">
+                        <span className="block break-words font-medium">{pack.title}</span>
+                        <span className="block break-words text-xs text-muted">
                           {pack.questionCount} questions · {pack.practicedCount} practised
                           {pack.interviewAt ? ` · interview ${new Date(pack.interviewAt).toLocaleDateString()}` : ''}
                         </span>
@@ -821,11 +821,11 @@ export default function JobDetailsPage() {
                           <div className="min-w-0 flex-1">
                             <Link
                               href={`/application-materials/${material.id}`}
-                              className="text-ink font-medium hover:text-accent-text"
+                              className="block break-words text-ink font-medium hover:text-accent-text"
                             >
                               {material.title}
                             </Link>
-                            <div className="mt-0.5 text-xs text-muted">
+                            <div className="mt-0.5 break-words text-xs text-muted">
                               {MATERIAL_TYPE_META[material.type as MaterialType]?.label ??
                                 material.type.replace(/_/g, ' ')}{' '}
                               · {material.status.toLowerCase()}
@@ -836,7 +836,7 @@ export default function JobDetailsPage() {
                             </div>
                           </div>
                           <span
-                            className={`badge text-xs ${
+                            className={`badge shrink-0 max-w-full break-words text-xs ${
                               material.generationStatus === 'COMPLETED'
                                 ? 'bg-success/15 text-success-text'
                                 : material.generationStatus === 'FAILED'

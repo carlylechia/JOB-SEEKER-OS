@@ -80,13 +80,13 @@ function SlideGraphic({ slide }: { slide: Slide }) {
       <div className={`relative overflow-hidden rounded-[28px] border border-line bg-gradient-to-b from-surface-sunken to-surface shadow-lift backdrop-blur-2xl ring-1 sm:rounded-[40px] sm:shadow-lift ${a.ring}`}>
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,var(--hero-orb-2),transparent_30%),radial-gradient(circle_at_bottom_right,var(--hero-orb-1),transparent_32%)]" />
         <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-line bg-surface-sunken sm:h-10 sm:w-10">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-line bg-surface-sunken sm:h-10 sm:w-10">
               <Icon className="h-4 w-4 text-ink sm:h-5 sm:w-5" />
             </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-2">{slide.kicker}</p>
-              <p className="mt-0.5 line-clamp-2 text-sm font-semibold text-ink">{slide.title}</p>
+            <div className="min-w-0">
+              <p className="break-words text-xs font-semibold uppercase tracking-[0.18em] text-ink-2">{slide.kicker}</p>
+              <p className="mt-0.5 line-clamp-2 break-words text-sm font-semibold text-ink">{slide.title}</p>
             </div>
           </div>
           <span className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold sm:px-3 sm:text-[11px] ${a.chip}`}>

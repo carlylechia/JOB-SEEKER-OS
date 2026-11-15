@@ -74,15 +74,15 @@ export function HeroCarousel() {
 
       <div className="relative rounded-[1.5rem] border border-line bg-surface-sunken p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface-sunken px-4 py-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-accent-text">
+          <div className="min-w-0">
+            <p className="break-words text-[11px] font-semibold uppercase tracking-[0.22em] text-accent-text">
               {activeSlide.eyebrow}
             </p>
-            <h3 className="mt-2 max-w-2xl text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+            <h3 className="mt-2 max-w-2xl break-words text-xl font-semibold tracking-tight text-ink sm:text-2xl">
               {activeSlide.title}
             </h3>
           </div>
-          <span className="inline-flex rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent-text">
+          <span className="shrink-0 whitespace-nowrap inline-flex rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent-text">
             {activeSlide.accent}
           </span>
         </div>

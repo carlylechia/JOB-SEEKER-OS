@@ -550,7 +550,10 @@ a { color: inherit; text-decoration: none; }
   .btn-secondary { @apply btn border border-line bg-surface text-ink hover:bg-surface-hover; }
   .input { @apply w-full rounded-xl border border-line bg-field px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-accent; }
   .select { @apply w-full rounded-xl border border-line bg-field-select px-3 py-2 text-sm text-ink outline-none focus:border-accent; }
-  .badge { @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold; }
+  /* Badges carry dynamic labels such as "Not enough information" or a full
+     work arrangement. They must wrap inside the card rather than force the
+     row wider than its container. */
+  .badge { @apply inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-xs font-semibold leading-snug break-words; }
   .table-wrap { @apply overflow-x-auto rounded-2xl border border-line bg-card shadow-soft; }
   .table { @apply min-w-full divide-y divide-line; }
   .table th { @apply bg-surface-sunken px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted; }

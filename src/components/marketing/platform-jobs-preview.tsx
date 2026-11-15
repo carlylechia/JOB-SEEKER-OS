@@ -71,21 +71,21 @@ export async function PlatformJobsPreview() {
             jobs.map((job) => (
               <div
                 key={job.id}
-                className="rounded-2xl border border-line bg-white p-4 shadow-soft transition hover:border-accent/30 hover:bg-surface-sunken"
+                className="min-w-0 rounded-2xl border border-line bg-white p-4 shadow-soft transition hover:border-accent/30 hover:bg-surface-sunken"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-ink">{job.title}</p>
-                    <p className="mt-1 text-sm text-ink-2">{job.company}</p>
+                  <div className="min-w-0">
+                    <p className="line-clamp-2 break-words text-sm font-semibold text-ink">{job.title}</p>
+                    <p className="mt-1 line-clamp-1 break-words text-sm text-ink-2">{job.company}</p>
                   </div>
-                  <span className="rounded-full border border-line bg-surface-sunken px-2.5 py-1 text-[11px] text-muted">
+                  <span className="shrink-0 whitespace-nowrap rounded-full border border-line bg-surface-sunken px-2.5 py-1 text-[11px] text-muted">
                     Recent
                   </span>
                 </div>
 
                 <div className="mt-5 space-y-2 text-sm text-muted">
-                  <p>{formatPublicJobLocation(job.remoteType, job.location)}</p>
-                  <p>{formatPublicJobAge(job.postedAt)}</p>
+                  <p className="break-words">{formatPublicJobLocation(job.remoteType, job.location)}</p>
+                  <p className="break-words">{formatPublicJobAge(job.postedAt)}</p>
                 </div>
               </div>
             ))

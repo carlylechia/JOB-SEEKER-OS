@@ -63,7 +63,7 @@ export function Topbar({ user }: { user: TopbarUser }) {
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
           <Link href="/profile" className="hidden items-center gap-2 rounded-xl border border-line bg-surface px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-ink lg:flex">
             <UserAvatar user={user} />
-            <span>{label}</span>
+            <span className="truncate">{label}</span>
           </Link>
           {/* Icon-only pill on phones; the fuller switch once space allows. */}
           <ThemeSwitch size="xs" className="sm:hidden" />

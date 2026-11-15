@@ -320,7 +320,7 @@ export function PublicJobBrowser({ onImport }: Props) {
                   <div className="min-w-0">
                     <p className="truncate font-medium text-ink">{job.title}</p>
                     <p className="mt-0.5 truncate text-sm text-ink-2">{job.company}</p>
-                    <p className="mt-1 text-xs text-muted">
+                    <p className="mt-1 break-words text-xs text-muted">
                       {formatPublicJobLocation(job.remoteType, job.location)}
                       {salary ? ` · ${salary}` : ''}
                     </p>

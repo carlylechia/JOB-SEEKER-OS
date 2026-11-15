@@ -222,11 +222,11 @@ export default function InterviewPrepPage() {
           {filtered.map((pack) => {
             const archived = pack.status === 'ARCHIVED';
             return (
-              <article key={pack.id} className="card-pad flex flex-col gap-4">
+              <article key={pack.id} className="card-pad min-w-0 flex flex-col gap-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <p className="truncate text-xs font-medium uppercase tracking-wide text-muted">
+                      <p className="break-words text-xs font-medium uppercase tracking-wide text-muted">
                         {pack.company}
                       </p>
                       <InterviewTypeBadge context={pack.context as InterviewContext} />

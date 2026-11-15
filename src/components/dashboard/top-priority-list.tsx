@@ -54,18 +54,18 @@ export function TopPriorityList({ jobs }: { jobs: JobLead[] }) {
               </div>
 
               {/* Main info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="font-semibold text-ink truncate">{job.title}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-2 mb-1.5">
+                  <span className="min-w-0 truncate font-semibold text-ink">{job.title}</span>
                   {priority && (
-                    <span className={`flex-shrink-0 text-[10px] font-medium ${priority.color}`}>
+                    <span className={`shrink-0 whitespace-nowrap text-[10px] font-medium ${priority.color}`}>
                       · {priority.label}
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted">{job.company}</span>
-                  {job.location && <span className="text-xs text-muted">{job.location}</span>}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                  <span className="max-w-full break-words text-xs text-muted">{job.company}</span>
+                  {job.location && <span className="max-w-full break-words text-xs text-muted">{job.location}</span>}
                 </div>
                 {/* Score bar */}
                 <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-surface-sunken">

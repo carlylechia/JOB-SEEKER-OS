@@ -138,13 +138,13 @@ export function LandingDashboardPreview() {
                 <div className="space-y-2.5">
                   {queueMini.map((item) => (
                     <div key={item.company} className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-sunken text-[10px] font-bold text-ink-2">
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-sunken text-[10px] font-bold text-ink-2">
                           {item.company[0]}
                         </div>
-                        <div>
-                          <p className="text-xs font-semibold text-ink">{item.company}</p>
-                          <p className="text-[10px] text-muted">{item.role}</p>
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-semibold text-ink">{item.company}</p>
+                          <p className="truncate text-[10px] text-muted">{item.role}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">

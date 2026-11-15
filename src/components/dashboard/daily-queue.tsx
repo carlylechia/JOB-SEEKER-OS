@@ -78,17 +78,17 @@ export function DailyQueue() {
               <span className="mt-0.5 text-xl shrink-0" aria-hidden="true">•</span>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium leading-tight">{item.title}</span>
+                  <span className="min-w-0 break-words font-medium leading-tight">{item.title}</span>
                   {item.priority >= 90 && (
-                    <span className="shrink-0 rounded-full bg-danger/20 px-2 py-0.5 text-xs font-semibold text-danger-text">
+                    <span className="shrink-0 whitespace-nowrap rounded-full bg-danger/20 px-2 py-0.5 text-xs font-semibold text-danger-text">
                       High priority
                     </span>
                   )}
-                  <span className="shrink-0 rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-muted">
+                  <span className="shrink-0 whitespace-nowrap rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-muted">
                     {item.actionType.replace(/_/g, ' ').toLowerCase()}
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-muted leading-relaxed">{item.description}</p>
+                <p className="mt-1 break-words text-sm text-muted leading-relaxed">{item.description}</p>
                 {item.dueDate && (
                   <p className="mt-1 text-xs text-danger-text">Due {new Date(item.dueDate).toLocaleDateString()}</p>
                 )}

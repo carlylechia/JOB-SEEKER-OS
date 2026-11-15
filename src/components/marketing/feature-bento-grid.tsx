@@ -72,12 +72,12 @@ export function FeatureBentoGrid() {
               className={`card-pad overflow-hidden ${card.wide ? 'lg:col-span-2' : ''}`}
             >
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-text">{card.eyebrow}</p>
-                  <h3 className="mt-3 text-xl font-semibold text-ink">{card.title}</h3>
-                  <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">{card.text}</p>
+                <div className="min-w-0">
+                  <p className="break-words text-xs font-semibold uppercase tracking-[0.18em] text-accent-text">{card.eyebrow}</p>
+                  <h3 className="mt-3 break-words text-xl font-semibold text-ink">{card.title}</h3>
+                  <p className="mt-3 max-w-2xl break-words text-sm leading-7 text-muted">{card.text}</p>
                 </div>
-                <span className="rounded-full border border-line bg-surface-sunken p-2 text-ink-2">
+                <span className="shrink-0 rounded-full border border-line bg-surface-sunken p-2 text-ink-2">
                   {Icon ? <Icon className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
                 </span>
               </div>

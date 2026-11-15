@@ -468,7 +468,7 @@ export function PreparationPanel({ jobId }: { jobId: string }) {
                     onChange={() => toggle(item.type)}
                   />
                   <span className="min-w-0">
-                    <span className="block text-sm font-medium text-ink">{item.label}</span>
+                    <span className="block break-words text-sm font-medium text-ink">{item.label}</span>
                     <span className="mt-0.5 block text-xs leading-5 text-muted">{item.reason}</span>
                   </span>
                 </label>
@@ -508,7 +508,7 @@ export function PreparationPanel({ jobId }: { jobId: string }) {
                 <div className="flex min-w-0 items-start gap-2">
                   {taskIcon(task)}
                   <div className="min-w-0">
-                    <span className="font-medium text-ink">{task.label}</span>
+                    <span className="break-words font-medium text-ink">{task.label}</span>
                     <span className={`ml-2 text-xs ${STATUS_STYLES[task.status] ?? 'text-muted'}`}>
                       {task.status.toLowerCase()}
                       {task.attempts > 0 ? ` · attempt ${task.attempts}/${task.maxAttempts}` : ''}

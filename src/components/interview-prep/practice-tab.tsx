@@ -856,11 +856,11 @@ export function QuestionsTab({
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <span className="text-[11px] font-medium uppercase tracking-wide text-muted">
+                    <span className="min-w-0 break-words text-[11px] font-medium uppercase tracking-wide text-muted">
                       Q{question.ordinal + 1} · {QUESTION_CATEGORY_LABELS[question.category]}
                     </span>
                     {attemptedIds.has(question.id) ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-success-text" aria-label="Practised" />
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success-text" aria-label="Practised" />
                     ) : null}
                   </div>
                   <p className="mt-1 line-clamp-2 text-sm">{question.question}</p>

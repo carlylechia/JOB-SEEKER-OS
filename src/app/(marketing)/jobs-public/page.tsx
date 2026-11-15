@@ -298,43 +298,43 @@ export default async function PublicJobsPage({ searchParams }: JobsPublicPagePro
                 return (
                   <article
                     key={job.id}
-                    className="flex flex-col rounded-[1.6rem] border border-line bg-surface-sunken p-5 shadow-soft"
+                    className="flex min-w-0 flex-col rounded-[1.6rem] border border-line bg-surface-sunken p-5 shadow-soft"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h2 className="text-lg font-semibold text-ink">{job.title}</h2>
-                        <p className="mt-1 text-sm text-ink-2">{job.company}</p>
+                      <div className="min-w-0">
+                        <h2 className="break-words text-lg font-semibold text-ink">{job.title}</h2>
+                        <p className="mt-1 break-words text-sm text-ink-2">{job.company}</p>
                       </div>
-                      <span className="shrink-0 rounded-full border border-line bg-surface-sunken px-2.5 py-1 text-[11px] text-muted">
+                      <span className="shrink-0 whitespace-nowrap rounded-full border border-line bg-surface-sunken px-2.5 py-1 text-[11px] text-muted">
                         {formatPublicJobAge(job.postedAt)}
                       </span>
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-1.5">
-                      <span className="rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 text-[11px] text-accent-text">
+                      <span className="break-words rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 text-[11px] text-accent-text">
                         {CATEGORY_LABELS[job.category]}
                       </span>
                       {job.seniority && job.seniority !== 'UNKNOWN' && (
-                        <span className="rounded-full border border-line bg-background px-2.5 py-1 text-[11px] text-muted">
+                        <span className="break-words rounded-full border border-line bg-background px-2.5 py-1 text-[11px] text-muted">
                           {formatPublicJobSeniority(job.seniority)}
                         </span>
                       )}
                       {job.employmentType && (
-                        <span className="rounded-full border border-line bg-background px-2.5 py-1 text-[11px] text-muted">
+                        <span className="break-words rounded-full border border-line bg-background px-2.5 py-1 text-[11px] text-muted">
                           {formatPublicJobEmploymentType(job.employmentType)}
                         </span>
                       )}
                       {job.sourceType === 'catalog' && job.source && (
-                        <span className="rounded-full border border-line bg-background px-2.5 py-1 text-[11px] text-muted">
+                        <span className="break-words rounded-full border border-line bg-background px-2.5 py-1 text-[11px] text-muted">
                           via {formatPublicJobSource(job.source)}
                         </span>
                       )}
                     </div>
 
                     <div className="mt-4 space-y-1 text-sm text-muted">
-                      <p>{formatPublicJobLocation(job.remoteType, job.location)}</p>
-                      {salary && <p className="font-medium text-ink-2">{salary}</p>}
-                      {job.industry && <p>{job.industry}</p>}
+                      <p className="break-words">{formatPublicJobLocation(job.remoteType, job.location)}</p>
+                      {salary && <p className="break-words font-medium text-ink-2">{salary}</p>}
+                      {job.industry && <p className="break-words">{job.industry}</p>}
                     </div>
 
                     {job.skills.length > 0 && (

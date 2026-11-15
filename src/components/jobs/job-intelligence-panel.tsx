@@ -292,7 +292,7 @@ export function JobIntelligencePanel({ jobId }: { jobId: string }) {
       {state.deterministic?.blockedBy?.length ? (
         <div className="flex items-start gap-2 rounded-xl border border-danger/25 bg-danger/[0.07] px-4 py-3">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden="true" />
-          <p className="text-sm text-ink">
+          <p className="break-words text-sm text-ink">
             This job scores zero because of {state.deterministic.blockedBy.join(' and ')}. That
             is a rule in your matching engine, and no analysis can override it.
           </p>
@@ -454,9 +454,9 @@ function AnalysisBody({
         )}
       </div>
 
-      <p className="text-sm leading-relaxed text-muted">{CATEGORY_DESCRIPTIONS[category]}</p>
-      <p className="text-sm leading-relaxed text-ink">{analysis.summary}</p>
-      <p className="muted text-xs">{analysis.categoryRationale}</p>
+      <p className="break-words text-sm leading-relaxed text-muted">{CATEGORY_DESCRIPTIONS[category]}</p>
+      <p className="break-words text-sm leading-relaxed text-ink">{analysis.summary}</p>
+      <p className="muted break-words text-xs">{analysis.categoryRationale}</p>
 
       {/* Dimensions */}
       <div>
@@ -491,16 +491,18 @@ function AnalysisBody({
                   <span className="badge bg-surface text-muted">
                     {IMPORTANCE_LABELS[requirement.importance] ?? requirement.importance}
                   </span>
-                  <span className="text-sm font-medium text-ink">{requirement.requirement}</span>
+                  <span className="min-w-0 max-w-full break-words text-sm font-medium text-ink">
+                    {requirement.requirement}
+                  </span>
                   {(requirement.outcome === 'MISMATCH' || requirement.outcome === 'PARTIAL_MATCH') && (
                     <AddSkillButton skill={requirement.requirement} />
                   )}
                 </div>
-                <p className="mt-2 text-sm leading-relaxed text-muted">
+                <p className="mt-2 break-words text-sm leading-relaxed text-muted">
                   {requirement.explanation}
                 </p>
                 {requirement.uncertainty && (
-                  <p className="mt-2 text-xs text-muted">⚠ {requirement.uncertainty}</p>
+                  <p className="mt-2 break-words text-xs text-muted">⚠ {requirement.uncertainty}</p>
                 )}
                 <EvidenceList evidence={requirement.evidence} />
               </div>
@@ -546,7 +548,7 @@ function AnalysisBody({
             {analysis.limitations.map((limitation) => (
               <li key={limitation} className="flex items-start gap-2 text-sm text-muted">
                 <CircleHelp className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                <span>{limitation}</span>
+                <span className="break-words">{limitation}</span>
               </li>
             ))}
           </ul>
@@ -571,15 +573,15 @@ function DimensionCard({
 }) {
   return (
     <div className="rounded-xl border border-line p-3">
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-sm font-medium text-ink">{label}</span>
-        <span className={`badge shrink-0 ${OUTCOME_STYLES[dimension.outcome]}`}>
+      <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1.5">
+        <span className="min-w-0 break-words text-sm font-medium text-ink">{label}</span>
+        <span className={`badge max-w-full shrink-0 break-words ${OUTCOME_STYLES[dimension.outcome]}`}>
           {OUTCOME_LABELS[dimension.outcome]}
         </span>
       </div>
-      <p className="mt-2 text-xs leading-relaxed text-muted">{dimension.explanation}</p>
+      <p className="mt-2 break-words text-xs leading-relaxed text-muted">{dimension.explanation}</p>
       {dimension.uncertainty && (
-        <p className="mt-2 text-xs text-muted">⚠ {dimension.uncertainty}</p>
+        <p className="mt-2 break-words text-xs text-muted">⚠ {dimension.uncertainty}</p>
       )}
       <EvidenceList evidence={dimension.evidence} />
     </div>
@@ -606,10 +608,10 @@ function EvidenceList({ evidence }: { evidence: JobIntelligenceResult['dimension
           {item.excerpt ? (
             <>
               {' — '}
-              <span className="italic">“{item.excerpt}”</span>
+              <span className="break-words italic">“{item.excerpt}”</span>
             </>
           ) : null}
-          <span className="block opacity-80">{item.supports}</span>
+          <span className="block break-words opacity-80">{item.supports}</span>
         </li>
       ))}
     </ul>

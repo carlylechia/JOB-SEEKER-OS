@@ -223,7 +223,7 @@ export default function ApplicationMaterialsWorkspace() {
                   return (
                     <article
                       key={kit.jobId}
-                      className="card-pad flex flex-col transition-colors hover:border-line-strong"
+                      className="card-pad min-w-0 flex flex-col transition-colors hover:border-line-strong"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="min-w-0">

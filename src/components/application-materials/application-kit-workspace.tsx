@@ -981,7 +981,7 @@ export default function ApplicationKitWorkspace({ initialWorkspace }: Props) {
                       <div className="min-w-0">
                         <Link
                           href={`/application-materials/${material.id}`}
-                          className="block truncate text-sm font-medium text-ink hover:text-accent-text"
+                          className="block break-words text-sm font-medium text-ink hover:text-accent-text"
                         >
                           {material.title}
                         </Link>
@@ -1044,7 +1044,7 @@ export default function ApplicationKitWorkspace({ initialWorkspace }: Props) {
                       <div className="min-w-0">
                         <Link
                           href={`/resumes/${resume.id}`}
-                          className="block truncate text-sm font-medium text-ink hover:text-accent-text"
+                          className="block break-words text-sm font-medium text-ink hover:text-accent-text"
                         >
                           {resume.name}
                         </Link>
