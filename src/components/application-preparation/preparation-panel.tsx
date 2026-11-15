@@ -159,18 +159,20 @@ export function PreparationPanel({ jobId }: { jobId: string }) {
   const maxTasks = plan?.limits.maxTasksPerRun ?? 4;
 
   const refreshRun = useCallback(
-    async (runId: string) => {
+    async (runId: string): Promise<PreparationRunSnapshot | null> => {
       try {
         const response = await fetch(
           `/api/preparation/runs/${encodeURIComponent(runId)}`,
           { cache: 'no-store' },
         );
-        if (!response.ok) return;
+        if (!response.ok) return null;
         const payload = await response.json().catch(() => null);
         const nextRun = payload?.run as PreparationRunSnapshot | undefined;
         if (mounted.current && nextRun) applyRun(nextRun);
+        return nextRun ?? null;
       } catch {
         // Polling is best-effort. The next tick or an explicit action retries.
+        return null;
       }
     },
     [applyRun],
@@ -266,9 +268,16 @@ export function PreparationPanel({ jobId }: { jobId: string }) {
         }
       } catch {
         if (mounted.current) {
-          setError(
-            'Preparation was interrupted. Press Continue preparation to resume; finished materials are safe.',
-          );
+          const refreshed = await refreshRun(targetRunId);
+          if (refreshed?.terminal) {
+            setNotice(
+              'Preparation finished. Your generated materials are ready to download below.',
+            );
+          } else {
+            setError(
+              'Preparation was interrupted. Press Continue preparation to resume; finished materials are safe.',
+            );
+          }
         }
       } finally {
         if (mounted.current) setAdvancing(false);
@@ -544,6 +553,32 @@ export function PreparationPanel({ jobId }: { jobId: string }) {
               </div>
             );
           })}
+        </div>
+      ) : null}
+
+      {run && run.terminal && (run.completedTasks.length > 0 || run.tasks.some((task) => task.status === 'COMPLETED')) ? (
+        <div className="space-y-3 rounded-xl border border-success/30 bg-success/10 px-4 py-3">
+          <p className="text-sm font-medium text-success-text">
+            Preparation finished. Your materials are ready.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={`/api/jobs/${encodeURIComponent(jobId)}/application-materials/export.zip`}
+              className="btn-primary gap-1.5 text-sm"
+              download
+            >
+              <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+              Download all materials (ZIP)
+            </a>
+            <Link href={`/jobs/${jobId}`} className="btn-secondary gap-1.5 text-sm">
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              Go to job page to apply
+            </Link>
+          </div>
+          <p className="text-xs leading-5 text-muted">
+            On the application form, open the teChia Jobs browser extension and click Auto-fill to
+            reuse your saved profile and these materials.
+          </p>
         </div>
       ) : null}
 

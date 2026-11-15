@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { ArrowRight, Menu, X, LayoutDashboard } from 'lucide-react';
+import { ArrowRight, LayoutDashboard } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
 import { ThemeSwitch } from '@/components/shared/theme-switch';
+import { LandingMobileMenu } from './landing-mobile-menu';
 import { auth } from '@/auth';
 
 const navLinks = [
@@ -82,67 +83,7 @@ export async function LandingNav() {
             <div className="flex shrink-0 items-center gap-2 md:hidden">
               <ThemeSwitch size="xs" className="sm:hidden" />
               <ThemeSwitch size="sm" className="hidden sm:flex" />
-              <details className="group relative">
-                <summary className="inline-flex h-10 w-10 list-none items-center justify-center rounded-xl border border-line bg-surface-sunken text-ink transition hover:bg-surface-sunken-hover [&::-webkit-details-marker]:hidden">
-                  <Menu className="h-5 w-5 group-open:hidden" />
-                  <X className="hidden h-5 w-5 group-open:block" />
-                  <span className="sr-only">Open menu</span>
-                </summary>
-
-                <div className="absolute right-0 top-14 z-40 max-h-[calc(100dvh-6rem)] w-[min(88vw,22rem)] overflow-y-auto overscroll-contain rounded-2xl border border-line bg-card p-3 shadow-lift">
-                  <div className="grid gap-2">
-                    {navLinks.map((link) => (
-                      <a
-                        key={link.href}
-                        href={link.href}
-                        className="inline-flex items-center justify-center rounded-xl border border-line bg-surface-sunken px-4 py-3 text-sm text-ink transition hover:bg-surface-sunken-hover"
-                      >
-                        {link.label}
-                      </a>
-                    ))}
-
-                    <div className="my-1 h-px bg-line" />
-
-                    <Link
-                      href="/jobs-public"
-                      className="inline-flex items-center justify-center rounded-xl border border-line bg-surface-sunken px-4 py-3 text-sm text-ink transition hover:bg-surface-sunken-hover"
-                    >
-                      Public Jobs Page
-                    </Link>
-                    <Link
-                      href="/demo"
-                      className="inline-flex items-center justify-center rounded-xl border border-line bg-surface-sunken px-4 py-3 text-sm text-ink transition hover:bg-surface-sunken-hover"
-                    >
-                      Watch demo
-                    </Link>
-
-                    {session?.user ? (
-                      <Link
-                        href="/dashboard"
-                        className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-accent-ink shadow-[0_10px_32px_rgb(var(--accent)/0.18)] transition hover:bg-accent-hover"
-                      >
-                        <LayoutDashboard className="h-4 w-4" />
-                        Go to Dashboard
-                      </Link>
-                    ) : (
-                      <>
-                        <Link
-                          href="/login"
-                          className="inline-flex items-center justify-center rounded-xl border border-line bg-surface-sunken px-4 py-3 text-sm text-ink transition hover:bg-surface-sunken-hover"
-                        >
-                          Sign In
-                        </Link>
-                        <Link
-                          href="/register"
-                          className="inline-flex items-center justify-center rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-accent-ink shadow-[0_10px_32px_rgb(var(--accent)/0.18)] transition hover:bg-accent-hover"
-                        >
-                          Start free
-                        </Link>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </details>
+              <LandingMobileMenu isSignedIn={!!session?.user} />
             </div>
           </div>
         </div>
