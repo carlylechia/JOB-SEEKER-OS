@@ -145,10 +145,31 @@ export function JobIntelligencePanel({ jobId }: { jobId: string }) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [message, setMessage] = useState('');
   const [retryable, setRetryable] = useState(false);
+  // The detailed breakdown is long; let the user hide it so one side of the
+  // job page does not dominate the screen. The preference is remembered.
+  const [detailsOpen, setDetailsOpen] = useState(true);
   // A ref, not state: the click handler must see the current value
   // immediately, so a double click cannot start two runs before React
   // re-renders.
   const runningRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem('job-intelligence-details-open');
+      if (stored === '0') setDetailsOpen(false);
+      if (stored === '1') setDetailsOpen(true);
+    } catch {
+      // localStorage may be unavailable; keep the default.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('job-intelligence-details-open', detailsOpen ? '1' : '0');
+    } catch {
+      // Ignore storage failures.
+    }
+  }, [detailsOpen]);
 
   const load = useCallback(async () => {
     setPhase('loading');
@@ -389,7 +410,25 @@ export function JobIntelligencePanel({ jobId }: { jobId: string }) {
         </p>
       )}
 
-      {data && <AnalysisBody analysis={data} envelope={analysis!} />}
+      {data && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="btn-secondary text-xs"
+            onClick={() => setDetailsOpen((open) => !open)}
+            aria-expanded={detailsOpen}
+            aria-controls="job-intelligence-details"
+          >
+            {detailsOpen ? 'Hide analysis details' : 'Show analysis details'}
+          </button>
+        </div>
+      )}
+
+      {data && detailsOpen && (
+        <div id="job-intelligence-details">
+          <AnalysisBody analysis={data} envelope={analysis!} />
+        </div>
+      )}
 
       {!canAnalyze && state.profile && state.profile.missingInputs.length > 0 && (
         <p className="muted text-xs">
