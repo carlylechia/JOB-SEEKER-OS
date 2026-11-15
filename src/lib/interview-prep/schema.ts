@@ -19,7 +19,7 @@
 import { z } from 'zod';
 
 export const INTERVIEW_PREP_SCHEMA_VERSION = 2;
-export const INTERVIEW_PREP_PROMPT_VERSION = 3;
+export const INTERVIEW_PREP_PROMPT_VERSION = 4;
 export const INTERVIEW_PREP_SCHEMA_NAME = 'interview_preparation_pack';
 
 // ─── Vocabularies ───────────────────────────────────────────────────────────
@@ -692,10 +692,15 @@ export const modelPackSchema = z
     company: modelCompanySectionSchema,
     role: modelRoleSectionSchema,
     evidenceBank: z.array(evidenceBankItemSchema).max(8),
-    /** A practical default bank: 12–20 selected questions for most roles. */
-    questions: z.array(modelQuestionSchema).max(20),
-    employerQuestions: z.array(modelEmployerQuestionSchema).max(8),
-    tasks: z.array(modelTaskSchema).max(10),
+    /**
+     * A practical default bank: 8–12 selected questions for most roles.
+     * Keep these ceilings in step with the generation limits: they bound the
+     * structured-output call that has to finish inside one request. Packs are
+     * stored as JSON, so lowering a ceiling never invalidates existing data.
+     */
+    questions: z.array(modelQuestionSchema).max(12),
+    employerQuestions: z.array(modelEmployerQuestionSchema).max(6),
+    tasks: z.array(modelTaskSchema).max(6),
     logistics: z.array(modelLogisticsItemSchema).max(8),
     cheatSheet: modelCheatSheetSchema,
     preparationGuidance: z.string().max(1200).nullable(),
@@ -703,6 +708,48 @@ export const modelPackSchema = z
   })
   .strict();
 export type ModelPack = z.infer<typeof modelPackSchema>;
+
+/**
+ * Generation is split across four concurrent provider calls so the whole pack
+ * fits inside a single serverless request.
+ *
+ * A complete pack is a large structured object. Asking one model call to emit
+ * every section pushed a 45-second provider timeout past the deployment's
+ * 60-second function budget, leaving the run stuck in GENERATING. Each call
+ * below writes one coherent slice of the pack, which keeps its output small
+ * enough to finish reliably while preserving every section the UI renders.
+ * All four use projections of the same contract, so none can drift from the
+ * verified shape.
+ */
+export const modelPackFoundationSchema = modelPackSchema.pick({
+  schemaVersion: true,
+  title: true,
+  context: true,
+  briefing: true,
+  company: true,
+  preparationGuidance: true,
+  limitations: true,
+});
+export type ModelPackFoundation = z.infer<typeof modelPackFoundationSchema>;
+
+export const modelPackRoleSchema = modelPackSchema.pick({
+  role: true,
+  evidenceBank: true,
+});
+export type ModelPackRole = z.infer<typeof modelPackRoleSchema>;
+
+export const modelPackQuestionsSchema = modelPackSchema.pick({
+  questions: true,
+  employerQuestions: true,
+});
+export type ModelPackQuestions = z.infer<typeof modelPackQuestionsSchema>;
+
+export const modelPackPlanSchema = modelPackSchema.pick({
+  tasks: true,
+  logistics: true,
+  cheatSheet: true,
+});
+export type ModelPackPlan = z.infer<typeof modelPackPlanSchema>;
 
 // ─── Feedback contract ─────────────────────────────────────────────────────
 

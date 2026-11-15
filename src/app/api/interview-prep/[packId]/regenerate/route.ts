@@ -17,6 +17,8 @@ import { generatePrepPack } from '@/lib/interview-prep/service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+// Research plus one provider call now fits comfortably inside this budget.
+export const maxDuration = 60;
 
 const ROUTE = '/api/interview-prep/[packId]/regenerate';
 

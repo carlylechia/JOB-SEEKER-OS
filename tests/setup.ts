@@ -23,9 +23,21 @@ function assertSafeTestDatabase() {
       'No TEST_DATABASE_URL or DATABASE_URL set. Integration tests need a real Postgres instance.',
     );
   }
-  const isLocal =
-    url.includes('localhost') || url.includes('127.0.0.1') || url.includes('postgres:');
-  const isTestNamed = /test/i.test(url);
+  let hostname = '';
+  let databaseName = '';
+  try {
+    const parsed = new URL(url);
+    hostname = parsed.hostname;
+    databaseName = parsed.pathname.replace(/^\//, '');
+  } catch {
+    // A malformed URL is treated as unsafe below.
+  }
+
+  const isLocal = ['localhost', '127.0.0.1', '::1', '0.0.0.0'].includes(hostname);
+  // A remote database is allowed only when its database name is clearly a test
+  // database. Testing the whole URL would let a password containing "test"
+  // accidentally satisfy the check.
+  const isTestNamed = /test/i.test(databaseName);
 
   if (!isLocal && !isTestNamed) {
     throw new Error(

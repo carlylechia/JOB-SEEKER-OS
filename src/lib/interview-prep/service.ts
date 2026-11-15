@@ -1293,35 +1293,23 @@ export async function generatePrepPack(options: RunPrepGenerationOptions): Promi
 
   let verified: ReturnType<typeof verifyPack>;
   try {
-    // A single in-process retry covers a transient provider failure without
-    // consuming a second credit: the idempotency key is unchanged, and a
-    // non-retryable error (bad input, refusal) is re-thrown immediately.
-    let modelPack!: Awaited<ReturnType<typeof provider.generatePack>>;
-    let lastError: unknown = null;
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      try {
-        modelPack = await provider.generatePack({
-          packBlock,
-          candidateBlock: candidate.profileText,
-          sourceBlock: buildSourceBlock(research.sources),
-          jobText: safeJobDescription.slice(0, 40_000),
-          context: row.context as InterviewContext,
-          track: interviewTrackForContext(row.context as InterviewContext),
-          horizon,
-          maxQuestions: INTERVIEW_PREP_MAX_QUESTIONS,
-          maxTasks: INTERVIEW_PREP_MAX_TASKS,
-          language: row.interviewLanguage,
-        });
-        lastError = null;
-        break;
-      } catch (error) {
-        lastError = error;
-        const retryable = error instanceof InterviewPrepAiError ? error.retryable : false;
-        if (!retryable || attempt === 1) throw error;
-        await new Promise((resolve) => setTimeout(resolve, 1_000));
-      }
-    }
-    if (lastError) throw lastError;
+    // Exactly one provider call per attempt. A second in-process retry used to
+    // live here, but it doubled the wall-clock time of an already slow task and
+    // pushed the advance request past its deployment budget. Retries now belong
+    // to the durable preparation run, which gives the user a visible Retry
+    // action without holding an HTTP request open twice as long.
+    const modelPack = await provider.generatePack({
+      packBlock,
+      candidateBlock: candidate.profileText,
+      sourceBlock: buildSourceBlock(research.sources),
+      jobText: safeJobDescription.slice(0, 40_000),
+      context: row.context as InterviewContext,
+      track: interviewTrackForContext(row.context as InterviewContext),
+      horizon,
+      maxQuestions: INTERVIEW_PREP_MAX_QUESTIONS,
+      maxTasks: INTERVIEW_PREP_MAX_TASKS,
+      language: row.interviewLanguage,
+    });
 
     const profileEvidence: ProfileEvidence = {
       projectNames: candidate.projectNames,
@@ -1348,7 +1336,12 @@ export async function generatePrepPack(options: RunPrepGenerationOptions): Promi
         jobId: row.jobId ?? undefined,
         route,
         error,
-        context: { packId: row.id, code: error.code },
+        context: {
+          packId: row.id,
+          code: error.code,
+          providerStatus: error.providerStatus,
+          providerDetail: error.providerDetail,
+        },
       });
       return failureFor(row.id, error.code as InterviewPrepErrorCode, error.retryable);
     }

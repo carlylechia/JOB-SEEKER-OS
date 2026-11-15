@@ -67,8 +67,8 @@ export const TASK_ERROR_MESSAGES: Record<string, string> = {
   MATERIAL_FAILED: 'The draft could not be generated.',
   PREP_FAILED: 'The interview briefing could not be generated.',
   AI_NOT_CONFIGURED: 'AI generation is not configured on this deployment.',
-  AI_RATE_LIMITED: 'The AI provider is busy. This task will retry shortly.',
-  AI_TIMEOUT: 'The AI provider timed out. This task will retry.',
+  AI_RATE_LIMITED: 'The AI provider is busy. Retry this step in a moment.',
+  AI_TIMEOUT: 'The AI provider timed out. Retry this step.',
   UNKNOWN_ERROR: 'This task could not be completed.',
   INTERRUPTED: 'The previous attempt was interrupted before it finished.',
 };

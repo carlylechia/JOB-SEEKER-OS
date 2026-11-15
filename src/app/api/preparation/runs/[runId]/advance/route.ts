@@ -3,10 +3,11 @@
  *
  *   POST /api/preparation/runs/[runId]/advance
  *
- * Each call claims at most one task (or `maxTasks`, bounded) and executes it.
- * The task is committed as RUNNING before the provider call, so a page refresh,
- * a second tab or a serverless timeout cannot lose the work that already
- * succeeded. Successful siblings are never re-executed on retry.
+ * Each call executes at most `maxTasks`, but always stops early when the
+ * request's wall-clock budget is nearly spent. The task is committed as RUNNING
+ * before the provider call, so a page refresh, a second tab or a serverless
+ * timeout cannot lose the work that already succeeded. Successful siblings are
+ * never re-executed on retry.
  */
 
 import { auth } from '@/auth';
@@ -19,9 +20,15 @@ import { preparationErrorResponse } from '@/lib/application-preparation/route-er
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-// One task per call keeps a single request well inside the deployment limit;
-// the client makes the next call after this one returns.
+// The deadline below stops new tasks well before this deployment limit; the
+// client makes the next call after this one returns.
 export const maxDuration = 60;
+
+/**
+ * Hard wall-clock budget for task execution, leaving 10 seconds for cold start,
+ * auth, the final transaction and the response inside the 60-second function.
+ */
+const ADVANCE_BUDGET_MS = 50_000;
 
 const ROUTE = '/api/preparation/runs/[runId]/advance';
 
@@ -42,6 +49,8 @@ export async function OPTIONS(request: Request) {
 }
 
 export async function POST(request: Request, { params }: Params) {
+  const startedAt = Date.now();
+
   return handleRoute(
     async () => {
       const session = await auth();
@@ -76,6 +85,7 @@ export async function POST(request: Request, { params }: Params) {
           runId,
           route: `/api/preparation/runs/${runId}/advance`,
           maxTasks: parsed.data.maxTasks ?? 1,
+          deadlineAt: startedAt + ADVANCE_BUDGET_MS,
         });
         return privateNoStore(
           jsonOk(

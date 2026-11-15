@@ -52,6 +52,10 @@ import {
   INTERVIEW_PREP_SCHEMA_VERSION,
   INTERVIEW_TRACK_CONTEXTS,
   INTERVIEW_TRACK_PREFERRED_CATEGORIES,
+  modelPackFoundationSchema,
+  modelPackPlanSchema,
+  modelPackQuestionsSchema,
+  modelPackRoleSchema,
   modelPackSchema,
   type InterviewContext,
   type ModelFeedback,
@@ -727,6 +731,30 @@ describe('schema', () => {
       ),
     });
     expect(modelPackSchema.safeParse(tooMany).success).toBe(false);
+  });
+
+  it('covers every pack field across the concurrent generation slices', () => {
+    const slices = [
+      modelPackFoundationSchema,
+      modelPackRoleSchema,
+      modelPackQuestionsSchema,
+      modelPackPlanSchema,
+    ];
+    const slicedKeys = slices.flatMap((schema) => Object.keys(schema.shape));
+
+    // A field that belongs to no slice would silently disappear from every
+    // generated pack; a field in two slices would be merged nondeterministically.
+    expect(new Set(slicedKeys).size).toBe(slicedKeys.length);
+    expect(slicedKeys.sort()).toEqual(Object.keys(modelPackSchema.shape).sort());
+
+    // Each slice must also accept the exact shape the merge produces.
+    const pack = makeModelPack();
+    for (const schema of slices) {
+      const slice = Object.fromEntries(
+        Object.keys(schema.shape).map((key) => [key, pack[key as keyof ModelPack]]),
+      );
+      expect(schema.safeParse(slice).success).toBe(true);
+    }
   });
 });
 

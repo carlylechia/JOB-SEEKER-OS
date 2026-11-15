@@ -37,6 +37,8 @@ import { INTERVIEW_PREP_MAX_RESEARCH_URLS } from '@/lib/interview-prep/limits';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+// Research plus one provider call now fits comfortably inside this budget.
+export const maxDuration = 60;
 
 const ROUTE = '/api/interview-prep';
 

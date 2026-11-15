@@ -47,6 +47,7 @@ export default function JobDetailsPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [creatingPack, setCreatingPack] = useState(false);
+  const [generatingPack, setGeneratingPack] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
   const [contactForm, setContactForm] = useState<Omit<Contact, 'id'>>({ name: '', company: '', title: '', relationshipType: 'RECRUITER', outreachDate: '', notes: '' });
   const [savingContact, setSavingContact] = useState(false);
@@ -178,7 +179,8 @@ export default function JobDetailsPage() {
   }
 
   async function createPack(context: string) {
-    if (!job) return;
+    if (!job || generatingPack) return;
+    setGeneratingPack(true);
     try {
       const res = await fetch('/api/interview-prep', {
         method: 'POST',
@@ -194,6 +196,8 @@ export default function JobDetailsPage() {
       router.push(`/interview-prep/${json.pack.id}`);
     } catch {
       alert('Could not create the preparation pack. Please try again.');
+    } finally {
+      setGeneratingPack(false);
     }
   }
 
@@ -647,9 +651,10 @@ export default function JobDetailsPage() {
                     <button
                       type="button"
                       className="btn-primary text-sm"
+                      disabled={generatingPack}
                       onClick={() => setCreatingPack((p) => !p)}
                     >
-                      {creatingPack ? 'Creating…' : 'Create AI prep pack'}
+                      {generatingPack ? 'Generating pack…' : creatingPack ? 'Choose focus' : 'Create AI prep pack'}
                     </button>
                   ) : (
                     <span className="text-xs text-muted">
@@ -683,11 +688,16 @@ export default function JobDetailsPage() {
               )}
               {jobIsActive && creatingPack && (
                 <div className="mt-3 space-y-2">
-                  <p className="muted text-xs mb-1">Prepare with job-specific questions generated from this role and your career profile.</p>
+                  <p className="muted text-xs mb-1">
+                    {generatingPack
+                      ? 'Generating your pack. This usually takes 20–40 seconds; keep this page open.'
+                      : 'Prepare with job-specific questions generated from this role and your career profile.'}
+                  </p>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       className="btn-secondary text-xs flex-1"
+                      disabled={generatingPack}
                       onClick={() => { setCreatingPack(false); void createPack('BALANCED'); }}
                     >
                       Balanced pack
@@ -695,6 +705,7 @@ export default function JobDetailsPage() {
                     <button
                       type="button"
                       className="btn-secondary text-xs flex-1"
+                      disabled={generatingPack}
                       onClick={() => { setCreatingPack(false); void createPack('TECHNICAL'); }}
                     >
                       Technical focus
@@ -702,6 +713,7 @@ export default function JobDetailsPage() {
                     <button
                       type="button"
                       className="btn-secondary text-xs flex-1"
+                      disabled={generatingPack}
                       onClick={() => { setCreatingPack(false); void createPack('BEHAVIORAL'); }}
                     >
                       Behavioral focus

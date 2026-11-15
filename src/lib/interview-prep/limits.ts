@@ -26,20 +26,24 @@ export const INTERVIEW_PREP_MIN_JOB_CHARS = JOB_INTELLIGENCE_MIN_JOB_CHARS;
 export const INTERVIEW_PREP_MIN_MANUAL_CHARS = 80;
 
 /**
- * Maximum questions in a pack. Relevance over volume: a practical bank is
- * 12–20 questions, never an undifferentiated dump.
+ * Maximum questions in a pack.
+ *
+ * Twelve focused questions fit in one structured-output call alongside the
+ * rest of the practice sections. Packs are stored as JSON and are not
+ * re-validated when read, so this smaller ceiling only affects new
+ * generations and never invalidates an existing pack.
  */
-export const INTERVIEW_PREP_MAX_QUESTIONS = 20;
+export const INTERVIEW_PREP_MAX_QUESTIONS = 12;
 export const INTERVIEW_PREP_MIN_USEFUL_QUESTIONS = 6;
 
 /** Maximum follow-up questions attached to any one question. */
 export const INTERVIEW_PREP_MAX_FOLLOW_UPS = 3;
 
 /** Maximum questions the candidate may ask the employer. */
-export const INTERVIEW_PREP_MAX_EMPLOYER_QUESTIONS = 8;
+export const INTERVIEW_PREP_MAX_EMPLOYER_QUESTIONS = 6;
 
 /** Maximum concrete preparation tasks in a plan. */
-export const INTERVIEW_PREP_MAX_TASKS = 10;
+export const INTERVIEW_PREP_MAX_TASKS = 6;
 export const INTERVIEW_PREP_MIN_TASKS = 4;
 
 /** Maximum company research sources retained for one pack. */
@@ -49,10 +53,17 @@ export const INTERVIEW_PREP_MAX_SOURCES = 8;
 export const INTERVIEW_PREP_MAX_SOURCE_TEXT_CHARS = 6_000;
 export const INTERVIEW_PREP_MAX_SOURCE_EXCERPT_CHARS = 1_200;
 
-/** Research fetch budget. Bounded so generation stays inside one function. */
+/**
+ * Research fetch budget.
+ *
+ * Research is an optional enrichment step, so it gets a deliberately small
+ * slice of the request. The provider call is the part that must never be
+ * starved by slow third-party pages: the whole task has to fit inside the
+ * advance route's 60-second budget with room to record its result.
+ */
 export const INTERVIEW_PREP_MAX_RESEARCH_URLS = 4;
-export const INTERVIEW_PREP_RESEARCH_TIMEOUT_MS = 6_000;
-export const INTERVIEW_PREP_RESEARCH_TOTAL_BUDGET_MS = 15_000;
+export const INTERVIEW_PREP_RESEARCH_TIMEOUT_MS = 3_000;
+export const INTERVIEW_PREP_RESEARCH_TOTAL_BUDGET_MS = 6_000;
 export const INTERVIEW_PREP_MAX_RESEARCH_BYTES = 512 * 1024;
 export const INTERVIEW_PREP_MAX_REDIRECTS = 3;
 
@@ -62,8 +73,18 @@ export const INTERVIEW_PREP_MAX_ANSWER_CHARS = 4_000;
 /** Minimum answer length before feedback is meaningful. */
 export const INTERVIEW_PREP_MIN_ANSWER_CHARS = 30;
 
-/** Provider call ceiling, matching the other AI features' serverless budget. */
-export const INTERVIEW_PREP_AI_TIMEOUT_MS = 45_000;
+/**
+ * Provider call ceiling.
+ *
+ * Generation is four concurrent structured-output calls; a representative job
+ * completes in roughly 24–25 seconds, so this leaves about 60% headroom for a
+ * slower deployment without approaching the function budget. Together with the
+ * 6-second research slice, the worst case stays inside the preparation task's
+ * 50-second execution guard. Durable retries live in the preparation run, so
+ * there is deliberately no second in-process retry that could double the
+ * wall-clock time of one task.
+ */
+export const INTERVIEW_PREP_AI_TIMEOUT_MS = 40_000;
 
 /** How long a pack row may sit mid-generation before another request may take it over. */
 export const INTERVIEW_PREP_PROCESSING_STALE_MS = 2 * 60 * 1000;

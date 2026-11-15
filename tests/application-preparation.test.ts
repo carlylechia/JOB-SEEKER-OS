@@ -17,11 +17,16 @@ import {
 import {
   advancePreparationRun,
   advanceUntilIdle,
+  cancelPreparationRun,
   createPreparationRun,
   getPreparationRun,
+  PreparationRunCancelledError,
   PreparationRunNotFoundError,
+  PreparationTaskNotRetryableError,
+  retryPreparationTask,
   __setPreparationTaskExecutorForTests,
 } from '@/lib/application-preparation/service';
+import type { TaskExecutionOutcome } from '@/lib/application-preparation/executors';
 import type { PreparationPlan } from '@/lib/application-preparation/types';
 import { typicalContent } from './resume-builder-fixtures';
 
@@ -391,5 +396,289 @@ describe('durable preparation runs', () => {
       advanceError = error;
     }
     expect(advanceError instanceof PreparationRunNotFoundError).toBe(true);
+  });
+
+  it('cancels a run, preserves completed work and refuses further advances', async () => {
+    const { user, job } = await setup();
+    __setPreparationTaskExecutorForTests(async ({ type }) =>
+      type === 'RESUME_TAILORING'
+        ? {
+            status: 'COMPLETED',
+            resultRef: 'resume-cancelled-run',
+            resultKind: 'RESUME',
+          }
+        : { status: 'FAILED', errorCode: 'AI_TIMEOUT', retryable: true },
+    );
+
+    const created = await createPreparationRun({
+      userId: user.id,
+      jobId: job.id,
+      tasks: ['RESUME_TAILORING', 'COVER_LETTER'],
+    });
+
+    await advanceUntilIdle({
+      userId: user.id,
+      runId: created.run.id,
+      route: '/test',
+      maxTasks: 4,
+    });
+
+    const cancelled = await cancelPreparationRun({
+      userId: user.id,
+      runId: created.run.id,
+    });
+
+    expect(cancelled.status).toBe('CANCELLED');
+    expect(cancelled.terminal).toBe(true);
+    expect(cancelled.completedTasks).toEqual(['RESUME_TAILORING']);
+    expect(
+      cancelled.tasks.find((task) => task.type === 'RESUME_TAILORING')?.status,
+    ).toBe('COMPLETED');
+    expect(cancelled.tasks.find((task) => task.type === 'COVER_LETTER')?.status).toBe(
+      'CANCELLED',
+    );
+
+    // Cancellation is idempotent, not an error.
+    const again = await cancelPreparationRun({
+      userId: user.id,
+      runId: created.run.id,
+    });
+    expect(again.status).toBe('CANCELLED');
+
+    let advanceError: unknown = null;
+    try {
+      await advancePreparationRun({
+        userId: user.id,
+        runId: created.run.id,
+        route: '/test',
+      });
+    } catch (error) {
+      advanceError = error;
+    }
+    expect(advanceError instanceof PreparationRunCancelledError).toBe(true);
+  });
+
+  it('retries one failed step without touching completed siblings', async () => {
+    const { user, job } = await setup();
+    const calls: string[] = [];
+    let coverShouldFail = true;
+
+    __setPreparationTaskExecutorForTests(async ({ type }) => {
+      calls.push(type);
+      if (type === 'RESUME_TAILORING') {
+        return {
+          status: 'COMPLETED',
+          resultRef: 'resume-single-retry',
+          resultKind: 'RESUME',
+        };
+      }
+      return coverShouldFail
+        ? { status: 'FAILED', errorCode: 'AI_TIMEOUT', retryable: true }
+        : {
+            status: 'COMPLETED',
+            resultRef: 'cover-single-retry',
+            resultKind: 'MATERIAL',
+          };
+    });
+
+    const created = await createPreparationRun({
+      userId: user.id,
+      jobId: job.id,
+      tasks: ['RESUME_TAILORING', 'COVER_LETTER'],
+    });
+
+    await advanceUntilIdle({
+      userId: user.id,
+      runId: created.run.id,
+      route: '/test',
+      maxTasks: 4,
+    });
+
+    const before = await getPreparationRun({ userId: user.id, runId: created.run.id });
+    const cover = before.tasks.find((task) => task.type === 'COVER_LETTER');
+    const resume = before.tasks.find((task) => task.type === 'RESUME_TAILORING');
+    expect(cover?.status).toBe('FAILED');
+    expect(resume?.status).toBe('COMPLETED');
+
+    // A completed step is not retryable: that would spend credits to replace
+    // a document the user already has.
+    let completedRetryError: unknown = null;
+    try {
+      await retryPreparationTask({
+        userId: user.id,
+        runId: created.run.id,
+        taskId: resume!.id,
+      });
+    } catch (error) {
+      completedRetryError = error;
+    }
+    expect(completedRetryError instanceof PreparationTaskNotRetryableError).toBe(true);
+
+    const retried = await retryPreparationTask({
+      userId: user.id,
+      runId: created.run.id,
+      taskId: cover!.id,
+    });
+
+    expect(retried.status).toBe('QUEUED');
+    expect(retried.tasks.find((task) => task.type === 'COVER_LETTER')?.status).toBe('PENDING');
+    expect(retried.tasks.find((task) => task.type === 'COVER_LETTER')?.attempts).toBe(0);
+    expect(retried.tasks.find((task) => task.type === 'RESUME_TAILORING')?.status).toBe(
+      'COMPLETED',
+    );
+
+    coverShouldFail = false;
+    const finished = await advanceUntilIdle({
+      userId: user.id,
+      runId: created.run.id,
+      route: '/test',
+      maxTasks: 4,
+    });
+
+    expect(finished.run.status).toBe('COMPLETED');
+    expect(finished.run.tasks.every((task) => task.status === 'COMPLETED')).toBe(true);
+    // The tailored resume was generated once, not again by the retry.
+    expect(calls.filter((type) => type === 'RESUME_TAILORING')).toHaveLength(1);
+  });
+
+  it('revives cancelled steps when the user explicitly prepares again', async () => {
+    const { user, job } = await setup();
+    const created = await createPreparationRun({
+      userId: user.id,
+      jobId: job.id,
+      tasks: ['COVER_LETTER', 'RECRUITER_MESSAGE'],
+    });
+
+    const cancelled = await cancelPreparationRun({
+      userId: user.id,
+      runId: created.run.id,
+    });
+    expect(cancelled.status).toBe('CANCELLED');
+
+    const restarted = await createPreparationRun({
+      userId: user.id,
+      jobId: job.id,
+      tasks: ['COVER_LETTER', 'RECRUITER_MESSAGE'],
+    });
+
+    expect(restarted.reused).toBe(true);
+    expect(restarted.run.id).toBe(created.run.id);
+    expect(restarted.run.status).toBe('QUEUED');
+    expect(restarted.run.terminal).toBe(false);
+    expect(restarted.run.tasks.every((task) => task.status === 'PENDING')).toBe(true);
+    expect(restarted.run.tasks.every((task) => task.attempts === 0)).toBe(true);
+  });
+
+  it('does not start a task after the request deadline', async () => {
+    const { user, job } = await setup();
+    let calls = 0;
+    __setPreparationTaskExecutorForTests(async () => {
+      calls += 1;
+      return { status: 'COMPLETED', resultRef: 'should-not-run', resultKind: 'MATERIAL' };
+    });
+
+    const created = await createPreparationRun({
+      userId: user.id,
+      jobId: job.id,
+      tasks: ['COVER_LETTER'],
+    });
+
+    const result = await advanceUntilIdle({
+      userId: user.id,
+      runId: created.run.id,
+      route: '/test',
+      maxTasks: 4,
+      deadlineAt: Date.now() - 1,
+    });
+
+    expect(calls).toBe(0);
+    expect(result.executed).toBe(false);
+    expect(result.run.status).toBe('QUEUED');
+    expect(result.run.tasks[0].status).toBe('PENDING');
+  });
+
+  it('bounds a task that never returns and records a retryable timeout', async () => {
+    const { user, job } = await setup();
+    __setPreparationTaskExecutorForTests(
+      () => new Promise<TaskExecutionOutcome>(() => undefined),
+    );
+
+    const created = await createPreparationRun({
+      userId: user.id,
+      jobId: job.id,
+      tasks: ['COVER_LETTER'],
+    });
+
+    const result = await advancePreparationRun({
+      userId: user.id,
+      runId: created.run.id,
+      route: '/test',
+      timeoutMs: 25,
+    });
+
+    const task = result.run.tasks[0];
+    expect(result.executed).toBe(true);
+    expect(task.status).toBe('FAILED');
+    expect(task.errorCode).toBe('AI_TIMEOUT');
+    expect(task.attempts).toBe(1);
+    // Still runnable, so the UI offers Retry this step rather than hanging.
+    expect(result.run.status).toBe('QUEUED');
+    expect(result.retryScheduled).toBe(true);
+  });
+
+  it('ignores a task result that arrives after the run was cancelled', async () => {
+    const { user, job } = await setup();
+    let resolveExecution!: (outcome: TaskExecutionOutcome) => void;
+
+    __setPreparationTaskExecutorForTests(
+      () =>
+        new Promise<TaskExecutionOutcome>((resolve) => {
+          resolveExecution = resolve;
+        }),
+    );
+
+    const created = await createPreparationRun({
+      userId: user.id,
+      jobId: job.id,
+      tasks: ['RESUME_TAILORING'],
+    });
+
+    const inFlight = advancePreparationRun({
+      userId: user.id,
+      runId: created.run.id,
+      route: '/test',
+    });
+
+    // Wait until the durable claim has committed RUNNING, which is the exact
+    // state that used to wedge the UI forever.
+    let running = false;
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const row = await prisma.applicationPreparationTask.findFirst({
+        where: { runId: created.run.id },
+      });
+      if (row?.status === 'RUNNING') {
+        running = true;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    expect(running).toBe(true);
+
+    const cancelled = await cancelPreparationRun({
+      userId: user.id,
+      runId: created.run.id,
+    });
+    expect(cancelled.status).toBe('CANCELLED');
+
+    resolveExecution({
+      status: 'COMPLETED',
+      resultRef: 'late-result',
+      resultKind: 'RESUME',
+    });
+
+    const result = await inFlight;
+    expect(result.run.status).toBe('CANCELLED');
+    expect(result.run.tasks[0].status).toBe('CANCELLED');
+    expect(result.run.tasks[0].resultRef).toBeNull();
   });
 });

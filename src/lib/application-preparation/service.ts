@@ -45,6 +45,24 @@ import {
 export const PREPARATION_MAX_TASKS_PER_RUN = 4;
 const CLAIM_TRANSACTION_TIMEOUT_MS = 10_000;
 
+/**
+ * Hard ceiling on one task execution.
+ *
+ * The advance route has a 60-second deployment budget. A task that runs past
+ * this point is marked as a retryable timeout instead of leaving the row
+ * RUNNING forever. The executor itself keeps its own, shorter provider
+ * timeouts; this is the last-resort guard against a stalled promise.
+ */
+export const PREPARATION_TASK_EXECUTION_TIMEOUT_MS = 50_000;
+
+/**
+ * A RUNNING task older than this is treated as interrupted. It is longer than
+ * the 50-second execution timeout, so a healthy task is never reclaimed by a
+ * concurrent advance call, but short enough that a killed serverless request
+ * does not make the user wait minutes before Continue works again.
+ */
+const PREPARATION_RUNNING_STALE_MS = 90 * 1000;
+
 type PreparationTaskExecutor = typeof executePreparationTask;
 
 /**
@@ -84,6 +102,33 @@ export class PreparationValidationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'PreparationValidationError';
+  }
+}
+
+export class PreparationRunCancelledError extends Error {
+  readonly code = 'PREPARATION_RUN_CANCELLED';
+  readonly status = 409;
+  constructor() {
+    super('This preparation run was stopped. Retry a step or start a new run.');
+    this.name = 'PreparationRunCancelledError';
+  }
+}
+
+export class PreparationTaskNotFoundError extends Error {
+  readonly code = 'PREPARATION_TASK_NOT_FOUND';
+  readonly status = 404;
+  constructor() {
+    super('That preparation step could not be found.');
+    this.name = 'PreparationTaskNotFoundError';
+  }
+}
+
+export class PreparationTaskNotRetryableError extends Error {
+  readonly code = 'PREPARATION_TASK_NOT_RETRYABLE';
+  readonly status = 409;
+  constructor(message: string) {
+    super(message);
+    this.name = 'PreparationTaskNotRetryableError';
   }
 }
 
@@ -383,18 +428,45 @@ export async function createPreparationRun(
  * retries only what failed.
  */
 async function reviveFailedTasks(runId: string): Promise<RunRow> {
+  const active = await prisma.applicationPreparationTask.count({
+    where: {
+      runId,
+      status: 'RUNNING',
+      startedAt: { gte: new Date(Date.now() - PREPARATION_RUNNING_STALE_MS) },
+    },
+  });
+
+  // Reusing a run while another invocation is genuinely executing a task must
+  // be a no-op. Changing the run or task state underneath a live provider call
+  // would make every status read lie until that call finished.
+  if (active > 0) {
+    return prisma.applicationPreparationRun.findUniqueOrThrow({
+      where: { id: runId },
+      include: { tasks: { orderBy: { createdAt: 'asc' } } },
+    }) as unknown as Promise<RunRow>;
+  }
+
   // `attempts < maxAttempts` compares two COLUMNS, which Prisma's filter API
   // cannot express. Raw SQL keeps the rule in one place and avoids loading
   // every task into the application to decide which ones are retryable.
+  //
+  // CANCELLED tasks are revived too: pressing the primary action again is an
+  // explicit request to run the selection, so those steps get a fresh attempt
+  // budget instead of staying dead forever.
   await prisma.$executeRaw`
     UPDATE "ApplicationPreparationTask"
     SET "status" = 'PENDING',
         "errorCode" = NULL,
         "nextAttemptAt" = NOW(),
+        "startedAt" = NULL,
+        "completedAt" = NULL,
+        "attempts" = CASE WHEN "status" = 'CANCELLED' THEN 0 ELSE "attempts" END,
         "updatedAt" = NOW()
     WHERE "runId" = ${runId}
-      AND "status" = 'FAILED'
-      AND "attempts" < "maxAttempts"
+      AND (
+        ("status" = 'FAILED' AND "attempts" < "maxAttempts")
+        OR "status" = 'CANCELLED'
+      )
   `;
 
   const tasks = await prisma.applicationPreparationTask.findMany({
@@ -402,11 +474,19 @@ async function reviveFailedTasks(runId: string): Promise<RunRow> {
     orderBy: { createdAt: 'asc' },
   });
   const runnable = tasks.some((task) => hasRunnable(task as unknown as TaskRow));
+  const completedTasks = tasks
+    .filter((task) => task.status === 'COMPLETED')
+    .map((task) => task.type);
+  const failedTasks = tasks
+    .filter((task) => task.status === 'FAILED')
+    .map((task) => task.type);
 
   return prisma.applicationPreparationRun.update({
     where: { id: runId },
     data: {
-      status: runnable ? 'QUEUED' : tasks.some((task) => task.status === 'COMPLETED') ? 'COMPLETED' : 'FAILED',
+      status: runnable ? 'QUEUED' : completedTasks.length > 0 ? 'COMPLETED' : 'FAILED',
+      completedTasks: completedTasks as never,
+      failedTasks: failedTasks as never,
       completedAt: runnable ? null : new Date(),
     },
     include: { tasks: { orderBy: { createdAt: 'asc' } } },
@@ -436,7 +516,8 @@ async function claimNextTask(runId: string): Promise<TaskRow | null> {
       // A request that died mid-provider-call leaves its task RUNNING forever.
       // Once the execution window has passed, return it to the queue (or fail
       // it when attempts are exhausted) so one interruption cannot wedge the
-      // whole run. Five minutes is longer than any provider timeout.
+      // whole run. The window is longer than the 50-second execution timeout,
+      // so a healthy task is never reclaimed underneath itself.
       await tx.$executeRaw`
         UPDATE "ApplicationPreparationTask"
         SET "status" = CASE WHEN "attempts" < "maxAttempts" THEN 'PENDING' ELSE 'FAILED' END,
@@ -445,7 +526,7 @@ async function claimNextTask(runId: string): Promise<TaskRow | null> {
             "updatedAt" = NOW()
         WHERE "runId" = ${runId}
           AND "status" = 'RUNNING'
-          AND "startedAt" < NOW() - INTERVAL '5 minutes'
+          AND "startedAt" < NOW() - INTERVAL '90 seconds'
       `;
 
       const running = await tx.applicationPreparationTask.count({
@@ -492,53 +573,71 @@ async function finaliseTask(params: {
 }): Promise<void> {
   const { task, outcome } = params;
 
+  // Cancellation wins. If the user stopped the run while the provider call was
+  // still in flight, the task row is already CANCELLED and must not be
+  // overwritten by the late result. Any generated document still exists; it is
+  // simply not attached to a cancelled run.
+  async function commit(data: Prisma.ApplicationPreparationTaskUpdateManyMutationInput): Promise<void> {
+    await prisma.applicationPreparationTask.updateMany({
+      where: { id: task.id, status: 'RUNNING' },
+      data,
+    });
+  }
+
   if (outcome.status === 'COMPLETED') {
-    await prisma.applicationPreparationTask.update({
-      where: { id: task.id },
-      data: {
-        status: 'COMPLETED',
-        completedAt: new Date(),
-        resultRef: outcome.resultRef,
-        resultKind: outcome.resultKind,
-        metadata: (outcome.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
-        nextAttemptAt: new Date(),
-      },
+    await commit({
+      status: 'COMPLETED',
+      completedAt: new Date(),
+      resultRef: outcome.resultRef,
+      resultKind: outcome.resultKind,
+      metadata: (outcome.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
+      nextAttemptAt: new Date(),
     });
     return;
   }
 
   if (outcome.status === 'SKIPPED') {
-    await prisma.applicationPreparationTask.update({
-      where: { id: task.id },
-      data: {
-        status: 'SKIPPED',
-        completedAt: new Date(),
-        errorCode: outcome.errorCode,
-        metadata: (outcome.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
-        attempts: task.maxAttempts,
-      },
+    await commit({
+      status: 'SKIPPED',
+      completedAt: new Date(),
+      errorCode: outcome.errorCode,
+      metadata: (outcome.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
+      attempts: task.maxAttempts,
     });
     return;
   }
 
   const willRetry = outcome.retryable && task.attempts < task.maxAttempts;
-  await prisma.applicationPreparationTask.update({
-    where: { id: task.id },
-    data: {
-      status: 'FAILED',
-      errorCode: outcome.errorCode,
-      metadata: (outcome.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
-      // A non-retryable failure is final on the first attempt. Setting attempts
-      // to the ceiling makes that explicit to every future claim and to the UI.
-      attempts: willRetry ? task.attempts : task.maxAttempts,
-      completedAt: willRetry ? null : new Date(),
-      nextAttemptAt: willRetry ? new Date(Date.now() + backoffMs(task.attempts)) : new Date(),
-    },
+  await commit({
+    status: 'FAILED',
+    errorCode: outcome.errorCode,
+    metadata: (outcome.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
+    // A non-retryable failure is final on the first attempt. Setting attempts
+    // to the ceiling makes that explicit to every future claim and to the UI.
+    attempts: willRetry ? task.attempts : task.maxAttempts,
+    completedAt: willRetry ? null : new Date(),
+    nextAttemptAt: willRetry ? new Date(Date.now() + backoffMs(task.attempts)) : new Date(),
   });
 }
 
 async function recomputeRun(runId: string): Promise<RunRow> {
   return prisma.$transaction(async (tx) => {
+    const current = await tx.applicationPreparationRun.findUnique({
+      where: { id: runId },
+      select: { status: true },
+    });
+    if (!current) throw new PreparationRunNotFoundError();
+
+    // A cancelled run stays cancelled even if an in-flight task finishes after
+    // the cancel request. The guarded update in `finaliseTask` already ignores
+    // that late result; this is the second half of the same guarantee.
+    if (current.status === 'CANCELLED') {
+      return tx.applicationPreparationRun.findUniqueOrThrow({
+        where: { id: runId },
+        include: { tasks: { orderBy: { createdAt: 'asc' } } },
+      }) as unknown as Promise<RunRow>;
+    }
+
     const tasks = await tx.applicationPreparationTask.findMany({
       where: { runId },
       orderBy: { createdAt: 'asc' },
@@ -574,6 +673,168 @@ async function recomputeRun(runId: string): Promise<RunRow> {
   });
 }
 
+/**
+ * Stop a run and every unfinished step in it.
+ *
+ * Idempotent, and safe while a provider call is in flight: the guarded
+ * finaliser ignores a result that arrives after cancellation, and the run is
+ * never recomputed back into an active state. Completed artifacts are never
+ * deleted.
+ */
+export async function cancelPreparationRun(params: {
+  userId: string;
+  runId: string;
+}): Promise<PreparationRunSnapshot> {
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${params.runId}))`;
+
+    const run = await tx.applicationPreparationRun.findFirst({
+      where: { id: params.runId, userId: params.userId },
+      include: { tasks: { orderBy: { createdAt: 'asc' } } },
+    });
+    if (!run) throw new PreparationRunNotFoundError();
+
+    const current = toRunSnapshot(run as unknown as RunRow);
+    if (current.terminal) return { snapshot: current, changed: false };
+
+    const completedTasks = run.tasks
+      .filter((task) => task.status === 'COMPLETED')
+      .map((task) => task.type);
+
+    await tx.applicationPreparationTask.updateMany({
+      where: {
+        runId: run.id,
+        status: { in: ['PENDING', 'RUNNING', 'FAILED'] },
+      },
+      data: {
+        status: 'CANCELLED',
+        errorCode: null,
+        completedAt: new Date(),
+        nextAttemptAt: new Date(),
+      },
+    });
+
+    const updated = await tx.applicationPreparationRun.update({
+      where: { id: run.id },
+      data: {
+        status: 'CANCELLED',
+        completedTasks: completedTasks as never,
+        failedTasks: [] as never,
+        completedAt: new Date(),
+      },
+      include: { tasks: { orderBy: { createdAt: 'asc' } } },
+    });
+
+    return {
+      snapshot: toRunSnapshot(updated as unknown as RunRow),
+      changed: true,
+    };
+  });
+
+  if (result.changed) {
+    await logImportantInfo({
+      event: 'application_preparation_run_cancelled',
+      userId: params.userId,
+      context: {
+        runId: params.runId,
+        completed: result.snapshot.completedTasks.length,
+      },
+    });
+  }
+
+  return result.snapshot;
+}
+
+/**
+ * Restart exactly one step.
+ *
+ * This is the escape hatch the UI needs when a single provider call fails but
+ * the rest of the run is healthy. Completed siblings are untouched, and the
+ * task gets a fresh attempt budget because the user explicitly asked for it.
+ */
+export async function retryPreparationTask(params: {
+  userId: string;
+  runId: string;
+  taskId: string;
+}): Promise<PreparationRunSnapshot> {
+  const row = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${params.runId}))`;
+
+    const run = await tx.applicationPreparationRun.findFirst({
+      where: { id: params.runId, userId: params.userId },
+      include: { tasks: { orderBy: { createdAt: 'asc' } } },
+    });
+    if (!run) throw new PreparationRunNotFoundError();
+
+    const task = run.tasks.find((entry) => entry.id === params.taskId);
+    if (!task) throw new PreparationTaskNotFoundError();
+
+    if (task.status === 'RUNNING') {
+      throw new PreparationTaskNotRetryableError(
+        'That step is still running. Stop the run first if it is stuck.',
+      );
+    }
+    if (task.status === 'COMPLETED') {
+      throw new PreparationTaskNotRetryableError('That step already finished.');
+    }
+    if (task.status === 'SKIPPED') {
+      throw new PreparationTaskNotRetryableError(
+        'That step was skipped because there was nothing safe to change. Retrying it will not produce a different result.',
+      );
+    }
+
+    const siblingRunning = run.tasks.some(
+      (entry) => entry.id !== task.id && entry.status === 'RUNNING',
+    );
+    if (siblingRunning) {
+      throw new PreparationTaskNotRetryableError(
+        'Wait for the current step to finish before retrying another one.',
+      );
+    }
+
+    await tx.applicationPreparationTask.update({
+      where: { id: task.id },
+      data: {
+        status: 'PENDING',
+        attempts: 0,
+        errorCode: null,
+        nextAttemptAt: new Date(),
+        startedAt: null,
+        completedAt: null,
+      },
+    });
+
+    const completedTasks = run.tasks
+      .filter((entry) => entry.status === 'COMPLETED')
+      .map((entry) => entry.type);
+
+    await tx.applicationPreparationRun.update({
+      where: { id: run.id },
+      data: {
+        status: 'QUEUED',
+        completedTasks: completedTasks as never,
+        // Every non-completed step was either just reset to PENDING or is
+        // still CANCELLED; neither belongs in the failed list.
+        failedTasks: [] as never,
+        completedAt: null,
+      },
+    });
+
+    return tx.applicationPreparationRun.findUniqueOrThrow({
+      where: { id: run.id },
+      include: { tasks: { orderBy: { createdAt: 'asc' } } },
+    });
+  });
+
+  await logImportantInfo({
+    event: 'application_preparation_task_retried',
+    userId: params.userId,
+    context: { runId: params.runId, taskId: params.taskId },
+  });
+
+  return toRunSnapshot(row as unknown as RunRow);
+}
+
 export type AdvancePreparationResult = {
   run: PreparationRunSnapshot;
   /** True when this call executed a task. */
@@ -584,10 +845,52 @@ export type AdvancePreparationResult = {
   retryScheduled: boolean;
 };
 
+/**
+ * Run one task with a hard ceiling.
+ *
+ * `taskExecutor` already applies provider-level timeouts, but a bug or a
+ * stalled socket must never leave the database row RUNNING forever. A timeout
+ * is recorded as a retryable failure, so the UI offers "Retry this step"
+ * instead of an endless spinner.
+ */
+async function executeTaskWithTimeout(
+  input: Parameters<PreparationTaskExecutor>[0],
+  timeoutMs: number,
+): Promise<Awaited<ReturnType<PreparationTaskExecutor>>> {
+  const execution = taskExecutor(input);
+
+  // The timeout does not cancel the underlying provider call. Attaching a
+  // rejection handler keeps a late failure from becoming an unhandled
+  // rejection after the race has already settled.
+  execution.catch(() => undefined);
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<Awaited<ReturnType<PreparationTaskExecutor>>>((resolve) => {
+    timer = setTimeout(
+      () =>
+        resolve({
+          status: 'FAILED',
+          errorCode: 'AI_TIMEOUT',
+          retryable: true,
+          metadata: { timedOut: true, timeoutMs },
+        }),
+      timeoutMs,
+    );
+  });
+
+  try {
+    return await Promise.race([execution, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export async function advancePreparationRun(params: {
   userId: string;
   runId: string;
   route: string;
+  /** Test seam. Production uses the constant above. */
+  timeoutMs?: number;
 }): Promise<AdvancePreparationResult> {
   const run = await prisma.applicationPreparationRun.findFirst({
     where: { id: params.runId, userId: params.userId },
@@ -596,6 +899,14 @@ export async function advancePreparationRun(params: {
   if (!run) throw new PreparationRunNotFoundError();
 
   const runRow = run as unknown as RunRow;
+
+  // A stopped run must stay stopped. `retryPreparationTask` moves the run back
+  // to QUEUED in the same transaction that revives its task, so a runnable
+  // task is the only legitimate reason to advance a CANCELLED row.
+  if (run.status === 'CANCELLED' && !toRunSnapshot(runRow).hasRunnableTask) {
+    throw new PreparationRunCancelledError();
+  }
+
   const claimed = await claimNextTask(run.id);
 
   if (!claimed) {
@@ -623,13 +934,16 @@ export async function advancePreparationRun(params: {
     data: { status: 'RUNNING' },
   });
 
-  const outcome = await taskExecutor({
-    userId: params.userId,
-    jobId: run.jobId,
-    type: claimed.type as PreparationTaskType,
-    route: params.route,
-    selection: selectionFromRun(runRow),
-  });
+  const outcome = await executeTaskWithTimeout(
+    {
+      userId: params.userId,
+      jobId: run.jobId,
+      type: claimed.type as PreparationTaskType,
+      route: params.route,
+      selection: selectionFromRun(runRow),
+    },
+    Math.max(1, params.timeoutMs ?? PREPARATION_TASK_EXECUTION_TIMEOUT_MS),
+  );
 
   await finaliseTask({ task: claimed, outcome });
   const refreshed = await recomputeRun(run.id);
@@ -672,18 +986,51 @@ export type AdvanceUntilIdleResult = {
   retryScheduled: boolean;
 };
 
+/**
+ * Time held back from the advance deadline for finalising the task and writing
+ * the HTTP response. The route budget is 60 seconds; 3 seconds is ample for one
+ * short transaction plus serialisation.
+ */
+const PREPARATION_ADVANCE_RESPONSE_RESERVE_MS = 3_000;
+
 export async function advanceUntilIdle(params: {
   userId: string;
   runId: string;
   route: string;
   maxTasks?: number;
+  /**
+   * Absolute epoch time after which no new task may start. The route sets
+   * this below its deployment limit; tests omit it to run the full selection.
+   */
+  deadlineAt?: number;
 }): Promise<AdvanceUntilIdleResult> {
   const limit = Math.min(PREPARATION_MAX_TASKS_PER_RUN, Math.max(1, params.maxTasks ?? 1));
   let last: AdvancePreparationResult | null = null;
   let executed = false;
 
   for (let index = 0; index < limit; index += 1) {
-    last = await advancePreparationRun(params);
+    // A second task must never begin with less than a full execution window
+    // left. Without this, `maxTasks: 4` could start a 46-second provider call
+    // 50 seconds into a 60-second function and be killed mid-write.
+    let timeoutMs: number | undefined;
+    if (params.deadlineAt !== undefined) {
+      const remaining = params.deadlineAt - Date.now() - PREPARATION_ADVANCE_RESPONSE_RESERVE_MS;
+      if (remaining <= 0) break;
+      timeoutMs = Math.min(PREPARATION_TASK_EXECUTION_TIMEOUT_MS, remaining);
+    }
+
+    try {
+      last = await advancePreparationRun({ ...params, timeoutMs });
+    } catch (error) {
+      // A stop can land between two loop iterations. The work already
+      // completed is still recorded, so return the cancelled snapshot rather
+      // than turning a successful first step into an error response.
+      if (error instanceof PreparationRunCancelledError) {
+        last = null;
+        break;
+      }
+      throw error;
+    }
     if (last.executed) executed = true;
     if (!last.executed || last.run.terminal) break;
     if (last.retryScheduled) break;

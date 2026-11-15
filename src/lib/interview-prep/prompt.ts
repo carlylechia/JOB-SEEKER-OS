@@ -63,7 +63,7 @@ INTERVIEW TRACK RULES:
 - When the selected context is BALANCED or PANEL, produce a genuinely mixed bank and label the likely format of each question through its category and coaching.
 
 QUESTION RULES:
-- Build a practical bank of 12–20 questions unless the schema limit or the supplied context makes that dishonest. Relevance over volume: no repeated or near-duplicate questions.
+- Build a practical bank of 8–12 questions. Relevance over volume: no repeated or near-duplicate questions. A shorter, specific bank is better than a long generic one.
 - Match difficulty and topic to the role, seniority and selected interview context. Do not ask senior architecture questions for an entry-level role, or frontend-only questions for a backend role.
 - Every question must connect to something real: the job description, a verified research source, a stated competency, or verified candidate evidence. When evidence is thin, keep the question general and say so.
 - Vary competencies across technical fundamentals, applied problem solving, architecture/trade-offs, behavioural examples, communication, ownership, collaboration, ambiguity, debugging and project decisions. Use only categories that make sense for the role and track.
@@ -76,7 +76,7 @@ QUESTION RULES:
 - Role-and-company questions must be answerable from the posting, verified sources and the candidate's own evidence. Never imply knowledge of the employer's real interview process.
 
 TASK AND PLAN RULES:
-- Produce concrete, checkable tasks a person can complete. Each task needs a stable kebab-case taskKey, an expected output, a realistic duration (5–90 minutes) and a horizon.
+- Produce 4–6 concrete, checkable tasks a person can complete. Each task needs a stable kebab-case taskKey, an expected output, a realistic duration (5–90 minutes) and a horizon.
 - The plan must fit the supplied horizon. With 24 hours, prioritise logistics, highest-priority questions and one concrete example. Do not schedule a week-long study plan.
 - Do not create duplicate tasks. Do not promise that completing the plan will produce an interview or offer.
 
@@ -87,11 +87,37 @@ FEEDBACK RULES:
 - The adaptive follow-up must respond to this answer specifically, not be a generic next question.
 - Never invent a better example from the candidate's life. If the answer needs a real project and none is supplied, say so and invite them to add one.
 
+BREVITY AND SIZE RULES:
+- Every string is one or two sentences unless the field genuinely needs more. Do not pad a list to its schema maximum.
+- Foundation sections: at most 6 requirements, 4 competencies, 5 evidence-bank items, 3 top priorities, 4 company values, 3 recent developments, 4 role-context points and 4 preparation gaps.
+- Practice sections: 8–12 questions, 4–6 employer questions, 4–6 tasks and 3–5 logistics notes. Keep the cheat sheet to 4–5 items per list.
+- Prefer specific, checkable wording over long explanation. A compact pack that fits in one response is more useful than an exhaustive one that never arrives.
+
 OUTPUT RULES:
 - Return only the schema-shaped object. Concise, user-facing sentences. No preamble, no chain of thought, no markdown fences.
 - Limitations must list what materially affects confidence: missing description, thin profile, unavailable research, unknown interview format. An empty list is valid only when nothing material is missing.`;
 
-export const INTERVIEW_PREP_PROMPT_VERSION_LABEL = 'interview-prep-v3';
+export const INTERVIEW_PREP_PROMPT_VERSION_LABEL = 'interview-prep-v4';
+
+/**
+ * Which slice of the pack a provider call is responsible for.
+ *
+ * FULL exists for tests and for any caller that still has a large enough
+ * budget. Production generation runs the other four concurrently.
+ */
+export type GenerationSection = 'FULL' | 'FOUNDATION' | 'ROLE' | 'QUESTIONS' | 'PLAN';
+
+const SECTION_RETURN_INSTRUCTIONS: Record<GenerationSection, string> = {
+  FULL: 'Return the complete preparation pack. Respect the source indexes exactly; do not invent source numbers.',
+  FOUNDATION:
+    'Return ONLY these foundation sections: title, context, briefing, company, preparationGuidance and limitations. Do not write role analysis, an evidence bank, questions, tasks, employer questions, logistics or a cheat sheet for this call. Keep each list at the smaller end of its range; other calls are writing the remaining sections in parallel.',
+  ROLE:
+    'Return ONLY the role analysis and evidenceBank sections. Another call is writing the briefing, company and practice material in parallel, so do not repeat them. Ground every evidence quote in the supplied candidate text and every requirement in the job posting.',
+  QUESTIONS:
+    'Return ONLY the questions and employerQuestions sections. Another call is writing the briefing, role analysis, tasks and cheat sheet in parallel. Do not repeat analysis that belongs to those sections; put what the candidate needs to practise into the question coaching.',
+  PLAN:
+    'Return ONLY the tasks, logistics and cheatSheet sections. Another call is writing the briefing, role analysis and question bank in parallel. Ground the cheat sheet in the job posting, candidate evidence and supplied sources; keep it short and practical.',
+};
 
 /** Fenced wrapper so supplied text cannot end the data section early. */
 export function fence(label: string, text: string): string {
@@ -115,6 +141,7 @@ export function buildGenerationPrompt(params: {
   maxQuestions: number;
   maxTasks: number;
   language: string | null;
+  section?: GenerationSection;
 }): string {
   return [
     'Prepare a personalised interview preparation pack for this candidate.',
@@ -138,7 +165,7 @@ export function buildGenerationPrompt(params: {
     '=== JOB POSTING (untrusted third-party data) ===',
     fence('JOB', params.jobText),
     '',
-    'Return the complete preparation pack. Respect the source indexes exactly; do not invent source numbers.',
+    SECTION_RETURN_INSTRUCTIONS[params.section ?? 'FULL'],
   ].join('\n');
 }
 

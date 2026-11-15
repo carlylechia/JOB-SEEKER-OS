@@ -12,7 +12,10 @@ import { PlanRequiredError } from '@/lib/billing/subscriptions';
 import { UsageLimitExceededError } from '@/lib/billing/usage';
 import {
   PreparationJobNotFoundError,
+  PreparationRunCancelledError,
   PreparationRunNotFoundError,
+  PreparationTaskNotFoundError,
+  PreparationTaskNotRetryableError,
   PreparationValidationError,
 } from './service';
 
@@ -29,6 +32,18 @@ function map(error: unknown): Mapped | null {
 
   if (error instanceof PreparationRunNotFoundError) {
     return { code: 'NOT_FOUND', message: error.message };
+  }
+
+  if (error instanceof PreparationTaskNotFoundError) {
+    return { code: 'NOT_FOUND', message: error.message };
+  }
+
+  if (error instanceof PreparationRunCancelledError) {
+    return { code: 'CONFLICT', message: error.message };
+  }
+
+  if (error instanceof PreparationTaskNotRetryableError) {
+    return { code: 'CONFLICT', message: error.message };
   }
 
   if (error instanceof PreparationValidationError) {
